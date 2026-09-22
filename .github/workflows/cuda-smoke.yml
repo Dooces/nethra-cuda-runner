@@ -1,7 +1,6 @@
 name: CUDA smoke test
 
 on:
-  push:
   workflow_dispatch:
 
 jobs:
