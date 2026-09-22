@@ -85,6 +85,12 @@ class NethraField:
         self.convergence_gain = float(convergence_gain)
 
         self.nethra = []
+        # Exact completed-interval boundary under audit. These are transient physical facts,
+        # not matching keys or construction permission.
+        self.previous_interval_source = {}
+        self.current_interval_source = {}
+        self.previous_interval_delta = {}
+        self.current_interval_delta = {}
         self.previous_explicit = frozenset()
         self.previous_closure = frozenset()
         self.previous_source_event = frozenset()
@@ -275,6 +281,36 @@ class NethraField:
                         changed = True
                         break
         return frozenset(active)
+
+
+    def _complete_interval(self, source_current, delta):
+        """Retain exactly what the Nethra field physically did over one completed interval.
+
+        source_current maps Nethra to externally injected current before that current is consumed.
+        delta maps Nethra to the activation change produced by the actual field integration.
+
+        This boundary performs no sign/membership projection, rounding, equality test, recurrence
+        test, probability estimate, residual fabrication, route choice, or construction.  It is
+        deliberately sufficient only to preserve the interval manifestation and its provenance.
+        """
+        source = {
+            n: float(value)
+            for n, value in source_current.items()
+            if float(value) != 0.0
+        }
+        change = {
+            n: float(value)
+            for n, value in delta.items()
+            if float(value) != 0.0
+        }
+        if any(n not in self.nethra for n in source) or any(n not in self.nethra for n in change):
+            raise ValueError("completed interval references unknown Nethra")
+
+        self.previous_interval_source = self.current_interval_source
+        self.previous_interval_delta = self.current_interval_delta
+        self.current_interval_source = source
+        self.current_interval_delta = change
+        return source, change
 
     def observe(self, explicit):
         """Separate independent source evidence from recursive closure description.
@@ -530,7 +566,8 @@ class NethraField:
         dt = float(dt)
         if dt <= 0.0:
             raise ValueError("dt must be positive")
-        explicit = frozenset(n for n in self.nethra if n.external != 0.0)
+        source_current = {n: n.external for n in self.nethra if n.external != 0.0}
+        explicit = frozenset(source_current)
         a0 = {n: n.activation for n in self.nethra}
         k1 = self._derivative_at(a0)
         a1 = {n: a0[n] + .5 * dt * k1[n] for n in self.nethra}
@@ -545,6 +582,9 @@ class NethraField:
             old = a0[n]
             n.activation = old + dt * (k1[n] + 2*k2[n] + 2*k3[n] + k4[n]) / 6.0
             delta[n] = n.activation - old
+        self._complete_interval(source_current, delta)
+        # Legacy construction path remains active on this audit branch only so the exact interval
+        # boundary can be tested without conflating the test with a new plasticity law.
         self.observe(explicit)
         for n in self.nethra:
             n.external = 0.0
