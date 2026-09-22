@@ -35,6 +35,15 @@ Reference freeze:
      - Phi weighting ended 88.1 vs 52.5/52.2 nuisance; both recovered the true incidence in all 8 seeds, Phi separated it substantially better.
    - Evidence-update chain rule remains relevant if persistent variable is evidence e rather than conductance g: `dg/de` collapses near conductance saturation, so `Phi*epsilon` cannot be justified as a literal gradient step in e-space.
    - Next formulation must use a consequence quantity valid for every Nethra manifestation (not only external source), and must account for established F61 field contributions including convergence.
+   - Counterfactual local-observability experiment (Fedora runs 35788031717 / 35788148497 / 35788268676):
+     - every physical incidence was replayed under identical inputs at `g+h` and `g-h`; true sensitivity `G=-dE/dg` was compared with local lag features `L_tau=sum Phi(k)*epsilon(k+tau)`;
+     - sweep covered chain/loop/skip topology, depth 1/3/6, source delay 1/3, F61 convergence off/on, source and internal-manifestation objectives, and held-out seeds;
+     - one-step local term over all objectives: corr 0.762, sign agreement 88.6%, median relative error 73.5%;
+     - delay degraded one-step source/local agreement (aggregate corr 0.827 at delay 1 vs 0.680 at delay 3); deeper systems increased magnitude error;
+     - a four-lag diagnostic source kernel fit on seed 0 generalized to seed 1 with corr 0.986, sign 93.8%, median relative error 19.0%;
+     - four-lag source kernel also generalized to held-out structure: loop corr 0.990/sign 95.1%, skip 0.986/93.1%, depth 6 0.990/93.0%, delay 3 0.965/94.5%, convergence-on 0.987/93.0%;
+     - manifestation target did NOT generalize similarly: best simple horizons remained unstable, and the 8-lag held-seed kernel fell to corr 0.676 with median relative error 129%.
+   - Experimental conclusion: short temporal eligibility is strongly supported for predicting external-source consequences under the tested field; this does not resolve the universal arbitrary-Nethra manifestation residual. No identifiability impossibility has been established yet.
 
 3. **Per-incidence evidence — CLOSED: RESTORE**
    - Purpose: persist which members of one arbitrary-arity Nethra actually carry its prospective relation.
