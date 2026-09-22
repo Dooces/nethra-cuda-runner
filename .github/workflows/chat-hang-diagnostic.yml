@@ -1,7 +1,6 @@
 name: Chat hang diagnostic
 
 on:
-  push:
   workflow_dispatch:
 
 jobs:
