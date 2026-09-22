@@ -1,0 +1,25 @@
+name: Nethra node integral cost
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'node_integral_cost_probe.py'
+      - '.github/workflows/nethra-node-integral-cost.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run node integral cost benchmark
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 node_integral_cost_probe.py
