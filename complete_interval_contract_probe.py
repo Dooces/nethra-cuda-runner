@@ -105,11 +105,32 @@ def test_same_source_ids_can_carry_different_continuous_instantiations():
     return (s1[a1],s1[b1],d1[a1],d1[b1]),(s2[a2],s2[b2],d2[a2],d2[b2])
 
 
+
+def test_shadow_boundary_is_filled_by_real_step():
+    f=NethraField()
+    a=f.new(); b=f.new(); r=f.new()
+    f._route(r,(a,b),frozenset(),20)
+
+    a.push(.37)
+    before={n:n.activation for n in f.nethra}
+    returned=f.step(.1)
+
+    assert set(f.current_interval_source)=={a}
+    assert f.current_interval_source[a] == .37
+    assert set(f.current_interval_delta)==set(n for n,v in returned.items() if v != 0.0)
+    for n,v in f.current_interval_delta.items():
+        assert v == returned[n]
+    worst=max(abs((n.activation-f.current_interval_delta.get(n,0.0))-before[n]) for n in f.nethra)
+    assert worst < 1e-15
+    return len(f.current_interval_source),len(f.current_interval_delta),worst
+
+
 def main():
     print("magnitude_preserved",test_magnitude_is_preserved_without_identity_multiplication())
     print("internal_vs_external",test_internal_field_change_is_not_relabelled_external_source())
     print("reconstruction_worst_error",test_before_state_reconstructs_exactly_from_after_minus_delta())
     print("same_ids_different_instantiation",test_same_source_ids_can_carry_different_continuous_instantiations())
+    print("real_step_shadow_boundary",test_shadow_boundary_is_filled_by_real_step())
     print("all_assertions_passed")
 
 
