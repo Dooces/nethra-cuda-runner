@@ -29,7 +29,7 @@ jobs:
         run: |
           set -euxo pipefail
           mkdir -p benchmark-output
-          /usr/bin/python3 bench/emergent_resource_decay.py             --epochs 8             --steps 15000             --out benchmark-output/emergent_resource_decay_results.json             | tee benchmark-output/stdout.txt
+          /usr/bin/python3 bench/emergent_resource_decay.py --epochs 16 --steps 7500 --out benchmark-output/emergent_resource_decay_results.json | tee benchmark-output/stdout.txt
 
       - name: Bundle benchmark receipt
         if: always()
