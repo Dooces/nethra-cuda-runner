@@ -216,6 +216,8 @@ def run_condition(
     feed_rate:float,
     basal_cost:float,
     motor_cost:float,
+    source_x:float,
+    source_y:float,
     steps:int,
     checkpoint_every:int,
     sample_rate:float,
@@ -234,6 +236,8 @@ def run_condition(
         basal_cost=basal_cost,
         motor_cost=motor_cost,
         initial_energy=.60,
+        source_x=source_x,
+        source_y=source_y,
     )
     rng=random.Random(seed^0xBADC0DE)
     babble:set[int]=set()
@@ -366,6 +370,8 @@ def run_condition(
         "seed":seed,
         "use_field_outputs":use_field_outputs,
         "feed_rate":feed_rate,
+        "source_x":source_x,
+        "source_y":source_y,
         "steps":steps,
         "final_energy":world.energy,
         "mean_energy":energy_sum/steps,
@@ -404,6 +410,8 @@ def main():
     ap.add_argument("--field-dt",type=float,default=.1)
     ap.add_argument("--basal-cost",type=float,default=.00042)
     ap.add_argument("--motor-cost",type=float,default=.000055)
+    ap.add_argument("--source-x",type=float,default=.94)
+    ap.add_argument("--source-y",type=float,default=.24)
     ap.add_argument("--seed",type=int,default=22001)
     ap.add_argument("--out",default="feeding-cuda.json")
     args=ap.parse_args()
@@ -432,6 +440,8 @@ def main():
             feed_rate=feed_rate,
             basal_cost=args.basal_cost,
             motor_cost=args.motor_cost,
+            source_x=args.source_x,
+            source_y=args.source_y,
             steps=args.steps,
             checkpoint_every=args.checkpoint_every,
             sample_rate=args.sample_rate,
