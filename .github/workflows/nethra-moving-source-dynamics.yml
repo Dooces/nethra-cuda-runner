@@ -1,0 +1,91 @@
+name: Nethra moving-source dynamics
+
+on:
+  push:
+    branches:
+      - nethra-long-reach-dynamics
+    paths:
+      - '.github/workflows/nethra-moving-source-dynamics.yml'
+
+jobs:
+  moving:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reuse exact primed hand-ball checkpoint
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          rm -rf prior benchmark-output
+          mkdir -p prior benchmark-output
+          gh run download 35686582364 -n nethra-feed-v3-cuda-feeding -D prior
+          tar -xzf prior/nethra-feed-v3-cuda-feeding.tar.gz -C prior
+          cp prior/benchmark-output/base_hand_ball_cuda.json benchmark-output/base_hand_ball_cuda.json
+      - name: Learned and frozen moving-source controls
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd feed_v3
+          env PYTHONPATH=. /usr/bin/python3 run_moving_source_cuda.py \
+            --base ../benchmark-output/base_hand_ball_cuda.json \
+            --seed 26001 --steps 60000 --segment-every 6000 --checkpoint-every 12000 \
+            --out ../benchmark-output/moving-learned.json > ../benchmark-output/moving-learned.txt 2>&1 &
+          p1=$!
+          env PYTHONPATH=. /usr/bin/python3 run_moving_source_cuda.py \
+            --base ../benchmark-output/base_hand_ball_cuda.json \
+            --seed 26001 --steps 60000 --segment-every 6000 --checkpoint-every 60000 \
+            --out ../benchmark-output/moving-frozen.json > ../benchmark-output/moving-frozen.txt 2>&1 &
+          p2=$!
+          wait "$p1"
+          wait "$p2"
+      - name: Summarize
+        shell: bash
+        run: |
+          set -euxo pipefail
+          /usr/bin/python3 - <<'PY'
+          import json
+          L=json.load(open("benchmark-output/moving-learned.json"))
+          F=json.load(open("benchmark-output/moving-frozen.json"))
+          rows=[]
+          for l,f in zip(L["segments"],F["segments"]):
+              rows.append({
+                  "segment":l["segment"],
+                  "position_index":l["position_index"],
+                  "source":l["source"],
+                  "learned_contact":l["contact_fraction"],
+                  "frozen_contact":f["contact_fraction"],
+                  "contact_delta":l["contact_fraction"]-f["contact_fraction"],
+                  "learned_final_energy":l["final_energy"],
+                  "frozen_final_energy":f["final_energy"],
+                  "energy_delta":l["final_energy"]-f["final_energy"],
+              })
+          out={
+              "segments":rows,
+              "learned_final_energy":L["final_energy"],
+              "frozen_final_energy":F["final_energy"],
+              "learned_constructed":L["constructed"],
+              "frozen_constructed":F["constructed"],
+              "learned_checkpoint_created":[x.get("created",0) for x in L["checkpoints"]],
+              "learned_checkpoint_reinforced":[x.get("reinforced",0) for x in L["checkpoints"]],
+          }
+          open("benchmark-output/moving-summary.json","w").write(json.dumps(out,indent=2,sort_keys=True)+"\n")
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
+      - name: Bundle
+        if: always()
+        shell: bash
+        run: tar -czf nethra-moving-source-dynamics.tar.gz benchmark-output feed_v3
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-moving-source-dynamics
+          path: nethra-moving-source-dynamics.tar.gz
+          if-no-files-found: error
+          retention-days: 7
