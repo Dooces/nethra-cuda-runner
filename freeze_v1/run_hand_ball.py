@@ -120,7 +120,10 @@ def lineage(seed:int,hand_epochs:int,ball_epochs:int,steps:int,sample_rate:float
         "hand_epochs":hand_rows,"ball_epochs":ball_rows,
     }
 
-def lineage_job(args):\n    return lineage(*args)\n\ndef main():
+def lineage_job(args):
+    return lineage(*args)
+
+def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--lineages",type=int,default=16)
     ap.add_argument("--workers",type=int,default=16)
