@@ -31,11 +31,11 @@ def make_cloud(*,sample_rate:float,proposal_budget:int,candidate_capacity:int,se
         seed=seed,
     )
 
-def drive_current(obs,babble:set[int])->dict[int,float]:
-    current=sensory_current(obs)
+def grounded_prime(obs,babble:set[int])->dict[int,float]:
+    activation=sensory_current(obs)
     for m in babble:
-        current[m]=current.get(m,0.0)+1.0
-    return current
+        activation[m]=1.0
+    return activation
 
 def field_motor_currents(runtime:CudaFieldRuntime)->dict[int,float]:
     values=runtime.motor_values(MOTOR_COUNT)
@@ -109,8 +109,9 @@ def developmental_epoch(
         motors=field_motor_currents(runtime)
         obs=world.step(motors)
         toggle_babble(babble,rng)
+        runtime.prime(grounded_prime(obs,babble))
         runtime.step(
-            drive_current(obs,babble),
+            {},
             step,
             dt=field_dt,
             return_active=False,
@@ -266,8 +267,9 @@ def run_condition(
 
         obs=world.step(motors)
         toggle_babble(babble,rng)
+        runtime.prime(grounded_prime(obs,babble))
         runtime.step(
-            drive_current(obs,babble),
+            {},
             step,
             dt=field_dt,
             return_active=False,
