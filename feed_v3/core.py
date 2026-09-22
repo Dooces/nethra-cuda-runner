@@ -203,10 +203,20 @@ class ResourceCloud:
 class NethraMemory:
     """One append-only Nethra graph for grounded and constructed Nethra."""
 
-    def __init__(self,grounded_count:int,*,half_life:float=60000.0,tau:float=100.0):
+    def __init__(
+        self,
+        grounded_count:int,
+        *,
+        half_life:float=60000.0,
+        tau:float=100.0,
+        leakage:float=1.0,
+    ):
         self.grounded_count=int(grounded_count)
         self.half_life=float(half_life)
         self.tau=float(tau)
+        self.leakage=float(leakage)
+        if self.leakage<0.0:
+            raise ValueError("leakage must be nonnegative")
         self.nodes:Dict[int,Nethra]={i:Nethra(i) for i in range(self.grounded_count)}
         self.next_nid=self.grounded_count
         self.by_members:Dict[Tuple[int,int],int]={}
@@ -289,28 +299,79 @@ class NethraMemory:
             "total_nethra":len(self.nodes),
         }
 
-    def field(self,externally_active:Mapping[int,float],step:int)->Dict[int,float]:
-        """One local symmetric resonance pass with no node-type branch."""
-        activation={int(nid):float(a) for nid,a in externally_active.items() if float(a)>0.0}
-        touched:set[int]=set()
-        for nid in activation:
-            touched.update(self.index.get(nid,()))
-
-        constructed_activation:Dict[int,float]={}
-        for nid in touched:
-            n=self.nodes[nid]
+    def _neighbors(self,nid:int,step:int):
+        """Yield every symmetric conductive incidence touching one Nethra."""
+        nid=int(nid)
+        n=self.nodes[nid]
+        if n.members:
             g=self.conductance(n,step)
-            incoming=sum(activation.get(member,0.0) for member in n.members)
-            if g>0.0 and incoming>0.0:
-                constructed_activation[nid]=g*incoming
+            if g>0.0:
+                for member in n.members:
+                    yield int(member),g
+        for parent_id in self.index.get(nid,()):
+            parent=self.nodes[parent_id]
+            g=self.conductance(parent,step)
+            if g>0.0:
+                yield int(parent_id),g
 
-        activation.update(constructed_activation)
-        for nid,a in constructed_activation.items():
-            n=self.nodes[nid]
-            g=self.conductance(n,step)
-            for member in n.members:
-                activation[member]=activation.get(member,0.0)+g*a
-        return activation
+    def passive_derivative(
+        self,
+        activation:Mapping[int,float],
+        source_current:Mapping[int,float],
+        step:int,
+    )->Dict[int,float]:
+        """Sparse transcription of J - leakage*a + symmetric incidence current."""
+        active=set(map(int,activation.keys()))|set(map(int,source_current.keys()))
+        nodes=set(active)
+        for nid in tuple(active):
+            for neighbor,_ in self._neighbors(nid,step):
+                nodes.add(neighbor)
+
+        out:Dict[int,float]={}
+        for nid in nodes:
+            a_i=float(activation.get(nid,0.0))
+            current=float(source_current.get(nid,0.0))-self.leakage*a_i
+            for neighbor,g in self._neighbors(nid,step):
+                current+=g*(float(activation.get(neighbor,0.0))-a_i)
+            out[nid]=current
+        return out
+
+    def field_step(
+        self,
+        activation:Mapping[int,float],
+        source_current:Mapping[int,float],
+        step:int,
+        *,
+        dt:float=0.1,
+        execution_epsilon:float=1e-9,
+    )->Dict[int,float]:
+        """Advance the passive Nethra field one interval with a stable local discretization.
+
+        This is the frozen passive field equation with the self/leakage term treated implicitly
+        and neighbor/source current explicitly. It creates no current, no selector, and no node
+        type distinction. Tiny values may be omitted only as execution compression.
+        """
+        if dt<=0.0:
+            raise ValueError("dt must be positive")
+        active=set(map(int,activation.keys()))|set(map(int,source_current.keys()))
+        nodes=set(active)
+        for nid in tuple(active):
+            for neighbor,_ in self._neighbors(nid,step):
+                nodes.add(neighbor)
+
+        new:Dict[int,float]={}
+        for nid in nodes:
+            old=max(0.0,float(activation.get(nid,0.0)))
+            source=max(0.0,float(source_current.get(nid,0.0)))
+            degree=0.0
+            inbound=0.0
+            for neighbor,g in self._neighbors(nid,step):
+                degree+=g
+                inbound+=g*max(0.0,float(activation.get(neighbor,0.0)))
+            value=(old+dt*(source+inbound))/(1.0+dt*(self.leakage+degree))
+            if value>execution_epsilon or source>0.0:
+                new[nid]=value
+        return new
 
     def save(self,path:str|Path,*,step:int,metadata:dict|None=None)->None:
         constructed=[
@@ -328,6 +389,7 @@ class NethraMemory:
             "grounded_count":self.grounded_count,
             "half_life":self.half_life,
             "tau":self.tau,
+            "leakage":self.leakage,
             "next_nid":self.next_nid,
             "step":int(step),
             "constructed":constructed,
@@ -342,7 +404,12 @@ class NethraMemory:
         obj=json.loads(Path(path).read_text())
         if obj.get("schema")!="NETHRA_BOUNDED_V1":
             raise RuntimeError("unsupported checkpoint schema")
-        mem=cls(obj["grounded_count"],half_life=obj["half_life"],tau=obj["tau"])
+        mem=cls(
+            obj["grounded_count"],
+            half_life=obj["half_life"],
+            tau=obj["tau"],
+            leakage=obj.get("leakage",1.0),
+        )
         mem.next_nid=int(obj["next_nid"])
         for row in obj["constructed"]:
             n=Nethra(
