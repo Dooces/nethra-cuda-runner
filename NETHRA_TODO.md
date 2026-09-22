@@ -44,6 +44,19 @@ Reference freeze:
      - four-lag source kernel also generalized to held-out structure: loop corr 0.990/sign 95.1%, skip 0.986/93.1%, depth 6 0.990/93.0%, delay 3 0.965/94.5%, convergence-on 0.987/93.0%;
      - manifestation target did NOT generalize similarly: best simple horizons remained unstable, and the 8-lag held-seed kernel fell to corr 0.676 with median relative error 129%.
    - Experimental conclusion: short temporal eligibility is strongly supported for predicting external-source consequences under the tested field; this does not resolve the universal arbitrary-Nethra manifestation residual. No identifiability impossibility has been established yet.
+   - Native manifestation candidate `M_i = C*Delta a_i + lambda*A_i` was tested directly:
+     - exact identity verified against actual F61 integration: `M = U + Q_conductive + Q_F61`; worst numerical closure error ~1.8e-16;
+     - stationary control: after equilibration `Delta a=0` while `A=0.363636` and `M=0.2`, confirming delta alone can miss sustained field presence;
+     - recursive control: relation Nethra with `U=0` still had `M=0.029319`, exactly equal to internal field drive;
+     - therefore M is a valid native completed-interval descriptor for every Nethra.
+   - However M is NOT yet justified as the prospective residual target:
+     - paired identical-replay comparison against `D=C*Delta a` used the same fields, inputs, conductance perturbations and prior exact internal-drive predictor;
+     - D one-step local observability: corr 0.744, sign 89.4%, median relative error 77.0%;
+     - M one-step local observability: corr -0.202, sign 72.9%, median relative error 80.2%;
+     - held-seed H8: D corr 0.783 / median error 61.8%; M corr 0.745 / median error 74.9%;
+     - held delay-3 H4: D corr 0.538 / median error 81.5%; M corr 0.463 / median error 109.1%;
+     - M did improve some individual structural correlations (e.g. skip/depth/convergence) while reducing sign reliability, so results are mixed rather than a universal improvement.
+   - Decision: retain `A` and `M` as mathematically native observables. Do not freeze `epsilon=M_next-P_prior` as the universal residual. The residual/prediction contract remains open.
 
 3. **Per-incidence evidence — CLOSED: RESTORE**
    - Purpose: persist which members of one arbitrary-arity Nethra actually carry its prospective relation.
