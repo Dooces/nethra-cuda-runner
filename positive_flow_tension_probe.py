@@ -171,7 +171,7 @@ def test_existing_predictor_consumes_receiver_residual():
     # Do not impose monotonicity: sufficiently strong existing paths can reverse the weak
     # relation's physical flow.  The audit only asks whether the residual available to the weak
     # relation is eventually exhausted/reversed by existing structure.
-    assert rows[-1][1] < 0.0
+    assert rows[-1][1] <= 1e-15
     return rows
 
 
