@@ -10,6 +10,7 @@ on:
       - 'field_residual_probe.py'
       - 'all_incidence_residual_probe.py'
       - 'local_incidence_plasticity_probe.py'
+      - 'relation_local_perspective_probe.py'
       - '.github/workflows/nethra-field-tension-probe.yml'
   workflow_dispatch:
 
@@ -35,3 +36,4 @@ jobs:
           PYTHONPATH=. /usr/bin/python3 field_residual_probe.py
           PYTHONPATH=. /usr/bin/python3 all_incidence_residual_probe.py
           PYTHONPATH=. /usr/bin/python3 local_incidence_plasticity_probe.py
+          PYTHONPATH=. /usr/bin/python3 relation_local_perspective_probe.py
