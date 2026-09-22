@@ -580,10 +580,10 @@ class NethraField:
         and exact sparse Nethra activation delta. That boundary is frozen and has no learning
         authority.
 
-        The retained _consider_completed_interval_provisional() path then runs the historical
-        discrete prospective construction machinery for regression comparison. It is explicitly
-        provisional and must not be mistaken for the observation model or for frozen Nethra
-        plasticity. External current is consumed only after both operations complete.
+        _consider_completed_interval_provisional() remains available only for explicit historical
+        regression comparison. step() does not invoke it, so the frozen interval boundary itself
+        has no construction authority. External current is consumed after the exact interval
+        record is stored.
         """
         dt = float(dt)
         if dt <= 0.0:
@@ -606,7 +606,9 @@ class NethraField:
             delta[n] = n.activation - old
 
         self._complete_interval(source_current, delta)
-        self._consider_completed_interval_provisional(explicit)
+
+        # The historical construction path remains manually callable for regression comparison.
+        # It is deliberately not part of live step() because the plasticity law is unresolved.
         for n in self.nethra:
             n.external = 0.0
         return delta
