@@ -5,6 +5,7 @@ import json
 import math
 import os
 import random
+import resource
 import statistics
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -117,6 +118,7 @@ def run_lineage(args):
     if cloud.n:
         mem.checkpoint_from_cloud(cloud,step,persistence_floor)
     elapsed=time.perf_counter()-t0
+    max_rss_mb=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0
     return {
         "seed":seed,"resonance_gain":resonance_gain,"feed_rate":feed_rate,
         "final_energy":world.energy,"mean_energy":energy_sum/steps,"min_energy":min_energy,
@@ -124,7 +126,7 @@ def run_lineage(args):
         "low_fraction":low/steps,"zero_fraction":zero/steps,"recoveries":recoveries,
         "mean_active_motors":motor_sum/steps,"mean_field_motor_mass":field_motor_mass/(steps*MOTOR_COUNT),
         "total_nethra":len(mem.nodes),"constructed":len(mem.nodes)-mem.interface_count,
-        "us_per_step":1e6*elapsed/steps,
+        "us_per_step":1e6*elapsed/steps,"max_rss_mb":max_rss_mb,
     }
 
 
@@ -143,6 +145,8 @@ def summarize(rows):
         "mean_field_motor_mass":statistics.mean(r["mean_field_motor_mass"] for r in rows),
         "us_per_step_mean":statistics.mean(r["us_per_step"] for r in rows),
         "constructed_mean":statistics.mean(r["constructed"] for r in rows),
+        "max_rss_mb_max":max(r["max_rss_mb"] for r in rows),
+        "max_rss_mb_mean":statistics.mean(r["max_rss_mb"] for r in rows),
     }
 
 
