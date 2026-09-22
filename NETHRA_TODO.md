@@ -1,224 +1,339 @@
-# Nethra TODO — 2026-09-22
+# Nethra current status / TODO — 2026-09-22
 
-Reference freeze:
-- `nethra-interval-boundary-frozen`: completed interval stores exact external source current and exact Nethra activation delta. Live `step()` has no automatic provisional learner.
+This file is the current project status. It separates:
+- what is frozen in the one-file core;
+- what has been established experimentally but is not yet installed in that freeze;
+- what has been falsified/rejected;
+- what remains genuinely unresolved.
 
-## Temporal prediction interpretation — CORRECTED
+The temporary/candidate residual mechanism is treated as the intended subtraction-before-construction direction, not as something already implemented successfully.
 
-Lag is an evidence coordinate used to establish that one Nethra manifestation/history prospectively
-predicts another. It is not required to become a literal physical delay parameter in F61.
+## Frozen reference
 
-Once a temporal relation has earned persistent Nethra structure/evidence, ordinary field resonance
-is sufficient to express that learned prospective relation. A current resonance of the learned
-relation can stand for a later consequence; the field is not required to wait the historical lag
-and reenact the environmental sequence autonomously.
+Authoritative frozen field/boundary branch:
+- `nethra-interval-boundary-frozen`
+- head `c7737da52080f87605803bbc6b33d90e48e93591`
 
-The archived temporal work already established:
-- fixed delayed relations at lags 1,2,3,5,8 were prospectively recovered;
-- after qualification, the temporal distinction was crystallized into ordinary Nethra structure;
-- sourcing the earned temporal relation produced a positive F61 consequence preference;
-- the crystallized temporal Nethra could participate recursively in later ordinary relations.
+Frozen persistent ontology:
+- one persistent object type: `Nethra`;
+- no input/relation/perspective/temporal/candidate persistent subtype;
+- arbitrary-size support routes;
+- recursive relations and cycles are allowed;
+- direct self-support is rejected;
+- recursively refound descriptions containing their own target are omitted as tautological rather than registered as new support;
+- longer cycles remain legal.
 
-A later diagnostic showing that lag labels 1/3/5/8 do not change free F61 propagation time answers
-only a different question: the lag label is not itself a physical delay element. That is not a
-failure of predictive resonance and is not an architectural prerequisite unless an autonomous
-generative rollout of elapsed time is explicitly required later.
+Frozen field:
+- symmetric nonnegative incidences;
+- external source current;
+- leakage;
+- bounded evidence -> conductance mapping;
+- F61 conservative convergence redistribution;
+- RK4 integration;
+- learning/construction cannot write activation directly.
 
-Do not reopen "must Y physically appear exactly tau intervals after X under source-free evolution"
-as a prediction requirement. The relevant Nethra question is whether temporal evidence earns a
-relation whose present field resonance prospectively distinguishes the later manifestation.
+Frozen completed-interval boundary:
+- `observe()` is gone;
+- `_complete_interval(source_current, delta)` records exact external-source provenance and exact activation change;
+- it does not discretize, round, classify, compare, construct, estimate probability, fabricate residuals, or alter conductance;
+- live `step()` on the frozen branch does NOT invoke the old learner;
+- `_consider_completed_interval_provisional()` remains only for explicit regression comparison.
 
-## Question separation
+Important implementation distinction:
+- the frozen core currently stores source current + Delta-a only;
+- it does NOT yet store the experimentally established interval integral A_i;
+- it still represents earned route evidence route-wide rather than with the per-incidence evidence that later tests established is required.
 
-Keep these questions distinct, but do not impose a false dependency ordering:
+## Established outside the freeze
 
-1. **Transient description / manifestation:** what finite-interval information is available about one persistent Nethra?
-2. **Adaptive expectation:** when an earned context/refound Nethra occurs, which continuations have survived experience?
-3. **Counterfactual sensitivity:** how would a chosen field objective change under a conductance perturbation?
+### Per-Nethra completed-interval integral
 
-Adaptive expectation does NOT require a privileged or complete manifestation variable first. It only
-requires enough transient description to refind the earned context and register whether an earned
-continuation occurred. Finer manifestation representation remains an independent investigation.
+Established:
+`A_i = integral_interval a_i(t) dt`
 
-Counterfactual `g±delta` remains a diagnostic for sensitivity only; it must not define prediction.
+For conductance fixed during one interval:
+`Phi_ij = A_i - A_j`
+`Q_ij = g_ij * Phi_ij`
 
-### Manifestation audit — current result
+Fedora tests established:
+- reconstructed Q matched directly integrated incidence charge to numerical precision;
+- final activations were unchanged;
+- Python overhead was about 1.9–2.4% in the tested graphs;
+- transient storage is O(N), not O(E).
 
-A scalar manifestation has not been justified.
+Current status:
+- conceptually/experimentally accepted;
+- not yet added to the frozen one-file interval record.
 
-The strongest native completed-interval descriptor currently tested is:
+The strongest low-order completed-interval descriptor currently supported is:
+`X_i = (Delta a_i, A_i)`
 
-`X_i = (Delta a_i, A_i)`, with `A_i = integral a_i dt`.
+Keep external source integral/provenance separate:
+`U_i = integral J_i dt`
 
-Keep `U_i = integral J_i dt` separately as original-source provenance, not folded into manifestation identity.
+`M_i = C*Delta a_i + lambda*A_i` is an exact native derived quantity, but tests did NOT justify using M as the universal prediction/residual target.
 
-Fedora audit run 35790036074 established:
-- prior boundary activation + `Delta a` reconstructs the completed endpoint;
-- neighbor `A` values reconstruct every fixed-conductance incidence potential integral `Phi_ij=A_i-A_j`;
-- therefore every conductive incidence charge reconstructs as `Q_ij=g_ij Phi_ij`;
-- `M_i=C Delta a_i + lambda A_i` reconstructs exactly from X;
-- with separate U and reconstructed conductive Q, total internal non-leak drive and net integrated F61 contribution reconstruct from the field balance;
-- `Delta a` alone collides between zero activity and sustained stationary activation;
-- `A` alone does not determine transition direction/magnitude;
-- `M` alone is a one-scalar projection of two independent native interval coordinates and cannot recover them.
+### Per-incidence persistent evidence
 
-This does NOT yet prove X is a complete lossless description of every within-interval temporal pattern. In particular, nonlinear within-interval interaction details may distinguish trajectories sharing the same A and Delta. That is the next manifestation-specific question.
+Established by graded and recursive-support tests:
+- one arbitrary-arity relation must be able to retain different earned evidence on different relation-member incidences;
+- route-wide evidence loses distinctions that the field can use.
 
-## Dependency chain under investigation
+Closure test:
+- graded true support separated strongly from continuous nuisances only with per-incidence evidence;
+- an already-constructed relation Nethra used as true support also separated from nuisance with per-incidence evidence;
+- route-wide controls could not retain the support distinction.
 
-1. **Interval-integrated local field flow — CLOSED: STORE PER-NETHRA INTEGRAL**
-   - Purpose: retain what each incidence physically carried over a finite interval.
-   - Resolved representation:
-     - store one completed-interval activation integral per Nethra: `A_i = integral a_i dt`;
-     - because conductance is fixed during a completed interval, recover any incidence potential integral as `Phi_ij = A_i - A_j`;
-     - recover existing incidence charge exactly as `Q_ij = g_ij * Phi_ij`.
-   - Fedora verification:
-     - direct integrated edge charge vs reconstructed `g(A_i-A_j)`: worst error ~5.2e-18;
-     - final activations unchanged exactly;
-     - CPU overhead ~1.9–2.4% for 200–4000 edges;
-     - transient storage O(N) activation-integral scalars instead of O(E) edge-flow scalars.
-   - Decision: use per-Nethra interval integrals as the canonical transient representation if/when local field-flow plasticity is promoted. Do not store per-edge integrated flow unless another requirement appears.
+Current status:
+- representation decision CLOSED: restore per-incidence evidence;
+- implementation in the frozen one-file core still pending;
+- the final evidence update law is not frozen.
 
-2. **Local receiver residual / tension — OPEN / REFORMULATED**
-   - Purpose: give each ordinary Nethra a local statistical tension from completed Nethra intervals without a probability ledger.
-   - Earlier positive-flow S-P candidate passed frequency calibration, regime reversal, redundancy suppression and shared-residual tests, but remains a new statistical law.
-   - Residual-squared / conductance-gradient proposal was vetted and is NOT valid as an exact field gradient:
-     - `epsilon * Phi` is only the direct/frozen-trajectory derivative; changing conductance changes the full activation trajectory and all coupled flows;
-     - full finite-difference gradient magnitude differed by ~1.4% to 57% in simple loaded passive tests;
-     - 2500 random passive-network sign tests produced 8 genuine sign mismatches, so the local term is not a guaranteed descent direction;
-     - virtual missing-edge finite-change formula retained ~7.9% first-order error even at delta-g=1e-6 and ~11.1% error at delta-g=.2.
-   - External-source-only residual is NOT universal:
-     - recursive-consequence control: future relation Nethra had external source U=0 but positive delta-a=0.11739; source residual therefore called a real positive manifestation an overprediction.
-   - F61 convergence is omitted by `sum Q`:
-     - test fixture: conductive charge 0.14517, convergence charge 0.07258, so one third of internal receiver drive was absent from the proposed prediction.
-   - Conductance-corrected `Phi` support weighting remains promising:
-     - with true incidence initially weak and nuisance incidences strong, Q weighting ended mean evidence 70.8 vs 60.9/60.6 nuisance;
-     - Phi weighting ended 88.1 vs 52.5/52.2 nuisance; both recovered the true incidence in all 8 seeds, Phi separated it substantially better.
-   - Evidence-update chain rule remains relevant if persistent variable is evidence e rather than conductance g: `dg/de` collapses near conductance saturation, so `Phi*epsilon` cannot be justified as a literal gradient step in e-space.
-   - Next formulation must use a consequence quantity valid for every Nethra manifestation (not only external source), and must account for established F61 field contributions including convergence.
-   - Counterfactual local-observability experiment (Fedora runs 35788031717 / 35788148497 / 35788268676):
-     - every physical incidence was replayed under identical inputs at `g+h` and `g-h`; true sensitivity `G=-dE/dg` was compared with local lag features `L_tau=sum Phi(k)*epsilon(k+tau)`;
-     - sweep covered chain/loop/skip topology, depth 1/3/6, source delay 1/3, F61 convergence off/on, source and internal-manifestation objectives, and held-out seeds;
-     - one-step local term over all objectives: corr 0.762, sign agreement 88.6%, median relative error 73.5%;
-     - delay degraded one-step source/local agreement (aggregate corr 0.827 at delay 1 vs 0.680 at delay 3); deeper systems increased magnitude error;
-     - a four-lag diagnostic source kernel fit on seed 0 generalized to seed 1 with corr 0.986, sign 93.8%, median relative error 19.0%;
-     - four-lag source kernel also generalized to held-out structure: loop corr 0.990/sign 95.1%, skip 0.986/93.1%, depth 6 0.990/93.0%, delay 3 0.965/94.5%, convergence-on 0.987/93.0%;
-     - manifestation target did NOT generalize similarly: best simple horizons remained unstable, and the 8-lag held-seed kernel fell to corr 0.676 with median relative error 129%.
-   - Experimental conclusion: short temporal eligibility is strongly supported for predicting external-source consequences under the tested field; this does not resolve the universal arbitrary-Nethra manifestation residual. No identifiability impossibility has been established yet.
-   - Native manifestation candidate `M_i = C*Delta a_i + lambda*A_i` was tested directly:
-     - exact identity verified against actual F61 integration: `M = U + Q_conductive + Q_F61`; worst numerical closure error ~1.8e-16;
-     - stationary control: after equilibration `Delta a=0` while `A=0.363636` and `M=0.2`, confirming delta alone can miss sustained field presence;
-     - recursive control: relation Nethra with `U=0` still had `M=0.029319`, exactly equal to internal field drive;
-     - therefore M is a valid native completed-interval descriptor for every Nethra.
-   - However M is NOT yet justified as the prospective residual target:
-     - paired identical-replay comparison against `D=C*Delta a` used the same fields, inputs, conductance perturbations and prior exact internal-drive predictor;
-     - D one-step local observability: corr 0.744, sign 89.4%, median relative error 77.0%;
-     - M one-step local observability: corr -0.202, sign 72.9%, median relative error 80.2%;
-     - held-seed H8: D corr 0.783 / median error 61.8%; M corr 0.745 / median error 74.9%;
-     - held delay-3 H4: D corr 0.538 / median error 81.5%; M corr 0.463 / median error 109.1%;
-     - M did improve some individual structural correlations (e.g. skip/depth/convergence) while reducing sign reliability, so results are mixed rather than a universal improvement.
-   - Decision: retain `A` and `M` as mathematically native observables. Do not freeze `epsilon=M_next-P_prior` as the universal residual. The residual/prediction contract remains open.
+### Recursive ordinary-Nethra structure
 
-3. **Per-incidence evidence — CLOSED: RESTORE**
-   - Purpose: persist which members of one arbitrary-arity Nethra actually carry its prospective relation.
-   - Historical precedent: V56 stored relation-member incidence evidence independently; one-file route-wide evidence collapsed this.
-   - Closure test passed on Fedora (run 35784621800):
-     - graded continuous support: true A mean evidence 64.4375; nuisance B/C 0.000393 / 0.002088; A prospective response 0.008250 vs ~0.002208 nuisance;
-     - recursive Nethra support: true supporting Nethra mean evidence 48.4446; nuisance B/C 10.6302 / 10.0116; true-support response 0.006103 vs 0.003793 / 0.003714;
-     - route-wide controls could not store any context-member distinction under either environment.
-   - Decision: persistent evidence must be available per relation-member incidence. Route-wide evidence is an information-losing simplification and should be removed when the live plasticity path is rebuilt.
-   - This closes the representation question only; the final local evidence-update law remains coupled to TODO #2.
+Established:
+- relation Nethra can participate in later relations without changing object type;
+- recursive closure/refinding works;
+- canonical reuse fixed the old duplicate-description blow-up in persistent structure;
+- ablation tests showed learned recursive layers were behaviorally/field necessary, not unused descriptive handles.
 
-4. **Whole-support recruitment**
-   - Purpose: let an existing Nethra add missing source support without subset search.
-   - Candidate rule: when its current perspective receives positive tension, add the whole independently sourced preceding support as weak incidences; do not choose a subset.
-   - Established so far: missing true A and nuisance D were both recruited; incidence-local credit later made A strong and D weak.
-   - Status: OPEN; requires larger nuisance/recursive tests.
+Archived V74 frozen result reached literal relation depth 10 in three worlds.
+Later relation-depth stress reached 12.
+V68 closure sizes of 49, 58 and 67 are active closure sizes, not literal relation depth 49/58/67.
 
-5. **Construction bootstrap**
-   - Question: when no relevant Nethra exists, what earns the first weak whole-event Nethra without a candidate scanner or consequence chooser?
-   - Status: OPEN / BLOCKING FULL PLASTICITY.
+### Temporal prospective relations
 
-6. **F61 own residual**
-   - Tension histories correctly make exact duplicates non-independent, but shared receiver coupling gave only partial independence for alternating predictors.
-   - Status: OPEN; do not equate tension with F61 epsilon yet.
+Established:
+- delayed prospective relations at lags 1,2,3,5,8 were recovered in the archived temporal work;
+- after qualification, temporal distinction crystallized into ordinary Nethra structure;
+- the earned temporal Nethra could participate recursively;
+- sourcing/refinding the earned temporal relation produced consequence preference through ordinary field resonance.
 
-7. **Duplicate consolidation / sleep**
-   - Existing policy: preserve ambiguity online; journal for later consolidation tests.
-   - Status: DEFERRED. No current need to merge.
+Correct interpretation:
+- lag is evidence used to establish the relation;
+- lag is not required to become a literal propagation-delay parameter in F61;
+- prediction does not require source-free reenactment of the original elapsed time.
 
-## Rejected / closed paths
+### Adaptive expectation capability
 
-- Dynamic external resolution/range chooser: REJECTED as outside learner machinery.
-- Exact continuous matching: REJECTED as unnecessary and recurrence-fragmenting.
-- Greedy binary range refinement: REJECTED; cancellation hides deeper structure.
-- Clamped observation boundary as literal prediction-error current: REJECTED; added conductive loading defeated the proposed interpretation.
-- Direct `p * epsilon` update using endpoint branch current: REJECTED; failed simplest frequency-order test.
-- Residual-squared proposal as exact physical/field energy gradient: REJECTED AS STATED; squared source-charge residual is a statistical loss, `epsilon*Phi` omits trajectory sensitivity, and source-only consequences break recursive Nethra.
-- External-source-only consequence residual `U_next - P_prior`: REJECTED as a universal Nethra consequence measure.
-- Per-edge integrated-flow storage: SUPERSEDED by per-Nethra activation integrals `A_i`, from which `Phi` and `Q` reconstruct exactly during fixed-conductance intervals.
-- Global automatic `history_count/support_count/outcome_count/conditional/baseline` authority in live step: REMOVED FROM LIVE PATH; retained only for explicit regression comparison.
+A shadow test with an already-earned context Nethra R and already-available continuation relations established:
+- persistent evidence -> conductance -> field resonance is sufficient to adapt expectation;
+- repeated B increased B evidence and later B resonance;
+- one contradictory D did not erase the established B relation;
+- sustained D evidence eventually reversed the field preference;
+- alternating B/D remained ambiguous rather than forcing a winner;
+- no conditional-probability or marginal-baseline table was needed.
 
-## Blocking / shared-residual analogy — VETTED, NETHRA FORMULATION OPEN
+Important limit:
+- the test was GIVEN which continuation occurred and applied signed +1/-1 evidence;
+- it does NOT establish the Nethra-native mechanism that generates that signed update;
+- established Nethra do not need a semantic operation that "registers agreement/disagreement."
 
-Behavioral literature:
-- Kamin blocking supports the empirical invariant that a continuation already well predicted by established cues produces much less learning about an added cue.
-- Blocking alone does not uniquely establish one error-correction mechanism; attentional/comparator alternatives exist.
-- Overexpectation provides a stronger shared-expectation control: separately established predictors compounded together can produce reduced responding when aggregate expectation exceeds the delivered outcome.
-- Extinction supplies the corresponding negative-expectation-error case, while recovery phenomena show that simple associative-strength erasure is not a complete model.
+### Whole-support recruitment
 
-Nethra-specific field test (Fedora run 35793479391):
-- no conventional `sum x*v` expectation was implemented;
-- after a context interval, expectation was read by continuing the SAME field for the next interval with no new source;
-- next manifestation was measured as the additional Nethra response caused by the actual new source pattern relative to that exact source-free continuation;
-- shared residual was `manifestation - field expectation`.
+Shadow tests established a useful feasibility result:
+- an existing relation missing true support A could weakly recruit the entire independently sourced support;
+- this also recruited irrelevant D;
+- subsequent incidence-local credit made A strong and D weak;
+- no subset enumeration was required.
 
-Results:
-- established A->B: residual +0.003672;
-- established A plus incidental X -> B: same +0.003672 (blocking condition did not reopen residual);
-- weak A->B control: +0.091054;
-- separately established A->B or C->B alone: +0.005590 each;
-- compounded A+C -> B: -0.045802 (overexpectation);
-- extinction A -> no B: -0.070261;
-- unexpected D after A: B residual -0.070261, D residual +0.100775;
-- recursive future relation Nethra with no direct external source still produced positive manifestation under newly sourced members, so this paired field measure avoids the source-only residual failure. Residual magnitude was not fully calibrated by one saturated predictor path, so universal normalization remains open.
+Important limit:
+- those tests used a provisional local tension/credit law;
+- therefore whole-support recruitment is supported as a construction/refinement pattern, not frozen as live plasticity.
 
-F61 aggregate expectation control (Fedora run 35793616900):
-- one established predictor: expected B 0.070261;
-- two predictors with duplicate/correlated histories: 0.102783;
-- same topology with independent histories: 0.111074;
-- F61 therefore modulates aggregate expectation from the field itself: independent convergent predictors add the established convergence bonus while duplicate histories do not;
-- ordinary conductive combination still sums duplicate paths, so F61 reduces extra convergence rather than erasing duplicate topology.
+### F61 convergence / independence
 
-Interpretation:
-- the experimental invariant "existing expectation consumes already-accounted evidence" is strongly relevant to Nethra;
-- do not import Rescorla-Wagner's `sum x*v` as the Nethra expectation operator;
-- the field itself is now the leading candidate for `F`: evidence -> conductance -> ordinary resonance + F61 convergence -> prospective activation;
-- the paired source/no-source replay is an exact diagnostic counterfactual using the same field, but it costs an extra integration and is not yet frozen as the live agreement-registration mechanism;
-- the update magnitude/normalization remains open. The existing signed-agreement probe only established that per-incidence +success/-known-failure evidence is sufficient once occurrence/agreement is already identified.
+Established field behavior:
+- simultaneous positive suppliers can receive a conservative convergence redistribution;
+- pair-history independence modulates the extra convergence term;
+- duplicate/correlated histories do not receive the same extra convergence bonus as independent histories;
+- convergence is real field drive and cannot be omitted from field accounting.
 
-## Current task
+Still unresolved:
+- what native quantity should supply/update F61's own residual trace rho in the rebuilt learning path;
+- do not identify the candidate residual below with F61 epsilon/rho without a separate derivation/test.
 
-**Current target: adaptive expectation / agreement registration.**
+## Intended subtraction-before-construction mechanism
 
-Minimal signed-agreement loop passed on Fedora run `35792821094`:
-- fixture used an already-earned context Nethra R and ordinary continuation relations to B/D;
-- persistent continuation evidence alone was updated: observed continuation +1, already-known unobserved continuations -1 with floor 0;
-- no probability table, marginal baseline, counterfactual gradient, target ranking, or autonomous delay replay was used;
-- R was sourced at expectation time while B/D received no external source, so continuation activation was field resonance only.
+This is the conceptual mechanism to implement/test accurately.
 
-Measured:
-- repeated B: evidence 1 -> 120 raised B activation 0.00757 -> 0.02984 monotonically;
-- after 120 B successes, one D gave B evidence 119 / D evidence 1 and field expectation B 0.02459 vs D 0.00627;
-- sustained reversal crossed D over B after 60 further D outcomes; by 120, B evidence reached 0 and D evidence 121;
-- perfectly alternating B/D from scratch left only the one-event recency asymmetry (evidence 0 vs 1), with nearly equal field expectation 0.00594 vs 0.00629.
+Existing persistent Nethra get first opportunity to refind/close/account for what is already represented.
 
-Conclusion:
-- the conceptual loop `experience -> evidence -> conductance -> resonance -> expectation -> agreement/failure -> evidence` is sufficient to produce adaptive expectation in the tested field;
-- a probability table is not required for this capability;
-- the exact magnitude/normalization/decay form of signed agreement is NOT frozen by this test;
-- construction/refinement remains separate: this probe assumes R already exists and creates a weak competing continuation when first observed.
+A temporary/unmaterialized candidate is allowed to carry the still-unaccounted prospective difference.
 
-Next question is narrow: derive/register the signed agreement from Nethra's own completed intervals without reintroducing the old probability ledger.
+Its residual keeps that candidate primed across relevant completed intervals.
 
-The independent manifestation-collision audit remains open but is not a blocker for adaptive expectation.
+As existing structure accounts for part of the recurrence, that accounted component is subtracted from what remains attributable to the temporary candidate.
+
+Whatever remains unresolved stays attributable to the difference.
+
+If the unresolved structure recurs prospectively, the temporary candidate can acquire per-incidence evidence and eventually crystallize as an ordinary persistent Nethra.
+
+Once persistent structure accounts for the recurrence, the temporary residual should collapse and should not create another redundant Nethra.
+
+The resulting recursive pattern is:
+`unresolved residual -> temporary candidate -> earned Nethra -> ordinary resonance/refinding -> later unresolved residual -> ...`
+
+Important status:
+- this is the intended mechanism;
+- older V52/L77-style temporary candidates and gain tests are evidence that temporary testing/crystallization can work, but those implementations used external statistical qualification machinery;
+- the current one-file frozen core does NOT yet implement a clean residual-bearing temporary candidate;
+- therefore do not describe this carrier as already solved.
+
+## What subtraction must preserve
+
+The rebuilt mechanism must preserve all of these established constraints:
+- complete existing-structure closure/refinding before construction;
+- original-source provenance remains distinct from recursively manifested/refound Nethra;
+- no candidate may influence behavior as persistent topology before crystallization;
+- no subset scanner;
+- no consequence chooser supplied by an evaluator;
+- no conditional/marginal probability ledger;
+- no semantic type for candidate/relation/input/perspective;
+- no forced winner when multiple continuations remain supported;
+- no hard gate that disconnects weak structure;
+- cycles remain allowed;
+- per-incidence evidence, once earned;
+- graded/continuous interval information must not be collapsed to binary membership merely to make matching easy.
+
+## Continuous precision / transient manifestation
+
+This remains genuinely open and is coupled to the residual-bearing temporary candidate.
+
+Established:
+- exact continuous-value matching fragments recurrence and is not acceptable as the general solution;
+- dynamic external range/resolution selection was rejected as outside learner machinery;
+- greedy binary refinement was rejected;
+- fixed rounding may be an engineering precision limit, but it is not a Nethra-native solution;
+- signed participation/state was historically necessary for temporal distinctions; collapsing transient state to bare IDs destroyed them;
+- Delta-a alone loses sustained stationary manifestation;
+- A alone loses endpoint change;
+- `(Delta a, A)` is the strongest low-order native descriptor currently established.
+
+Still open:
+- how a temporary candidate retains/reuses graded residual structure without exact-float identity;
+- whether the candidate/field itself naturally controls effective precision;
+- whether a higher-order within-interval temporal coordinate is needed beyond `(Delta a, A)`.
+
+Do not install a matcher, clustering layer, adaptive quantizer or semantic precision policy to close this gap.
+
+## Structural subtraction already present as regression evidence
+
+The old/provisional one-file learner contains `_accounted(before, after)`:
+- it checks existing persistent Nethra before minting another handle;
+- it is a useful regression embodiment of "existing structure first";
+- it is NOT the live solution because its before/after descriptions come from the provisional discrete event/probability path.
+
+Likewise, archived gain/subset work demonstrated why proper-substructure subtraction matters, but the count/probability machinery is no longer accepted as the live implementation.
+
+## Diagnostic work that remains useful but is not the mechanism
+
+Keep these results as falsification/audit evidence:
+- source-only residual `U_next - P_prior` is not universal because a relation Nethra can manifest internally with U=0;
+- `epsilon*Phi` is not the exact full-field conductance gradient;
+- residual-squared "energy" interpretation was not justified;
+- clamped observation boundary produced loading artifacts;
+- source-free replay/blocking/overexpectation probes demonstrate desirable subtraction behavior but are evaluator diagnostics, not the live residual carrier;
+- counterfactual g+/-delta replay is a sensitivity audit only;
+- `M=C*Delta a+lambda*A` is native but not established as a universal residual target;
+- a short local temporal history can approximate some external-source sensitivity, but this does not define Nethra learning.
+
+## Current unresolved implementation work
+
+### Residual-bearing temporary candidate
+
+Implement/test the temporary candidate so that:
+- it is transient, not a second persistent ontology;
+- it carries the unresolved prospective difference after existing Nethra subtraction;
+- it can remain primed across intervals;
+- accounted components actually reduce its residual;
+- the remaining residual is what receives attribution to newly differing support;
+- it can crystallize into an ordinary Nethra only after recurrent prospective support;
+- once crystallized/accounted, repeated identical experience does not mint another relation.
+
+No existing test currently proves all of this in the one-file/F61 core.
+
+### Per-incidence evidence in the live core
+
+Move the already-established representation into the rebuilt learning path:
+- persistent strength must be relation-member/incidence local;
+- keep symmetric field incidence;
+- do not turn incidence evidence into semantic member roles.
+
+### Whole-support recruitment under the real residual carrier
+
+Retest the successful whole-support idea using the actual candidate residual:
+- recruit whole independently sourced support weakly;
+- allow nuisance support to enter;
+- let per-incidence evidence determine what persists;
+- no subset enumeration.
+
+### Construction bootstrap
+
+The first unresolved relation must become testable without:
+- external Candidate/ResourceCloud machinery;
+- pair manufacture;
+- exhaustive subset enumeration;
+- an externally chosen consequence;
+- conditional-probability qualification.
+
+This may be the same problem as creating the first residual-bearing temporary candidate from a completed interval. Do not split it into a separate learner unless the field forces that conclusion.
+
+### F61 residual trace source
+
+Keep F61 rho/convergence intact.
+Determine later whether the rebuilt candidate/residual dynamics supply a native epsilon for rho.
+Do not make rho define the candidate residual merely because the names are similar.
+
+### Precision
+
+Once the temporary candidate exists, stress it with:
+- continuous graded input;
+- nearby values;
+- nuisance noise;
+- recursive relation support;
+- changing regimes.
+
+Only then decide whether any explicit finite precision is still necessary.
+
+## Deferred
+
+Duplicate consolidation / sleep:
+- preserve ambiguity online;
+- no automatic merge/delete/rank;
+- sleep/offline consolidation remains a later optional concern.
+
+Decay:
+- still not frozen in the live one-file core;
+- only add a decay/competition law after the residual-bearing candidate/evidence update is clear enough to test without hiding mistakes.
+
+## Rejected shortcuts
+
+Do not reintroduce:
+- Candidate/ResourceCloud as an independent learner substrate;
+- direct pair-Nethra manufacture;
+- binary source-presence residual as universal evidence;
+- `history_count/support_count/outcome_count/conditional/baseline` as live authority;
+- external adaptive precision/range chooser;
+- exact-float recurrence keys;
+- primitive-leaf flattening as universal evidence identity;
+- raw activation ranking as a safe construction frontier;
+- stop-at-first-gain-failure search;
+- source-free autonomous lag reenactment as a requirement for prediction;
+- semantic input/output/relation/temporal/perspective Nethra subtypes;
+- external Rescorla-Wagner-style expectation/error as the Nethra mechanism.
+
+## Immediate test target
+
+Build the smallest faithful live test around the temporary candidate, not around an externally computed error:
+
+1. establish an ordinary predictive relation through repeated experience;
+2. present the same completed relation again and verify existing closure/subtraction leaves negligible candidate residual;
+3. add an irrelevant X while the consequence is already accounted for and verify X does not acquire durable consequence evidence from the accounted component;
+4. change the continuation so a genuine residual remains and verify the temporary candidate stays primed;
+5. repeat that changed continuation and verify only the unresolved per-incidence support accumulates;
+6. crystallize the candidate into an ordinary Nethra and verify it enters the same symmetric field;
+7. repeat recursively with that new Nethra as support/consequence;
+8. run graded/noisy versions without binary event projection.
+
+The experiment must expose the candidate/residual directly. A test that computes the desired answer externally and then updates evidence is not sufficient.
