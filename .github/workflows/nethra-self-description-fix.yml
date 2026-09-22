@@ -1,0 +1,31 @@
+name: Nethra self-description fix
+
+on:
+  push:
+    branches:
+      - nethra-self-description-fix
+    paths:
+      - 'nethra.py'
+      - 'test_self_description_provenance.py'
+      - '.github/workflows/nethra-self-description-fix.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+      - name: Run provenance regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/python3 -m unittest -v test_self_description_provenance.py
