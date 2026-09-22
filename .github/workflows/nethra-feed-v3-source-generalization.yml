@@ -37,7 +37,23 @@ jobs:
           set -euxo pipefail
           mkdir -p benchmark-output/generalization
           cd feed_v3
-          ulimit -v 4194304
+          run_capped() {
+            "$@" &
+            pid=$!
+            while kill -0 "$pid" 2>/dev/null; do
+              rss_kb=$(awk '/VmRSS:/ {print $2}' "/proc/$pid/status" 2>/dev/null || echo 0)
+              if [ "${rss_kb:-0}" -gt 4194304 ]; then
+                echo "RSS safety limit exceeded: ${rss_kb} KiB" >&2
+                kill -TERM "$pid" 2>/dev/null || true
+                sleep 1
+                kill -KILL "$pid" 2>/dev/null || true
+                wait "$pid" || true
+                return 99
+              fi
+              sleep 1
+            done
+            wait "$pid"
+          }
           positions=(
             "center 0.94 0.24"
             "left 0.72 0.22"
@@ -49,7 +65,7 @@ jobs:
             for seed in "${seeds[@]}"; do
               out="../benchmark-output/generalization/${label}-${seed}.json"
               echo "=== $label seed=$seed source=($sx,$sy) ==="
-              env PYTHONPATH=. /usr/bin/python3 run_feeding_cuda.py \
+              run_capped env PYTHONPATH=. /usr/bin/python3 run_feeding_cuda.py \
                 --base ../benchmark-output/base_hand_ball_cuda.json \
                 --steps 12000 \
                 --checkpoint-every 12000 \
