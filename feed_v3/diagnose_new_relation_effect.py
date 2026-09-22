@@ -78,7 +78,9 @@ samples=[]
 for i in range(POST):
     ml=field_motor_currents(learned)
     mf=field_motor_currents(frozen)
-    delta=np.abs(ml-mf)
+    vl=np.asarray([ml.get(m,0.0) for m in range(MOTOR_COUNT)],dtype=float)
+    vf=np.asarray([mf.get(m,0.0) for m in range(MOTOR_COUNT)],dtype=float)
+    delta=np.abs(vl-vf)
     md=float(delta.max()) if delta.size else 0.0
     max_abs=max(max_abs,md); sum_abs+=float(delta.sum())
     if first_gt is None and md>1e-9: first_gt=i+1
