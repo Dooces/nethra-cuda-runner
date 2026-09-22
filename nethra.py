@@ -210,8 +210,14 @@ class NethraField:
         key = (before, after)
         existing = self.history_relation.get(key)
         if existing is not None:
-            self._route(existing, left, self._project(before, left), evidence)
-            self._route(existing, right, self._project(after, right), evidence)
+            # A manifestation containing its own target is tautological evidence: closure may
+            # contain the target precisely because this already-earned Nethra refound itself.
+            # Historical L77/L78 omitted such self-containing descriptions entirely rather than
+            # stripping the target and treating the remainder as independent support.
+            if existing not in left:
+                self._route(existing, left, self._project(before, left), evidence)
+            if existing not in right:
+                self._route(existing, right, self._project(after, right), evidence)
             return existing
 
         accounted = self._accounted(before, after)
