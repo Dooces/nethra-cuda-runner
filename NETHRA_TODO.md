@@ -3,45 +3,30 @@
 Reference freeze:
 - `nethra-interval-boundary-frozen`: completed interval stores exact external source current and exact Nethra activation delta. Live `step()` has no automatic provisional learner.
 
-## Autonomous temporal expression audit — CLOSED RESULT
+## Temporal prediction interpretation — CORRECTED
 
-Fedora run `35791872891` tested the old crystallized temporal graph with the temporal provenance
-transducer removed at probe time.
+Lag is an evidence coordinate used to establish that one Nethra manifestation/history prospectively
+predicts another. It is not required to become a literal physical delay parameter in F61.
 
-Archived crystallization contract:
-- source context `R_Q={A,B}`;
-- lag coordinate `delta_t[tau]` is an ordinary Nethra;
-- temporal Nethra `T_tau={R_Q,delta_t[tau]}`;
-- perspective relation `{T_tau,Y}`;
-- learned high perspective applicability requires current support containing `T_tau`.
+Once a temporal relation has earned persistent Nethra structure/evidence, ordinary field resonance
+is sufficient to express that learned prospective relation. A current resonance of the learned
+relation can stand for a later consequence; the field is not required to wait the historical lag
+and reenact the environmental sequence autonomously.
 
-Probe:
-- crystallized lag labels 1,3,5,8;
-- source only X={A,B} for a finite pulse;
-- remove all external source afterward, including Y and temporal provenance;
-- evolve unchanged symmetric F61 field;
-- compare complete Y trajectories;
-- manual direct-T source retained as positive control.
+The archived temporal work already established:
+- fixed delayed relations at lags 1,2,3,5,8 were prospectively recovered;
+- after qualification, the temporal distinction was crystallized into ordinary Nethra structure;
+- sourcing the earned temporal relation produced a positive F61 consequence preference;
+- the crystallized temporal Nethra could participate recursively in later ordinary relations.
 
-Results:
-- manual T-source learned control reproduced the old field margin: Y=0.0340340100 vs unlearned
-  Y=0.0013145613;
-- autonomous X-only Y peak time was 2.75 field-time for lag 1,3,5,8;
-- max Y-curve difference between lag-1 and lag-3/5/8 = exactly 0.0;
-- learned-vs-unlearned autonomous X-only Y-curve difference = exactly 0.0 for every lag.
+A later diagnostic showing that lag labels 1/3/5/8 do not change free F61 propagation time answers
+only a different question: the lag label is not itself a physical delay element. That is not a
+failure of predictive resonance and is not an architectural prerequisite unless an autonomous
+generative rollout of elapsed time is explicitly required later.
 
-Conclusion:
-- old temporal evidence + crystallized topology could recognize/store a lagged statistical fact and
-  could influence F61 when the temporal handle was externally re-presented;
-- the learned lag value was NOT encoded as autonomous field dynamics;
-- X-only field evolution contains generic diffusion/persistence, but its timing does not depend on
-  the learned lag;
-- therefore the old temporal provenance layer supplied the learned timing at runtime.
-
-Do not cite the old temporal crystallization as proof that learned delay itself is a field predictor.
-The unresolved architectural seam is now explicit: if Nethra is to predict delayed manifestation
-autonomously, learned temporal evidence must alter ordinary Nethra dynamics/topology in a way whose
-free evolution actually carries that learned temporal relation. No replacement mechanism is frozen.
+Do not reopen "must Y physically appear exactly tau intervals after X under source-free evolution"
+as a prediction requirement. The relevant Nethra question is whether temporal evidence earns a
+relation whose present field resonance prospectively distinguishes the later manifestation.
 
 ## Ordering discipline
 
