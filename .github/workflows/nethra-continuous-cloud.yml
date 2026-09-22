@@ -1,0 +1,45 @@
+name: Nethra continuous-cloud persistence
+
+on:
+  push:
+    paths:
+      - 'bench/continuous_cloud_persistence.py'
+      - '.github/workflows/nethra-continuous-cloud.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          uname -a
+          nvidia-smi || true
+      - name: Run continuous-cloud benchmark
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          /usr/bin/python3 bench/continuous_cloud_persistence.py --total 120000 --out benchmark-output/continuous_cloud_persistence.json | tee benchmark-output/stdout.txt
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cp bench/continuous_cloud_persistence.py benchmark-output/
+          sha256sum bench/continuous_cloud_persistence.py > benchmark-output/source.sha256
+          tar -czf nethra-continuous-cloud.tar.gz benchmark-output
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-continuous-cloud
+          path: nethra-continuous-cloud.tar.gz
+          if-no-files-found: error
+          retention-days: 7
