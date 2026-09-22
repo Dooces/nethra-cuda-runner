@@ -15,6 +15,28 @@ from feed_world import EnergyHandBallWorld
 from world import BASE_COUNT, MOTOR_COUNT, HandBallWorld, support
 
 
+class MotorResonanceIndex:
+    """Execution-only cache of exact one-hop resonance terms that can reach output wires."""
+
+    def __init__(self, mem: NethraMemory):
+        self.by_source = {}
+        for rel in mem.by_nid.values():
+            a, b = rel.a, rel.b
+            if a < MOTOR_COUNT:
+                self.by_source.setdefault(b, []).append((a, rel))
+            if b < MOTOR_COUNT:
+                self.by_source.setdefault(a, []).append((b, rel))
+
+    def scores(self, mem: NethraMemory, active, step: int):
+        out = {}
+        for x in active:
+            for motor, rel in self.by_source.get(int(x), ()):
+                g = mem.conductance(rel, step)
+                if g > 0.0:
+                    out[motor] = out.get(motor, 0.0) + g
+        return out
+
+
 def random_epoch(world, mem, active, rng, *, seed, steps, step0, sample_rate, persistence_floor):
     cloud = ResourceCloud(sample_rate, seed)
     prev = None
@@ -69,6 +91,7 @@ def feeding_lineage(args):
     explore = set()
     prev = None
     cloud = ResourceCloud(sample_rate, seed ^ 0x55AA)
+    motor_index = MotorResonanceIndex(mem)
     step = base_step
 
     energy_sum = 0.0
@@ -97,7 +120,7 @@ def feeding_lineage(args):
 
         motors = set(explore)
         if resonance_enabled and prev is not None:
-            scores = mem.resonance(prev, step)
+            scores = motor_index.scores(mem, prev, step)
             for m in range(MOTOR_COUNT):
                 s = scores.get(m, 0.0)
                 resonance_motor_sum += s
@@ -137,6 +160,7 @@ def feeding_lineage(args):
         if (i + 1) % checkpoint_every == 0:
             cp = mem.checkpoint_from_cloud(cloud, step, persistence_floor)
             checkpoints.append(cp)
+            motor_index = MotorResonanceIndex(mem)
             cloud = ResourceCloud(sample_rate, seed ^ (0x55AA + i + 1))
 
     if current_contact_run:
