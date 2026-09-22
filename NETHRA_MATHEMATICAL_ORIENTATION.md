@@ -37,18 +37,31 @@ Established:
 
 NOT established:
 - X is a complete description of arbitrary within-interval chronology.
-- X is predictively sufficient.
-- X is sufficient for causal sensitivity.
+- X is sufficient for every future refinement question.
 
-Those are different questions.
+This does NOT block adaptive expectation. If an existing relation can already be refound and a later
+continuation can be registered, that is sufficient to update empirical support.
 
-### C. Prediction / predictive state
-Only after manifestation is defined do we ask:
-    which past manifestation/history distinctions alter future manifestation distributions?
+### C. Adaptive expectation / predictive relation
+The immediate learning question is:
+    when an earned relation R refounds, what continuation has worked here before,
+    and did that continuation occur again?
 
-Systems theory language: a predictive state is a sufficient statistic of history for future
-behavior.  This is where equivalence of histories belongs.  It does NOT belong in the definition
-of manifestation itself.
+This does not require proving a privileged causal/statistical relation or comparing against marginals.
+A temporal lag may be part of the experience used to qualify the relation. Once earned, present
+resonance of that learned relation can prime a continuation.
+
+Persistent evidence may therefore summarize success/failure history directly:
+    experience -> evidence -> conductance -> resonance -> expectation.
+
+Ambiguity is not a failure:
+- if R repeatedly precedes B, B becomes strongly expected;
+- if R sometimes precedes D, D becomes a competing continuation;
+- if additional existing context distinguishes the cases, refinement can form;
+- if nothing distinguishes them, both continuations remain uncertain/ambiguous.
+
+A complete predictive-state representation is a stronger mathematical question and should not be
+silently imposed as a prerequisite for this empirical learning loop.
 
 Nethra consequence:
 - construction/reuse should ultimately be justified by prospectively different histories;
