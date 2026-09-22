@@ -10,12 +10,13 @@ def rss_mb()->float:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0
 
 def main():
-    mem=NethraMemory(GROUNDED_COUNT)
+    mem=NethraMemory(GROUNDED_COUNT,leakage=1.0)
     target=400000
     created=0
     offset=1
     before=rss_mb()
     t0=time.perf_counter()
+
     while created<target:
         for a in range(GROUNDED_COUNT):
             if created>=target:
@@ -39,28 +40,43 @@ def main():
             mem._index(n)
             created+=1
         offset+=1
-    build_s=time.perf_counter()-t0
-    after=rss_mb()
 
-    active={i:1.0 for i in range(20)}
+    build_s=time.perf_counter()-t0
+    graph_rss=rss_mb()
+
+    state={}
+    source={i:1.0 for i in range(20)}
+    loops=100
+    total_entries=0
+    max_entries=0
     t0=time.perf_counter()
-    loops=1000
-    total_active=0
     for step in range(1001,1001+loops):
-        a=mem.field(active,step)
-        total_active+=len(a)
+        state=mem.field_step(
+            state,
+            source,
+            step,
+            dt=.1,
+            execution_epsilon=1e-6,
+        )
+        total_entries+=len(state)
+        max_entries=max(max_entries,len(state))
     field_s=time.perf_counter()-t0
+    final_rss=rss_mb()
 
     print("persistent_relations",created)
     print("rss_before_mb",before)
-    print("rss_after_mb",after)
-    print("rss_delta_mb",after-before)
+    print("rss_graph_mb",graph_rss)
+    print("rss_final_mb",final_rss)
+    print("rss_graph_delta_mb",graph_rss-before)
+    print("rss_field_delta_mb",final_rss-graph_rss)
     print("build_s",build_s)
     print("field_us_per_step",1e6*field_s/loops)
-    print("mean_field_entries",total_active/loops)
+    print("mean_field_entries",total_entries/loops)
+    print("max_field_entries",max_entries)
 
     assert created==target
-    assert after-before<1024.0
+    assert graph_rss-before<1024.0
+    assert final_rss-before<1024.0
     assert len(mem.nodes)==GROUNDED_COUNT+target
     print("persistent_graph_stress passed")
 
