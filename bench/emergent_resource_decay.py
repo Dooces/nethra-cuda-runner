@@ -212,7 +212,7 @@ def synthetic_intuition(*,sample_rate:float,create_floor:float,decay:float,block
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--out',default='emergent_resource_decay_results.json');ap.add_argument('--epochs',type=int,default=6);ap.add_argument('--steps',type=int,default=12000);args=ap.parse_args()
-    policies=[('strict_full',1.0,500.0,1.0,25.0),('sample50_decay90',.50,80.0,.90,20.0),('sample25_decay85',.25,35.0,.85,15.0),('sample25_permissive_decay70',.25,10.0,.70,10.0),('sample125_permissive_decay80',.125,8.0,.80,8.0)]
+    policies=[('sample25_decay85',.25,35.0,.85,10.0),('sample25_floor10_decay70',.25,10.0,.70,10.0),('sample25_floor3_decay65',.25,3.0,.65,10.0),('sample25_floor1_decay50',.25,1.0,.50,10.0),('sample125_floor3_decay70',.125,3.0,.70,10.0)]
     report={'host':{},'policies':[],'intuition':[]}
     import platform,os
     report['host']={'platform':platform.platform(),'python':platform.python_version(),'hostname':platform.node(),'pid':os.getpid()}
