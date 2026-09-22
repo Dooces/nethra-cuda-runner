@@ -1,0 +1,25 @@
+name: Nethra subtraction before construction regression
+
+on:
+  push:
+    branches:
+      - nethra-subtraction-before-construction-regression
+    paths:
+      - 'nethra.py'
+      - 'test_subtraction_before_construction.py'
+      - '.github/workflows/nethra-subtraction-before-construction-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run subtraction regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 -m unittest -v test_subtraction_before_construction.py
