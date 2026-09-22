@@ -1,0 +1,24 @@
+name: Nethra field expectation blocking vet
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'field_expectation_blocking_vet.py'
+      - '.github/workflows/nethra-field-expectation-blocking-vet.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run field expectation blocking vet
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 field_expectation_blocking_vet.py
