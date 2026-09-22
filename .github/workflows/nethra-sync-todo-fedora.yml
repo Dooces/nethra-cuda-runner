@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - nethra-field-tension-investigation
+      - nethra-residual-persistence-return
     paths:
       - 'NETHRA_TODO.md'
       - '.github/workflows/nethra-sync-todo-fedora.yml'
