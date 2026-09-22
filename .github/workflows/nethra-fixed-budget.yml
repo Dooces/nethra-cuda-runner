@@ -1,0 +1,45 @@
+name: Nethra fixed-budget persistence
+
+on:
+  push:
+    paths:
+      - 'bench/fixed_budget_persistence.py'
+      - '.github/workflows/nethra-fixed-budget.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          uname -a
+          nvidia-smi || true
+      - name: Run fixed-budget persistence benchmark
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          /usr/bin/python3 bench/fixed_budget_persistence.py --out benchmark-output/fixed_budget_persistence.json | tee benchmark-output/stdout.txt
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cp bench/fixed_budget_persistence.py benchmark-output/
+          sha256sum bench/fixed_budget_persistence.py > benchmark-output/source.sha256
+          tar -czf nethra-fixed-budget.tar.gz benchmark-output
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-fixed-budget
+          path: nethra-fixed-budget.tar.gz
+          if-no-files-found: error
+          retention-days: 7
