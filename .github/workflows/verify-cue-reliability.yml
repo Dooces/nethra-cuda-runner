@@ -1,0 +1,45 @@
+name: Verify Nethra cue reliability
+
+on:
+  push:
+    branches:
+      - verify-cue-reliability-20260922
+    paths:
+      - 'verification/cue_reliability_verify.py'
+      - '.github/workflows/verify-cue-reliability.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: verify-cue-reliability-20260922
+      - name: Run cue reliability verification
+        shell: bash
+        run: |
+          set +e
+          mkdir -p verification
+          {
+            echo "timestamp=$(date --iso-8601=seconds)"
+            echo "hostname=$(hostname)"
+            /usr/bin/python3 --version
+            echo "commit=$(git rev-parse HEAD)"
+            echo "=== TEST OUTPUT ==="
+            PYTHONPATH=. /usr/bin/python3 verification/cue_reliability_verify.py
+            rc=$?
+            echo "=== EXIT CODE ==="
+            echo "$rc"
+          } > verification/cue_reliability_result.txt 2>&1
+          rc=$(tail -n 1 verification/cue_reliability_result.txt)
+          cat verification/cue_reliability_result.txt
+          git config user.name "nethra-verification-bot"
+          git config user.email "nethra-verification@local"
+          git add verification/cue_reliability_result.txt
+          git commit -m "Record cue reliability verification result" || true
+          git push origin HEAD:verify-cue-reliability-20260922
+          exit 0
