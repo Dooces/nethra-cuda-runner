@@ -1,0 +1,24 @@
+name: Nethra whole relation incidence credit
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'whole_relation_incidence_credit_probe.py'
+      - '.github/workflows/nethra-whole-relation-incidence-credit.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run whole relation incidence credit probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 whole_relation_incidence_credit_probe.py
