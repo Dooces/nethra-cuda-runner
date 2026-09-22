@@ -148,5 +148,49 @@ class SubtractionBeforeConstructionTests(unittest.TestCase):
         self.assertNotIn(r,closed)
 
 
+    def test_state_qualified_route_still_refinds_from_transient_event(self):
+        f=NethraField()
+        a=f.new(); b=f.new(); r=f.new()
+        sig=frozenset(((a,1),))
+        f._route(r,(a,),sig,5)
+
+        closed=f.closure((b,),sig)
+        self.assertIn(r,closed)
+
+    def test_random_unqualified_closure_matches_membership_fixed_point(self):
+        import random
+        rng=random.Random(1701)
+
+        for _ in range(100):
+            f=NethraField()
+            leaves=[f.new() for _ in range(6)]
+            relations=[]
+
+            for _j in range(8):
+                r=f.new()
+                pool=leaves+relations
+                size=rng.randint(1,min(3,len(pool)))
+                members=tuple(rng.sample(pool,size))
+                f._route(r,members,frozenset(),rng.randint(1,7))
+                relations.append(r)
+
+            explicit=set(rng.sample(leaves,rng.randint(0,len(leaves))))
+
+            expected=set(explicit)
+            changed=True
+            while changed:
+                changed=False
+                for r in relations:
+                    if r in expected:
+                        continue
+                    if any(route.issubset(expected) and conditions.get(frozenset(),0)>0
+                           for route,conditions in r.routes.items()):
+                        expected.add(r)
+                        changed=True
+
+            got=set(f.closure(explicit,frozenset()))
+            self.assertEqual(got,expected)
+
+
 if __name__=="__main__":
     unittest.main(verbosity=2)
