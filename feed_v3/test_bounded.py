@@ -6,7 +6,7 @@ from pathlib import Path
 
 import core
 from core import Nethra,NethraMemory,ResourceCloud
-from world import GROUNDED_COUNT,MOTOR_COUNT
+from world import GROUNDED_COUNT,MOTOR_COUNT,World,grounded_activation
 
 def rss_mb()->float:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0
@@ -59,6 +59,15 @@ def test_activity_width_does_not_change_proposal_bound():
         assert len(cloud)<=2048
         print("width",width,"candidates",len(cloud),"proposals",cloud.proposals)
 
+def test_output_nethra_current_is_direct():
+    world=World()
+    obs=world.step({0:.5,3:.25})
+    a=grounded_activation(obs)
+    assert obs.motor_currents[0]==.5
+    assert obs.motor_currents[3]==.25
+    assert a[0]==.5
+    assert a[3]==.25
+
 def test_constructed_is_same_nethra_and_field_reaches_output():
     cloud=ResourceCloud(sample_rate=1.0,proposal_budget=8,candidate_capacity=128,seed=5)
     # Feed a sparse relation long enough that candidate admission and evidence can recur.
@@ -98,6 +107,7 @@ def main():
     test_one_nethra_type()
     test_bounded_cloud_under_large_activity()
     test_activity_width_does_not_change_proposal_bound()
+    test_output_nethra_current_is_direct()
     test_constructed_is_same_nethra_and_field_reaches_output()
     test_checkpoint_roundtrip()
     print("feed_v3 bounded invariants passed")
