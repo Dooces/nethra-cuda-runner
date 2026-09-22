@@ -1,0 +1,57 @@
+name: Nethra feed v2 unified
+
+on:
+  push:
+    branches:
+      - nethra-feed-v2
+    paths:
+      - 'feed_v2/**'
+      - '.github/workflows/nethra-feed-v2.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi || true
+      - name: Unified Nethra invariants
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd feed_v2
+          PYTHONPATH=. /usr/bin/python3 test_feed.py
+      - name: Feeding experiment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          cd feed_v2
+          PYTHONPATH=. /usr/bin/python3 run_feeding.py             --base ../benchmark-output/base_hand_ball.json             --lineages 12             --workers 16             --steps 120000             --checkpoint-every 12000             --sample-rate 0.0625             --persistence-floor 0.003             --execution-epsilon 0.01             --out ../benchmark-output/feeding_results.json             | tee ../benchmark-output/stdout.txt
+          cd ..
+          cp feed_v2/core.py feed_v2/world.py feed_v2/run_feeding.py feed_v2/test_feed.py benchmark-output/
+          sha256sum benchmark-output/core.py benchmark-output/world.py benchmark-output/run_feeding.py benchmark-output/test_feed.py > benchmark-output/source.sha256
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          tar -czf nethra-feed-v2.tar.gz benchmark-output feed_v2
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-feed-v2
+          path: nethra-feed-v2.tar.gz
+          if-no-files-found: error
+          retention-days: 7
