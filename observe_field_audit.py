@@ -185,17 +185,35 @@ def test_existing_field_prediction_reduces_marginal_candidate_effect():
     )
 
 
+
+def test_field_redundancy_suppression_sweep():
+    rows=[]
+    prior=None
+    for base in (None,1.0,5.0,20.0,100.0,1000.0):
+        without=b_activation_with_optional_candidate(base,None)
+        with_candidate=b_activation_with_optional_candidate(base,1.0)
+        marginal=with_candidate-without
+        rows.append((base,without,with_candidate,marginal))
+        if prior is not None:
+            assert marginal <= prior + 1e-12
+        prior=marginal
+    assert rows[-1][3] < rows[0][3] * 0.35
+    return rows
+
+
 def main():
     memory=test_transient_field_has_no_long_horizon_frequency_memory()
     effect=test_one_shot_relation_has_immediate_field_effect()
     recurrence=test_local_relation_magnitude_separates_recurrence_rates()
     baseline=test_base_rate_is_not_subtracted_by_local_recurrence_alone()
     field_subtraction=test_existing_field_prediction_reduces_marginal_candidate_effect()
+    field_sweep=test_field_redundancy_suppression_sweep()
     print("long_horizon_same_probe_high_vs_chance",memory)
     print("one_shot_none_weak_strong_and_relation",effect)
     print("local_relation_ema_high_chance_low",recurrence)
     print("high_base_rate_causal_vs_independent",baseline)
     print("existing_field_prediction_marginal_candidate",field_subtraction)
+    print("field_redundancy_suppression_sweep",field_sweep)
     print("all_assertions_passed")
 
 
