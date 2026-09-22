@@ -6,6 +6,7 @@ on:
       - nethra-field-tension-investigation
     paths:
       - 'NETHRA_TODO.md'
+      - 'NETHRA_MATHEMATICAL_ORIENTATION.md'
       - '.github/workflows/nethra-sync-todo-fedora.yml'
   workflow_dispatch:
 
@@ -19,9 +20,12 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          target=/home/dooces/Projects/20260918/NETHRA_TODO.md
           test -d /home/dooces/Projects/20260918
-          cp NETHRA_TODO.md "$target"
-          cmp -s NETHRA_TODO.md "$target"
-          ls -l "$target"
-          sha256sum NETHRA_TODO.md "$target"
+          todo=/home/dooces/Projects/20260918/NETHRA_TODO.md
+          orient=/home/dooces/Projects/20260918/NETHRA_MATHEMATICAL_ORIENTATION.md
+          cp NETHRA_TODO.md "$todo"
+          cp NETHRA_MATHEMATICAL_ORIENTATION.md "$orient"
+          cmp -s NETHRA_TODO.md "$todo"
+          cmp -s NETHRA_MATHEMATICAL_ORIENTATION.md "$orient"
+          ls -l "$todo" "$orient"
+          sha256sum NETHRA_TODO.md "$todo" NETHRA_MATHEMATICAL_ORIENTATION.md "$orient"
