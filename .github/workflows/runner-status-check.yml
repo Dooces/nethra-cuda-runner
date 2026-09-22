@@ -1,0 +1,26 @@
+name: Runner status check
+
+on:
+  push:
+    paths:
+      - '.github/workflows/runner-status-check.yml'
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query self-hosted runner status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          gh api repos/${{ github.repository }}/actions/runners
+          echo "runner_query_rc=$?"
+          echo "=== queued runs ==="
+          gh api 'repos/${{ github.repository }}/actions/runs?status=queued&per_page=20'             --jq '.workflow_runs[] | [.id,.name,.display_title,.created_at] | @tsv'
+          echo "=== in-progress runs ==="
+          gh api 'repos/${{ github.repository }}/actions/runs?status=in_progress&per_page=20'             --jq '.workflow_runs[] | [.id,.name,.display_title,.created_at] | @tsv'
