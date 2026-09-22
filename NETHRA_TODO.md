@@ -1,89 +1,118 @@
-# Nethra TODO — 2026-09-22
+# Nethra TODO — residual persistence return — 2026-09-22
 
 Reference freeze:
-- `nethra-interval-boundary-frozen`: completed interval stores exact external source current and exact Nethra activation delta. Live `step()` has no automatic provisional learner.
+- `nethra-interval-boundary-frozen` @ `c7737da52080f87605803bbc6b33d90e48e93591`
+- completed interval preserves exact external source current and exact Nethra activation delta;
+- live `step()` has no automatic probability/count learner.
 
-## Dependency chain under investigation
+Clean investigation checkpoint:
+- this branch starts from `568502bdb239d71b646e7bc1fea92c78b4ed233d`;
+- later counterfactual-gradient, scalar-manifestation, autonomous-delay, signed-agreement and blocking/source-free-replay experiments remain on `nethra-field-tension-investigation` as diagnostics only. They do not define the active mechanism here.
 
-1. **Interval-integrated local field flow — CLOSED: STORE PER-NETHRA INTEGRAL**
-   - Purpose: retain what each incidence physically carried over a finite interval.
-   - Resolved representation:
-     - store one completed-interval activation integral per Nethra: `A_i = integral a_i dt`;
-     - because conductance is fixed during a completed interval, recover any incidence potential integral as `Phi_ij = A_i - A_j`;
-     - recover existing incidence charge exactly as `Q_ij = g_ij * Phi_ij`.
-   - Fedora verification:
-     - direct integrated edge charge vs reconstructed `g(A_i-A_j)`: worst error ~5.2e-18;
-     - final activations unchanged exactly;
-     - CPU overhead ~1.9–2.4% for 200–4000 edges;
-     - transient storage O(N) activation-integral scalars instead of O(E) edge-flow scalars.
-   - Decision: use per-Nethra interval integrals as the canonical transient representation if/when local field-flow plasticity is promoted. Do not store per-edge integrated flow unless another requirement appears.
+## Resolved pieces carried forward
 
-2. **Local receiver residual / tension — OPEN / REFORMULATED**
-   - Purpose: give each ordinary Nethra a local statistical tension from completed Nethra intervals without a probability ledger.
-   - Earlier positive-flow S-P candidate passed frequency calibration, regime reversal, redundancy suppression and shared-residual tests, but remains a new statistical law.
-   - Residual-squared / conductance-gradient proposal was vetted and is NOT valid as an exact field gradient:
-     - `epsilon * Phi` is only the direct/frozen-trajectory derivative; changing conductance changes the full activation trajectory and all coupled flows;
-     - full finite-difference gradient magnitude differed by ~1.4% to 57% in simple loaded passive tests;
-     - 2500 random passive-network sign tests produced 8 genuine sign mismatches, so the local term is not a guaranteed descent direction;
-     - virtual missing-edge finite-change formula retained ~7.9% first-order error even at delta-g=1e-6 and ~11.1% error at delta-g=.2.
-   - External-source-only residual is NOT universal:
-     - recursive-consequence control: future relation Nethra had external source U=0 but positive delta-a=0.11739; source residual therefore called a real positive manifestation an overprediction.
-   - F61 convergence is omitted by `sum Q`:
-     - test fixture: conductive charge 0.14517, convergence charge 0.07258, so one third of internal receiver drive was absent from the proposed prediction.
-   - Conductance-corrected `Phi` support weighting remains promising:
-     - with true incidence initially weak and nuisance incidences strong, Q weighting ended mean evidence 70.8 vs 60.9/60.6 nuisance;
-     - Phi weighting ended 88.1 vs 52.5/52.2 nuisance; both recovered the true incidence in all 8 seeds, Phi separated it substantially better.
-   - Evidence-update chain rule remains relevant if persistent variable is evidence e rather than conductance g: `dg/de` collapses near conductance saturation, so `Phi*epsilon` cannot be justified as a literal gradient step in e-space.
-   - Next formulation must use a consequence quantity valid for every Nethra manifestation (not only external source), and must account for established F61 field contributions including convergence.
+1. **Per-Nethra completed-interval integral — CLOSED**
+   - store `A_i = integral a_i dt`;
+   - for any fixed-conductance incidence, `Phi_ij = A_i - A_j`;
+   - `Q_ij = g_ij * Phi_ij` reconstructs integrated conductive flow exactly;
+   - Fedora overhead was ~1.9–2.4% in tested graphs with O(N) transient storage.
 
-3. **Per-incidence evidence — CLOSED: RESTORE**
-   - Purpose: persist which members of one arbitrary-arity Nethra actually carry its prospective relation.
-   - Historical precedent: V56 stored relation-member incidence evidence independently; one-file route-wide evidence collapsed this.
-   - Closure test passed on Fedora (run 35784621800):
-     - graded continuous support: true A mean evidence 64.4375; nuisance B/C 0.000393 / 0.002088; A prospective response 0.008250 vs ~0.002208 nuisance;
-     - recursive Nethra support: true supporting Nethra mean evidence 48.4446; nuisance B/C 10.6302 / 10.0116; true-support response 0.006103 vs 0.003793 / 0.003714;
-     - route-wide controls could not store any context-member distinction under either environment.
-   - Decision: persistent evidence must be available per relation-member incidence. Route-wide evidence is an information-losing simplification and should be removed when the live plasticity path is rebuilt.
-   - This closes the representation question only; the final local evidence-update law remains coupled to TODO #2.
+2. **Per-incidence evidence — CLOSED: RESTORE**
+   - evidence must be available independently on each relation-member incidence;
+   - route-wide evidence erased support distinctions;
+   - graded and recursive-support Fedora tests both separated true support from nuisance only when evidence was per incidence.
 
-4. **Whole-support recruitment**
-   - Purpose: let an existing Nethra add missing source support without subset search.
-   - Candidate rule: when its current perspective receives positive tension, add the whole independently sourced preceding support as weak incidences; do not choose a subset.
-   - Established so far: missing true A and nuisance D were both recruited; incidence-local credit later made A strong and D weak.
-   - Status: OPEN; requires larger nuisance/recursive tests.
+3. **Source provenance — CLOSED**
+   - externally sourced Nethra remain distinguishable from Nethra manifested through field resonance;
+   - recursive closure/refinding cannot manufacture independent source evidence.
 
-5. **Construction bootstrap**
-   - Question: when no relevant Nethra exists, what earns the first weak whole-event Nethra without a candidate scanner or consequence chooser?
-   - Status: OPEN / BLOCKING FULL PLASTICITY.
+4. **Recursive ordinary-Nethra prediction — ESTABLISHED**
+   - relations of relations remain ordinary Nethra;
+   - recursive prospective layers produced positive consequence activation and ablation-to-zero in the archived V67/V69/V74 line;
+   - corrected recursive closure sizes reached 49/58/67 active Nethra in V68. This is not evidence of literal relation depth 50+; literal validated relation depth in the archived reports was lower (e.g. depth 10 in V74).
 
-6. **F61 own residual**
-   - Tension histories correctly make exact duplicates non-independent, but shared receiver coupling gave only partial independence for alternating predictors.
-   - Status: OPEN; do not equate tension with F61 epsilon yet.
+## Active mechanism — return to this
 
-7. **Duplicate consolidation / sleep**
-   - Existing policy: preserve ambiguity online; journal for later consolidation tests.
-   - Status: DEFERRED. No current need to merge.
+Existing Nethra structure gets the first opportunity to account for the current completed interval through ordinary closure/resonance.
 
-## Rejected / closed paths
+Whatever remains unaccounted is not converted into a separate probability error, agreement flag, classifier result, or global residual ledger.
 
-- Dynamic external resolution/range chooser: REJECTED as outside learner machinery.
-- Exact continuous matching: REJECTED as unnecessary and recurrence-fragmenting.
-- Greedy binary range refinement: REJECTED; cancellation hides deeper structure.
-- Clamped observation boundary as literal prediction-error current: REJECTED; added conductive loading defeated the proposed interpretation.
-- Direct `p * epsilon` update using endpoint branch current: REJECTED; failed simplest frequency-order test.
-- Residual-squared proposal as exact physical/field energy gradient: REJECTED AS STATED; squared source-charge residual is a statistical loss, `epsilon*Phi` omits trajectory sensitivity, and source-only consequences break recursive Nethra.
-- External-source-only consequence residual `U_next - P_prior`: REJECTED as a universal Nethra consequence measure.
-- Per-edge integrated-flow storage: SUPERSEDED by per-Nethra activation integrals `A_i`, from which `Phi` and `Q` reconstruct exactly during fixed-conductance intervals.
-- Global automatic `history_count/support_count/outcome_count/conditional/baseline` authority in live step: REMOVED FROM LIVE PATH; retained only for explicit regression comparison.
+The unresolved remainder itself stays active/primed as transient field structure.
 
-## Current task
+That residual/temporary candidate is what continues prospectively. As later intervals arrive:
+- already-earned Nethra account for whatever part they can;
+- that accounted part collapses out of the temporary residual;
+- whatever still persists remains attributable to the unresolved difference;
+- repeated persistence can strengthen/refine ordinary Nethra structure;
+- once established structure accounts for the recurrence, little or no residual remains to construct again.
 
-**Next target: #2 Local receiver residual / tension.**
+This is the subtraction-before-construction mechanism to test.
 
-Per-incidence representation and interval-flow representation are resolved. The next unresolved dependency is the consequence/residual quantity itself. The next candidate must:
-- operate on completed Nethra manifestations, including internally manifested relation Nethra;
-- retain original-source provenance separately;
-- include established F61 field contribution rather than conductive Q alone;
-- preserve local computability and avoid global probability ledgers;
-- treat `Phi` as local conductance opportunity unless tests justify a stronger interpretation;
-- be tested against full finite perturbations before any gradient language is used.
+## Current unresolved question
+
+**How is the still-unaccounted continuous field remainder represented and carried as a temporary/candidate Nethra without an external matcher or learner?**
+
+This is where we had actually stopped.
+
+The frozen interval boundary now preserves the raw quantities that the old learner discarded:
+- exact source provenance;
+- exact activation delta;
+- per-Nethra interval integral A;
+- reconstructable incidence flow Phi/Q.
+
+The missing step is not to define a scalar `y - yhat`.
+
+The missing step is to show, using the actual field, that:
+1. established Nethra resonance/closure removes the component it already accounts for;
+2. a remainder is still present as Nethra field structure after that accounting;
+3. the same remainder can remain primed across the next interval;
+4. the temporary/candidate structure associated with that remainder can recruit/retain per-incidence support;
+5. when established structure eventually accounts for it, that residual candidate loses its unresolved field support naturally;
+6. this process can recurse, so the surviving remainder can continue the predictive chain.
+
+## Immediate test
+
+Rebuild the smallest controlled sequence in the current one-file/F61 field:
+
+`A A -> B` repeated until an ordinary relation is established, then test:
+- another identical `A A -> B`: residual candidate should collapse toward zero;
+- `A A + X -> B`: already-accounted B should not create a durable X-B residual;
+- `A A -> D`: B-side expectation should fail to account for the interval and a D-side residual candidate should persist;
+- follow that residual candidate for multiple recursive continuation levels without converting it to a binary event or probability table.
+
+Measure the field remainder directly from frozen completed-interval quantities and existing topology. Do not introduce source-free replay as the mechanism. Do not introduce a semantic agreement/disagreement function. Do not choose a consequence outside the field.
+
+## Whole-support recruitment
+
+Keep the prior result as a supporting mechanism, not the definition of residual:
+- an existing residual-bearing Nethra may weakly recruit the whole independently sourced preceding support;
+- no subset search;
+- per-incidence evidence can subsequently separate predictive support from nuisance.
+
+This remains OPEN until the residual-candidate representation above is demonstrated in the live field.
+
+## Construction bootstrap
+
+Still OPEN:
+- when no relevant persistent Nethra exists, the first unresolved field remainder must be able to become a temporary/candidate ordinary Nethra without a candidate scanner, subset enumeration, or consequence chooser.
+- this is coupled directly to the residual-persistence test above.
+
+## Explicitly demoted / rejected
+
+- live `history_count/support_count/outcome_count/conditional/baseline` authority;
+- binary membership residual as universal learning evidence;
+- external range/resolution chooser;
+- source-only `U_next - P_prior` residual;
+- residual-squared / conductance-gradient claim as exact Nethra plasticity;
+- paired source-free replay as the live residual mechanism;
+- imported Rescorla-Wagner-style `sum x*v` expectation;
+- semantic “register agreement/disagreement” operation owned by established Nethra;
+- autonomous physical reenactment of historical lag as a requirement for prediction.
+
+## Why this is the active target
+
+The field and recursive topology already demonstrated that learned ordinary Nethra can carry prospective activation deeply and recursively.
+
+The repeated implementation failures were at the boundary where continuous field structure was projected into a simpler learner representation.
+
+The next work therefore belongs inside the field remainder itself: preserve the part existing Nethra did not account for, let that remainder carry the temporary candidate forward, and test whether ordinary Nethra dynamics can consume it through experience.
