@@ -36,7 +36,7 @@ jobs:
           set -euxo pipefail
           mkdir -p benchmark-output
           cd freeze_v1
-          PYTHONPATH=. /usr/bin/python3 run_hand_ball.py             --lineages 20             --workers 20             --hand-epochs 8             --ball-epochs 8             --steps 12000             --sample-rate 0.0625             --persistence-floor 0.003             --half-life 60000             --out ../benchmark-output/hand_ball_results.json             | tee ../benchmark-output/stdout.txt
+          PYTHONPATH=. /usr/bin/python3 run_hand_ball.py             --lineages 16             --workers 16             --hand-epochs 8             --ball-epochs 8             --steps 12000             --sample-rate 0.0625             --persistence-floor 0.003             --half-life 60000             --out ../benchmark-output/hand_ball_results.json             | tee ../benchmark-output/stdout.txt
           cd ..
           cp freeze_v1/core.py freeze_v1/world.py freeze_v1/run_hand_ball.py freeze_v1/test_freeze.py benchmark-output/
           sha256sum benchmark-output/core.py benchmark-output/world.py benchmark-output/run_hand_ball.py benchmark-output/test_freeze.py > benchmark-output/source.sha256
