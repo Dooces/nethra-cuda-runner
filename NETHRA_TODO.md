@@ -163,11 +163,24 @@ This does NOT yet prove X is a complete lossless description of every within-int
 
 **Current target: adaptive expectation / agreement registration.**
 
-Test the minimal loop directly:
-- repeated earned context R followed by B strengthens R-B evidence;
-- refinding R before outcome raises B field resonance;
-- an unexpected D weakens the unsupported B continuation and makes D available as a competing continuation;
-- alternating B/D should preserve ambiguity rather than force a winner;
-- no conditional-probability table, marginal baseline, privileged causal relation, or autonomous delay replay is required.
+Minimal signed-agreement loop passed on Fedora run `35792821094`:
+- fixture used an already-earned context Nethra R and ordinary continuation relations to B/D;
+- persistent continuation evidence alone was updated: observed continuation +1, already-known unobserved continuations -1 with floor 0;
+- no probability table, marginal baseline, counterfactual gradient, target ranking, or autonomous delay replay was used;
+- R was sourced at expectation time while B/D received no external source, so continuation activation was field resonance only.
 
-The independent manifestation-collision audit remains open but is not a blocker for this test.
+Measured:
+- repeated B: evidence 1 -> 120 raised B activation 0.00757 -> 0.02984 monotonically;
+- after 120 B successes, one D gave B evidence 119 / D evidence 1 and field expectation B 0.02459 vs D 0.00627;
+- sustained reversal crossed D over B after 60 further D outcomes; by 120, B evidence reached 0 and D evidence 121;
+- perfectly alternating B/D from scratch left only the one-event recency asymmetry (evidence 0 vs 1), with nearly equal field expectation 0.00594 vs 0.00629.
+
+Conclusion:
+- the conceptual loop `experience -> evidence -> conductance -> resonance -> expectation -> agreement/failure -> evidence` is sufficient to produce adaptive expectation in the tested field;
+- a probability table is not required for this capability;
+- the exact magnitude/normalization/decay form of signed agreement is NOT frozen by this test;
+- construction/refinement remains separate: this probe assumes R already exists and creates a weak competing continuation when first observed.
+
+Next question is narrow: derive/register the signed agreement from Nethra's own completed intervals without reintroducing the old probability ledger.
+
+The independent manifestation-collision audit remains open but is not a blocker for adaptive expectation.
