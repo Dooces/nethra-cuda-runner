@@ -1,0 +1,19 @@
+name: CUDA smoke test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  cuda-smoke:
+    runs-on: self-hosted
+    steps:
+      - name: Host
+        run: |
+          hostname
+          whoami
+          pwd
+      - name: NVIDIA
+        run: nvidia-smi
+      - name: Python
+        run: python3 --version
