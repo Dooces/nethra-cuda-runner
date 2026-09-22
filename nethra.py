@@ -85,6 +85,16 @@ class NethraField:
         self.convergence_gain = float(convergence_gain)
 
         self.nethra = []
+
+        # Frozen completed-interval boundary. These sparse maps preserve exact physical
+        # provenance and exact Nethra field change; absence means numerical zero.
+        self.previous_interval_source = {}
+        self.current_interval_source = {}
+        self.previous_interval_delta = {}
+        self.current_interval_delta = {}
+
+        # Everything below through the prospective counters belongs to the provisional
+        # construction path retained for regression comparison, not to interval observation.
         self.previous_explicit = frozenset()
         self.previous_closure = frozenset()
         self.previous_source_event = frozenset()
@@ -276,8 +286,55 @@ class NethraField:
                         break
         return frozenset(active)
 
-    def observe(self, explicit):
-        """Separate independent source evidence from recursive closure description.
+    def _complete_interval(self, source_current, delta):
+        """Freeze the physical record of one completed Nethra-field interval.
+
+        source_current is the exact externally injected current by persistent Nethra for the
+        interval that just completed. delta is the exact activation change produced by the actual
+        Nethra field over that same finite interval.
+
+        Both are stored sparsely: an omitted Nethra is exactly zero on that coordinate. This
+        preserves original-source provenance without confusing internally propagated field change
+        with external observation.
+
+        This operation has no learning authority. It does not discretize, classify, round, match,
+        compare for equality, estimate recurrence or probability, fabricate residuals, refind or
+        choose structure, alter conductance, or construct Nethra. It only advances the exact
+        transient completed-interval record.
+        """
+        source = {
+            n: float(value)
+            for n, value in source_current.items()
+            if float(value) != 0.0
+        }
+        change = {
+            n: float(value)
+            for n, value in delta.items()
+            if float(value) != 0.0
+        }
+        if any(n not in self.nethra for n in source):
+            raise ValueError("completed interval source references unknown Nethra")
+        if any(n not in self.nethra for n in change):
+            raise ValueError("completed interval delta references unknown Nethra")
+
+        self.previous_interval_source = self.current_interval_source
+        self.previous_interval_delta = self.current_interval_delta
+        self.current_interval_source = source
+        self.current_interval_delta = change
+        return source, change
+
+    def _consider_completed_interval_provisional(self, explicit):
+        """Run the retained provisional construction path after an interval is complete.
+
+        THIS FUNCTION IS NOT PART OF THE FROZEN INTERVAL-OBSERVATION CONTRACT.
+
+        It is the former observe() implementation, renamed because it does far more than observe:
+        it projects source participation to discrete state, refinds recursive descriptions,
+        updates a prospective probability ledger, fabricates a binary participation residual, and
+        may construct or strengthen Nethra. It remains only so established regressions can be
+        compared while the native plasticity rule is investigated.
+
+        Separate independent source evidence from recursive closure description.
 
         explicit is the physically/currently presented Nethra set. Its signed interval delta is
         the only event used for recurrence counts, prospective qualification, and residual
@@ -519,18 +576,20 @@ class NethraField:
 
         The field is integrated with RK4 using the same F61 derivative at every stage. Nethra with
         nonzero external current are the explicit physical/current participants for this interval.
-        After integration, observe() converts participation change into transient chronological
-        evidence and may, only if recurrence and prospective subtraction justify it, alter Nethra
-        structure. External current is then consumed.
+        After integration, _complete_interval() records the exact sparse external-source current
+        and exact sparse Nethra activation delta. That boundary is frozen and has no learning
+        authority.
 
-        Integration itself never constructs relations, and learning never writes activation
-        directly. This separation is the tow-truck boundary: only persistent Nethra topology can
-        carry learned structure into later field behavior.
+        The retained _consider_completed_interval_provisional() path then runs the historical
+        discrete prospective construction machinery for regression comparison. It is explicitly
+        provisional and must not be mistaken for the observation model or for frozen Nethra
+        plasticity. External current is consumed only after both operations complete.
         """
         dt = float(dt)
         if dt <= 0.0:
             raise ValueError("dt must be positive")
-        explicit = frozenset(n for n in self.nethra if n.external != 0.0)
+        source_current = {n: n.external for n in self.nethra if n.external != 0.0}
+        explicit = frozenset(source_current)
         a0 = {n: n.activation for n in self.nethra}
         k1 = self._derivative_at(a0)
         a1 = {n: a0[n] + .5 * dt * k1[n] for n in self.nethra}
@@ -545,7 +604,9 @@ class NethraField:
             old = a0[n]
             n.activation = old + dt * (k1[n] + 2*k2[n] + 2*k3[n] + k4[n]) / 6.0
             delta[n] = n.activation - old
-        self.observe(explicit)
+
+        self._complete_interval(source_current, delta)
+        self._consider_completed_interval_provisional(explicit)
         for n in self.nethra:
             n.external = 0.0
         return delta
