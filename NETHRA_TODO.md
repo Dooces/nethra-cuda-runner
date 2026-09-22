@@ -20,11 +20,15 @@ Reference freeze:
    - Important limit: this is a new local statistical plasticity law; passive F61 does not imply the subtraction by itself.
    - Status: OPEN / HIGH PRIORITY.
 
-3. **Per-incidence evidence**
+3. **Per-incidence evidence — CLOSED: RESTORE**
    - Purpose: persist which members of one arbitrary-arity Nethra actually carry its prospective relation.
    - Historical precedent: V56 stored relation-member incidence evidence independently; one-file route-wide evidence collapsed this.
-   - Established so far: one overinclusive {A,B,C,Y} Nethra separated true A from nuisance B/C; route-wide control could not.
-   - Status: OPEN; next test will try graded input + recursive-Nethra support and close/reject it.
+   - Closure test passed on Fedora (run 35784621800):
+     - graded continuous support: true A mean evidence 64.4375; nuisance B/C 0.000393 / 0.002088; A prospective response 0.008250 vs ~0.002208 nuisance;
+     - recursive Nethra support: true supporting Nethra mean evidence 48.4446; nuisance B/C 10.6302 / 10.0116; true-support response 0.006103 vs 0.003793 / 0.003714;
+     - route-wide controls could not store any context-member distinction under either environment.
+   - Decision: persistent evidence must be available per relation-member incidence. Route-wide evidence is an information-losing simplification and should be removed when the live plasticity path is rebuilt.
+   - This closes the representation question only; the final local evidence-update law remains coupled to TODO #2.
 
 4. **Whole-support recruitment**
    - Purpose: let an existing Nethra add missing source support without subset search.
@@ -55,10 +59,6 @@ Reference freeze:
 
 ## Current task
 
-**Attempt to close #3 Per-incidence evidence.**
+**Next target: #2 Local receiver residual / S-P tension.**
 
-Required tests:
-- graded continuous true support against nuisance support;
-- recursive Nethra used as the true predictive support;
-- route-wide control must fail to delineate support under the same environments;
-- no subset generation, selector, candidate ranking, or external precision mechanism.
+Per-incidence representation is now resolved. The next unresolved dependency is whether S-P tension is the correct Nethra-local statistical law or only one successful proxy. Promotion requires a direct formulation over completed interval quantities, stable behavior with multiple consequences and recursive relations, and no global probability ledger or semantic target selection.
