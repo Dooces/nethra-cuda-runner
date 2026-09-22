@@ -7,6 +7,7 @@ on:
     paths:
       - 'nethra.py'
       - 'field_tension_probe.py'
+      - 'field_residual_probe.py'
       - '.github/workflows/nethra-field-tension-probe.yml'
   workflow_dispatch:
 
@@ -29,3 +30,4 @@ jobs:
         run: |
           set -euxo pipefail
           PYTHONPATH=. /usr/bin/python3 field_tension_probe.py
+          PYTHONPATH=. /usr/bin/python3 field_residual_probe.py
