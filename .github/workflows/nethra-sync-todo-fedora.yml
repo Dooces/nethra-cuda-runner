@@ -1,0 +1,27 @@
+name: Nethra sync TODO to Fedora
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'NETHRA_TODO.md'
+      - '.github/workflows/nethra-sync-todo-fedora.yml'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync persistent TODO
+        shell: bash
+        run: |
+          set -euxo pipefail
+          target=/home/dooces/Projects/20260918/NETHRA_TODO.md
+          test -d /home/dooces/Projects/20260918
+          cp NETHRA_TODO.md "$target"
+          cmp -s NETHRA_TODO.md "$target"
+          ls -l "$target"
+          sha256sum NETHRA_TODO.md "$target"
