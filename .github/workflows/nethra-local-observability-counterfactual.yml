@@ -1,0 +1,40 @@
+name: Nethra local observability counterfactual
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'local_observability_counterfactual_probe.py'
+      - '.github/workflows/nethra-local-observability-counterfactual.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+      - name: Run local observability counterfactual probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -v /usr/bin/python3 local_observability_counterfactual_probe.py 2>&1 | tee local-observability.txt
+      - name: Upload raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-observability-counterfactual
+          path: |
+            local_observability_counterfactual_results.json
+            local-observability.txt
+          if-no-files-found: warn
+          retention-days: 7
