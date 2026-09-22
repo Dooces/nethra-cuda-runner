@@ -1,0 +1,24 @@
+name: Nethra adaptive expectation signed agreement
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'adaptive_expectation_signed_agreement_probe.py'
+      - '.github/workflows/nethra-adaptive-expectation-signed-agreement.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run adaptive expectation probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 adaptive_expectation_signed_agreement_probe.py
