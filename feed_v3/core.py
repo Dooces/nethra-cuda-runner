@@ -343,7 +343,7 @@ class NethraMemory:
         step:int,
         *,
         dt:float=0.1,
-        execution_epsilon:float=1e-9,
+        execution_epsilon:float=1e-6,
     )->Dict[int,float]:
         """Advance the passive Nethra field one interval with a stable local discretization.
 
