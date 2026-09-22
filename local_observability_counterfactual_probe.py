@@ -377,6 +377,41 @@ def main():
         }
     summary["fitted_kernel"]=kernel
 
+    # Horizon sweep: fit only the first H local lags on seed 0, evaluate on seed 1.
+    horizon_fit={}
+    for mode in MODES:
+        horizon_fit[mode]={}
+        train=[r for r in rows if r["seed"]==0 and r["mode"]==mode]
+        test=[r for r in rows if r["seed"]==1 and r["mode"]==mode]
+        for h in range(1,HMAX+1):
+            K=solve_ridge([r["L"][:h] for r in train],[r["G"] for r in train])
+            horizon_fit[mode][str(h)]={
+                "K":K,
+                "test":metrics(test,lambda r,K=K,h=h:dot(r["L"][:h],K)),
+            }
+    summary["horizon_fit"]=horizon_fit
+
+    # Structural holdouts. Fit source-mode kernels on all remaining structure/seeds and evaluate
+    # the unseen topology/depth/delay. This is diagnostic generalization, not model selection.
+    structural={}
+    source_rows=[r for r in rows if r["mode"]=="source"]
+    holdouts=[
+        ("topology","loop"),
+        ("topology","skip"),
+        ("depth",6),
+        ("delay",3),
+        ("convergence",1.0),
+    ]
+    for field,value in holdouts:
+        train=[r for r in source_rows if r[field]!=value]
+        test=[r for r in source_rows if r[field]==value]
+        K=solve_ridge([r["L"] for r in train],[r["G"] for r in train])
+        structural[f"{field}={value}"]={
+            "K":K,
+            "test":metrics(test,lambda r,K=K:dot(r["L"],K)),
+        }
+    summary["source_structural_holdout"]=structural
+
     # Group the exact one-step observable by each requested stress axis.
     group_metrics={}
     for name,keyfn in (
@@ -422,6 +457,15 @@ def main():
         print(mode,"K",val["K"])
         print(mode,"train",val["train"])
         print(mode,"test",val["test"])
+
+    print("=== HORIZON FIT HELD SEED ===")
+    for mode,hs in horizon_fit.items():
+        for h,val in hs.items():
+            print(mode,"H",h,"K",val["K"],"test",val["test"])
+
+    print("=== SOURCE STRUCTURAL HOLDOUT ===")
+    for name,val in structural.items():
+        print(name,"K",val["K"],"test",val["test"])
 
     # Print the largest exact L1 sign failures for inspection.
     fails=[]
