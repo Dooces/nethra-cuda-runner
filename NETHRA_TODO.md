@@ -5,20 +5,36 @@ Reference freeze:
 
 ## Dependency chain under investigation
 
-1. **Interval-integrated local field flow**
+1. **Interval-integrated local field flow — CLOSED: STORE PER-NETHRA INTEGRAL**
    - Purpose: retain what each incidence physically carried over a finite interval.
-   - Established so far: RK4-refinement stable; exact final activations preserved; O(E) transient storage; ~6.8–8.6% Python wall-time overhead in tested graphs.
-   - Status: STRONG CANDIDATE; needs integration contract before promotion.
+   - Resolved representation:
+     - store one completed-interval activation integral per Nethra: `A_i = integral a_i dt`;
+     - because conductance is fixed during a completed interval, recover any incidence potential integral as `Phi_ij = A_i - A_j`;
+     - recover existing incidence charge exactly as `Q_ij = g_ij * Phi_ij`.
+   - Fedora verification:
+     - direct integrated edge charge vs reconstructed `g(A_i-A_j)`: worst error ~5.2e-18;
+     - final activations unchanged exactly;
+     - CPU overhead ~1.9–2.4% for 200–4000 edges;
+     - transient storage O(N) activation-integral scalars instead of O(E) edge-flow scalars.
+   - Decision: use per-Nethra interval integrals as the canonical transient representation if/when local field-flow plasticity is promoted. Do not store per-edge integrated flow unless another requirement appears.
 
-2. **Local receiver residual / S-P tension**
-   - Candidate:
-     - `P_m(k) = sum positive incoming integrated field charge into m`
-     - `epsilon_m(k+1) = S_m(k+1) - P_m(k)`
-     - `T_R = sum_m p_Rm(k) * epsilon_m(k+1)`
-   - Purpose: give each ordinary Nethra a local statistical tension from its own field perspective.
-   - Established so far: frequency calibration, regime reversal, redundancy suppression, shared residual all passed shadow tests.
-   - Important limit: this is a new local statistical plasticity law; passive F61 does not imply the subtraction by itself.
-   - Status: OPEN / HIGH PRIORITY.
+2. **Local receiver residual / tension — OPEN / REFORMULATED**
+   - Purpose: give each ordinary Nethra a local statistical tension from completed Nethra intervals without a probability ledger.
+   - Earlier positive-flow S-P candidate passed frequency calibration, regime reversal, redundancy suppression and shared-residual tests, but remains a new statistical law.
+   - Residual-squared / conductance-gradient proposal was vetted and is NOT valid as an exact field gradient:
+     - `epsilon * Phi` is only the direct/frozen-trajectory derivative; changing conductance changes the full activation trajectory and all coupled flows;
+     - full finite-difference gradient magnitude differed by ~1.4% to 57% in simple loaded passive tests;
+     - 2500 random passive-network sign tests produced 8 genuine sign mismatches, so the local term is not a guaranteed descent direction;
+     - virtual missing-edge finite-change formula retained ~7.9% first-order error even at delta-g=1e-6 and ~11.1% error at delta-g=.2.
+   - External-source-only residual is NOT universal:
+     - recursive-consequence control: future relation Nethra had external source U=0 but positive delta-a=0.11739; source residual therefore called a real positive manifestation an overprediction.
+   - F61 convergence is omitted by `sum Q`:
+     - test fixture: conductive charge 0.14517, convergence charge 0.07258, so one third of internal receiver drive was absent from the proposed prediction.
+   - Conductance-corrected `Phi` support weighting remains promising:
+     - with true incidence initially weak and nuisance incidences strong, Q weighting ended mean evidence 70.8 vs 60.9/60.6 nuisance;
+     - Phi weighting ended 88.1 vs 52.5/52.2 nuisance; both recovered the true incidence in all 8 seeds, Phi separated it substantially better.
+   - Evidence-update chain rule remains relevant if persistent variable is evidence e rather than conductance g: `dg/de` collapses near conductance saturation, so `Phi*epsilon` cannot be justified as a literal gradient step in e-space.
+   - Next formulation must use a consequence quantity valid for every Nethra manifestation (not only external source), and must account for established F61 field contributions including convergence.
 
 3. **Per-incidence evidence — CLOSED: RESTORE**
    - Purpose: persist which members of one arbitrary-arity Nethra actually carry its prospective relation.
@@ -55,10 +71,19 @@ Reference freeze:
 - Greedy binary range refinement: REJECTED; cancellation hides deeper structure.
 - Clamped observation boundary as literal prediction-error current: REJECTED; added conductive loading defeated the proposed interpretation.
 - Direct `p * epsilon` update using endpoint branch current: REJECTED; failed simplest frequency-order test.
+- Residual-squared proposal as exact physical/field energy gradient: REJECTED AS STATED; squared source-charge residual is a statistical loss, `epsilon*Phi` omits trajectory sensitivity, and source-only consequences break recursive Nethra.
+- External-source-only consequence residual `U_next - P_prior`: REJECTED as a universal Nethra consequence measure.
+- Per-edge integrated-flow storage: SUPERSEDED by per-Nethra activation integrals `A_i`, from which `Phi` and `Q` reconstruct exactly during fixed-conductance intervals.
 - Global automatic `history_count/support_count/outcome_count/conditional/baseline` authority in live step: REMOVED FROM LIVE PATH; retained only for explicit regression comparison.
 
 ## Current task
 
-**Next target: #2 Local receiver residual / S-P tension.**
+**Next target: #2 Local receiver residual / tension.**
 
-Per-incidence representation is now resolved. The next unresolved dependency is whether S-P tension is the correct Nethra-local statistical law or only one successful proxy. Promotion requires a direct formulation over completed interval quantities, stable behavior with multiple consequences and recursive relations, and no global probability ledger or semantic target selection.
+Per-incidence representation and interval-flow representation are resolved. The next unresolved dependency is the consequence/residual quantity itself. The next candidate must:
+- operate on completed Nethra manifestations, including internally manifested relation Nethra;
+- retain original-source provenance separately;
+- include established F61 field contribution rather than conductive Q alone;
+- preserve local computability and avoid global probability ledgers;
+- treat `Phi` as local conductance opportunity unless tests justify a stronger interpretation;
+- be tested against full finite perturbations before any gradient language is used.
