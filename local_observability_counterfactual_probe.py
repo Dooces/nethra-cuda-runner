@@ -406,9 +406,12 @@ def main():
         train=[r for r in source_rows if r[field]!=value]
         test=[r for r in source_rows if r[field]==value]
         K=solve_ridge([r["L"] for r in train],[r["G"] for r in train])
+        K4=solve_ridge([r["L"][:4] for r in train],[r["G"] for r in train])
         structural[f"{field}={value}"]={
             "K":K,
             "test":metrics(test,lambda r,K=K:dot(r["L"],K)),
+            "K4":K4,
+            "test_H4":metrics(test,lambda r,K4=K4:dot(r["L"][:4],K4)),
         }
     summary["source_structural_holdout"]=structural
 
@@ -466,6 +469,7 @@ def main():
     print("=== SOURCE STRUCTURAL HOLDOUT ===")
     for name,val in structural.items():
         print(name,"K",val["K"],"test",val["test"])
+        print(name,"K4",val["K4"],"test_H4",val["test_H4"])
 
     # Print the largest exact L1 sign failures for inspection.
     fails=[]
