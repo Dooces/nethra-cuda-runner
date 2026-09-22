@@ -254,6 +254,13 @@ def run_condition(
     max_field_size=0
     max_output_activation=0.0
     checkpoint_receipts=[]
+    windows=[]
+    window_energy_sum=0.0
+    window_contacts=0
+    window_low=0
+    window_zero=0
+    window_motor_sum=0.0
+    window_start_energy=world.energy
     start_rss=rss_mb()
     t0=time.perf_counter()
 
@@ -278,7 +285,9 @@ def run_condition(
             cloud,runtime,step,previous_for_sample
         )
 
-        motor_current_sum+=sum(motors.values())
+        motor_now=sum(motors.values())
+        motor_current_sum+=motor_now
+        window_motor_sum+=motor_now
         max_output_activation=max(
             max_output_activation,
             max((float(v) for v in runtime.motor_values(MOTOR_COUNT)),default=0.0),
@@ -287,20 +296,41 @@ def run_condition(
             max_field_size=max(max_field_size,runtime.active_count())
 
         energy_sum+=obs.energy
+        window_energy_sum+=obs.energy
         min_energy=min(min_energy,obs.energy)
         source_contacts+=int(obs.source_contact)
+        window_contacts+=int(obs.source_contact)
         ball_contacts+=obs.contacts
 
         if obs.energy<.25:
             low_steps+=1
+            window_low+=1
             was_low=True
         if obs.energy<=1e-12:
             zero_steps+=1
+            window_zero+=1
         if was_low and obs.energy>.55:
             recoveries+=1
             was_low=False
 
         if (i+1)%checkpoint_every==0:
+            window_steps=checkpoint_every
+            windows.append({
+                "end_step":i+1,
+                "start_energy":window_start_energy,
+                "final_energy":world.energy,
+                "mean_energy":window_energy_sum/window_steps,
+                "source_contact_fraction":window_contacts/window_steps,
+                "low_fraction":window_low/window_steps,
+                "zero_fraction":window_zero/window_steps,
+                "mean_motor_current":window_motor_sum/(window_steps*MOTOR_COUNT),
+            })
+            window_energy_sum=0.0
+            window_contacts=0
+            window_low=0
+            window_zero=0
+            window_motor_sum=0.0
+            window_start_energy=world.energy
             state=runtime.snapshot()
             checkpoint_receipts.append(
                 mem.checkpoint_from_cloud(cloud,step,persistence_floor)
@@ -355,6 +385,7 @@ def run_condition(
         "wall_s":elapsed,
         "us_per_step":1e6*elapsed/steps,
         "checkpoints":checkpoint_receipts,
+        "windows":windows,
     }
 
 def main():
