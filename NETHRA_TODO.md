@@ -28,15 +28,19 @@ Do not reopen "must Y physically appear exactly tau intervals after X under sour
 as a prediction requirement. The relevant Nethra question is whether temporal evidence earns a
 relation whose present field resonance prospectively distinguishes the later manifestation.
 
-## Ordering discipline
+## Question separation
 
-The active questions are now explicitly separated:
+Keep these questions distinct, but do not impose a false dependency ordering:
 
-1. **Manifestation:** what happened to one persistent Nethra over a completed interval?
-2. **Prediction:** what prior Nethra manifestation/history predicts a later manifestation?
-3. **Causal sensitivity / plasticity:** what would have changed if an incidence had been stronger, and how should persistent evidence respond?
+1. **Transient description / manifestation:** what finite-interval information is available about one persistent Nethra?
+2. **Adaptive expectation:** when an earned context/refound Nethra occurs, which continuations have survived experience?
+3. **Counterfactual sensitivity:** how would a chosen field objective change under a conductance perturbation?
 
-Do not build or freeze a final evidence-update equation while #1 is unresolved. Counterfactual `g±delta` tests remain diagnostic for #3 only and must not define manifestation.
+Adaptive expectation does NOT require a privileged or complete manifestation variable first. It only
+requires enough transient description to refind the earned context and register whether an earned
+continuation occurred. Finer manifestation representation remains an independent investigation.
+
+Counterfactual `g±delta` remains a diagnostic for sensitivity only; it must not define prediction.
 
 ### Manifestation audit — current result
 
@@ -157,6 +161,13 @@ This does NOT yet prove X is a complete lossless description of every within-int
 
 ## Current task
 
-**Current target: completed-interval manifestation only.**
+**Current target: adaptive expectation / agreement registration.**
 
-Prediction/residual formulation and causal/plasticity equations are paused until manifestation is resolved. The next test should ask whether two physically realizable Nethra trajectories can share the same `(Delta a, A)` descriptor while differing in a completed-interval quantity that Nethra itself can later use without importing prediction or credit semantics.
+Test the minimal loop directly:
+- repeated earned context R followed by B strengthens R-B evidence;
+- refinding R before outcome raises B field resonance;
+- an unexpected D weakens the unsupported B continuation and makes D available as a competing continuation;
+- alternating B/D should preserve ambiguity rather than force a winner;
+- no conditional-probability table, marginal baseline, privileged causal relation, or autonomous delay replay is required.
+
+The independent manifestation-collision audit remains open but is not a blocker for this test.
