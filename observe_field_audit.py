@@ -34,7 +34,7 @@ def rk4_no_learning(field, external, steps=20, dt=0.05):
         n.external = 0.0
 
 
-def decay_to_negligible(field, steps=500, dt=0.05):
+def decay_to_negligible(field, steps=2000, dt=0.05):
     rk4_no_learning(field, {}, steps=steps, dt=dt)
 
 
@@ -71,8 +71,9 @@ def test_transient_field_has_no_long_horizon_frequency_memory():
 
     high=run(0.9)
     chance=run(0.5)
-    assert abs(high[1]-chance[1]) < 1e-12
-    return high,chance
+    residual = abs(high[1]-chance[1])
+    assert residual < 1e-30
+    return high,chance,residual
 
 
 def make_weak_relation():
