@@ -36,7 +36,7 @@ jobs:
           set -euxo pipefail
           mkdir -p benchmark-output
           cd feed_v2
-          PYTHONPATH=. /usr/bin/python3 run_feeding.py             --base ../benchmark-output/base_hand_ball.json             --lineages 12             --workers 16             --steps 120000             --checkpoint-every 12000             --sample-rate 0.0625             --persistence-floor 0.003             --execution-epsilon 0.01             --out ../benchmark-output/feeding_results.json             | tee ../benchmark-output/stdout.txt
+          PYTHONPATH=. /usr/bin/python3 run_feeding.py             --base ../benchmark-output/base_hand_ball.json             --lineages 6             --workers 6             --steps 60000             --checkpoint-every 12000             --sample-rate 0.0625             --persistence-floor 0.003             --execution-epsilon 0.01             --out ../benchmark-output/feeding_results.json             | tee ../benchmark-output/stdout.txt
           cd ..
           cp feed_v2/core.py feed_v2/world.py feed_v2/run_feeding.py feed_v2/test_feed.py benchmark-output/
           sha256sum benchmark-output/core.py benchmark-output/world.py benchmark-output/run_feeding.py benchmark-output/test_feed.py > benchmark-output/source.sha256
