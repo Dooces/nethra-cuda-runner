@@ -149,15 +149,53 @@ def test_base_rate_is_not_subtracted_by_local_recurrence_alone():
     return ec,ei,relative
 
 
+
+def b_activation_with_optional_candidate(baseline_strength, candidate_strength):
+    f=NethraField()
+    a=f.new(); b=f.new(); c=f.new()
+    if baseline_strength is not None:
+        rb=f.new()
+        f._route(rb,(c,),frozenset(),1)
+        f._route(rb,(b,),frozenset(),1)
+        set_unqualified_strength(rb,baseline_strength)
+    if candidate_strength is not None:
+        ra=f.new()
+        f._route(ra,(a,),frozenset(),1)
+        f._route(ra,(b,),frozenset(),1)
+        set_unqualified_strength(ra,candidate_strength)
+    ext={a:1.0}
+    if baseline_strength is not None:
+        ext[c]=1.0
+    rk4_no_learning(f,ext,steps=20,dt=0.05)
+    return b.activation
+
+
+def test_existing_field_prediction_reduces_marginal_candidate_effect():
+    no_base_without=b_activation_with_optional_candidate(None,None)
+    no_base_with=b_activation_with_optional_candidate(None,1.0)
+    strong_base_without=b_activation_with_optional_candidate(100.0,None)
+    strong_base_with=b_activation_with_optional_candidate(100.0,1.0)
+    marginal_no_base=no_base_with-no_base_without
+    marginal_strong_base=strong_base_with-strong_base_without
+    assert marginal_no_base > 0.0
+    assert marginal_strong_base < marginal_no_base
+    return (
+        no_base_without,no_base_with,marginal_no_base,
+        strong_base_without,strong_base_with,marginal_strong_base,
+    )
+
+
 def main():
     memory=test_transient_field_has_no_long_horizon_frequency_memory()
     effect=test_one_shot_relation_has_immediate_field_effect()
     recurrence=test_local_relation_magnitude_separates_recurrence_rates()
     baseline=test_base_rate_is_not_subtracted_by_local_recurrence_alone()
+    field_subtraction=test_existing_field_prediction_reduces_marginal_candidate_effect()
     print("long_horizon_same_probe_high_vs_chance",memory)
     print("one_shot_none_weak_strong_and_relation",effect)
     print("local_relation_ema_high_chance_low",recurrence)
     print("high_base_rate_causal_vs_independent",baseline)
+    print("existing_field_prediction_marginal_candidate",field_subtraction)
     print("all_assertions_passed")
 
 
