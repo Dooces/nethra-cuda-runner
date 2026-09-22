@@ -129,5 +129,24 @@ class SubtractionBeforeConstructionTests(unittest.TestCase):
         self.assertIn(r2,members)
 
 
+    def test_absent_unqualified_route_does_not_match_event(self):
+        f=NethraField()
+        a=f.new(); b=f.new(); r=f.new()
+        f._route(r,(a,),frozenset(),5)
+
+        event=frozenset(((b,1),))
+        self.assertIsNone(f._matching_route(r,event))
+
+    def test_absent_unqualified_route_does_not_refind_in_closure(self):
+        f=NethraField()
+        a=f.new(); b=f.new(); r=f.new()
+        f._route(r,(a,),frozenset(),5)
+
+        event=frozenset(((b,1),))
+        closed=f.closure((b,),event)
+        self.assertIn(b,closed)
+        self.assertNotIn(r,closed)
+
+
 if __name__=="__main__":
     unittest.main(verbosity=2)
