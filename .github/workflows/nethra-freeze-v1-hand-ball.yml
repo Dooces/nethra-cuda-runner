@@ -3,7 +3,7 @@ name: Nethra freeze v1 hand-ball
 on:
   push:
     branches:
-      - nethra-freeze-v1-hand-ball
+      - nethra-capability-handball-audit
     paths:
       - 'freeze_v1/**'
       - '.github/workflows/nethra-freeze-v1-hand-ball.yml'
