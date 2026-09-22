@@ -1,0 +1,39 @@
+name: Nethra multidepth quick Fedora probe
+
+on:
+  push:
+    branches:
+      - nethra-multidepth-fedora-probe
+    paths:
+      - '.github/workflows/nethra-multidepth-quick.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    env:
+      NETHRA_DEPTH_NTRAIN: "600"
+      NETHRA_DEPTH_NTEST: "4000"
+      NETHRA_DEPTH_FIELD_STEPS: "6"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run parallel quick depth benchmark
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          /usr/bin/time -v /usr/bin/python3 bench/multidepth_frozen_nethra.py 2>&1 | tee benchmark-output/stdout.txt
+          cp multidepth_results.json benchmark-output/
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: tar -czf nethra-multidepth-quick.tar.gz benchmark-output
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-multidepth-quick
+          path: nethra-multidepth-quick.tar.gz
+          if-no-files-found: error
+          retention-days: 7
