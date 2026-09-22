@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import FrozenSet, Iterable
 
-from world import HandBallWorld, Obs
+from world import HandBallWorld, Obs, RANGES
 
 
 @dataclass(frozen=True)
@@ -49,7 +49,7 @@ class EnergyHandBallWorld(HandBallWorld):
     def _joint_step(self, j: int, pos: bool, neg: bool) -> None:
         a = self.angle[j]
         v = self.vel[j]
-        lo, hi = __import__("world").RANGES[j]
+        lo, hi = RANGES[j]
         authority = .06 + .94 * max(0.0, min(1.0, self.energy))
         accel = 2.1 * authority * (float(pos) - float(neg)) - 1.9 * v - .35 * a
         v += .10 * accel
