@@ -5,12 +5,11 @@ import gc
 import json
 import random
 import resource
-import statistics
 import time
 from pathlib import Path
 
 from core import NethraMemory,ResourceCloud
-from world import GROUNDED_COUNT,MOTOR_COUNT,World,grounded_activation
+from world import GROUNDED_COUNT,MOTOR_COUNT,World,sensory_current
 
 def rss_mb()->float:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0
@@ -31,28 +30,25 @@ def make_cloud(*,sample_rate:float,proposal_budget:int,candidate_capacity:int,se
         seed=seed,
     )
 
-def direct_motor_currents(
-    babble:set[int],
-    previous_grounded:dict[int,float]|None,
-    previous_field:dict[int,float]|None,
-    resonance_gain:float,
-)->dict[int,float]:
-    currents={m:1.0 for m in babble}
-    if resonance_gain<=0.0 or previous_field is None:
-        return currents
-    previous_grounded=previous_grounded or {}
-    for m in range(MOTOR_COUNT):
-        direct=float(previous_grounded.get(m,0.0))
-        resonant=max(0.0,float(previous_field.get(m,0.0))-direct)
-        if resonant>0.0:
-            currents[m]=min(1.0,currents.get(m,0.0)+resonance_gain*resonant)
-    return currents
+def source_current(obs,babble:set[int])->dict[int,float]:
+    current=sensory_current(obs)
+    for m in babble:
+        current[m]=current.get(m,0.0)+1.0
+    return current
+
+def motor_currents_from_field(field:dict[int,float])->dict[int,float]:
+    return {
+        m:max(0.0,min(1.0,float(field.get(m,0.0))))
+        for m in range(MOTOR_COUNT)
+        if float(field.get(m,0.0))>0.0
+    }
 
 def developmental_epoch(
     world:World,
     mem:NethraMemory,
     babble:set[int],
     rng:random.Random,
+    field:dict[int,float],
     *,
     seed:int,
     steps:int,
@@ -61,26 +57,28 @@ def developmental_epoch(
     proposal_budget:int,
     candidate_capacity:int,
     persistence_floor:float,
-)->tuple[int,dict]:
+    field_dt:float,
+)->tuple[int,dict[int,float],dict]:
     cloud=make_cloud(
         sample_rate=sample_rate,
         proposal_budget=proposal_budget,
         candidate_capacity=candidate_capacity,
         seed=seed,
     )
-    prev_field=None
+
     for i in range(steps):
         step=step0+i+1
+        motors=motor_currents_from_field(field)
+        obs=world.step(motors)
         toggle_babble(babble,rng)
-        currents={m:1.0 for m in babble}
-        obs=world.step(currents)
-        grounded=grounded_activation(obs)
-        field=mem.field(grounded,step)
-        if prev_field is not None:
-            cloud.observe(prev_field,field,step)
-        prev_field=field
+        drive=source_current(obs,babble)
+        next_field=mem.field_step(field,drive,step,dt=field_dt)
+        if field:
+            cloud.observe(field,next_field,step)
+        field=next_field
+
     receipt=mem.checkpoint_from_cloud(cloud,step0+steps,persistence_floor)
-    return step0+steps,receipt
+    return step0+steps,field,receipt
 
 def build_base(
     path:str,
@@ -89,6 +87,7 @@ def build_base(
     proposal_budget:int,
     candidate_capacity:int,
     persistence_floor:float,
+    field_dt:float,
 )->dict:
     p=Path(path)
     if p.exists():
@@ -101,16 +100,17 @@ def build_base(
             "metadata":meta,
         }
 
-    mem=NethraMemory(GROUNDED_COUNT,half_life=60000.0)
+    mem=NethraMemory(GROUNDED_COUNT,half_life=60000.0,leakage=1.0)
     world=World(balls=False,source=False,energy=False)
     rng=random.Random(18001^0xA5A5)
     babble:set[int]=set()
+    field:dict[int,float]={}
     step=0
     receipts=[]
 
     for epoch in range(8):
-        step,receipt=developmental_epoch(
-            world,mem,babble,rng,
+        step,field,receipt=developmental_epoch(
+            world,mem,babble,rng,field,
             seed=18001000+epoch,
             steps=12000,
             step0=step,
@@ -118,14 +118,15 @@ def build_base(
             proposal_budget=proposal_budget,
             candidate_capacity=candidate_capacity,
             persistence_floor=persistence_floor,
+            field_dt=field_dt,
         )
         receipts.append(receipt)
 
     world.enable_balls()
 
     for epoch in range(8):
-        step,receipt=developmental_epoch(
-            world,mem,babble,rng,
+        step,field,receipt=developmental_epoch(
+            world,mem,babble,rng,field,
             seed=18001008+epoch,
             steps=12000,
             step0=step,
@@ -133,6 +134,7 @@ def build_base(
             proposal_budget=proposal_budget,
             candidate_capacity=candidate_capacity,
             persistence_floor=persistence_floor,
+            field_dt=field_dt,
         )
         receipts.append(receipt)
 
@@ -146,6 +148,7 @@ def build_base(
             "proposal_budget":proposal_budget,
             "candidate_capacity":candidate_capacity,
             "persistence_floor":persistence_floor,
+            "field_dt":field_dt,
         },
     )
     return {
@@ -162,7 +165,7 @@ def run_condition(
     base_path:str,
     *,
     seed:int,
-    resonance_gain:float,
+    use_field_outputs:bool,
     feed_rate:float,
     steps:int,
     checkpoint_every:int,
@@ -170,6 +173,7 @@ def run_condition(
     proposal_budget:int,
     candidate_capacity:int,
     persistence_floor:float,
+    field_dt:float,
 )->dict:
     mem,base_step,_=NethraMemory.load(base_path)
     world=World(
@@ -181,8 +185,7 @@ def run_condition(
     )
     rng=random.Random(seed^0xBADC0DE)
     babble:set[int]=set()
-    previous_grounded=None
-    previous_field=None
+    field:dict[int,float]={}
     cloud=make_cloud(
         sample_rate=sample_rate,
         proposal_budget=proposal_budget,
@@ -200,37 +203,34 @@ def run_condition(
     recoveries=0
     was_low=False
     motor_current_sum=0.0
-    resonance_current_sum=0.0
     checkpoint_receipts=[]
     max_field_size=0
+    max_output_activation=0.0
     start_rss=rss_mb()
     t0=time.perf_counter()
 
     for i in range(steps):
         step+=1
+        if use_field_outputs:
+            motors=motor_currents_from_field(field)
+        else:
+            motors={m:1.0 for m in babble}
+
+        obs=world.step(motors)
         toggle_babble(babble,rng)
-        currents=direct_motor_currents(
-            babble,
-            previous_grounded,
-            previous_field,
-            resonance_gain,
-        )
-        for m,current in currents.items():
-            direct=1.0 if m in babble else 0.0
-            resonance_current_sum+=max(0.0,float(current)-direct)
-        motor_current_sum+=sum(currents.values())
+        drive=source_current(obs,babble)
+        next_field=mem.field_step(field,drive,step,dt=field_dt)
 
-        obs=world.step(currents)
-        grounded=grounded_activation(obs)
-        field=mem.field(grounded,step)
+        if field:
+            cloud.observe(field,next_field,step)
+        field=next_field
+
         max_field_size=max(max_field_size,len(field))
-
-        if previous_field is not None:
-            cloud.observe(previous_field,field,step)
-
-        previous_grounded=grounded
-        previous_field=field
-
+        max_output_activation=max(
+            max_output_activation,
+            max((field.get(m,0.0) for m in range(MOTOR_COUNT)),default=0.0),
+        )
+        motor_current_sum+=sum(motors.values())
         energy_sum+=obs.energy
         min_energy=min(min_energy,obs.energy)
         source_contacts+=int(obs.source_contact)
@@ -264,7 +264,7 @@ def run_condition(
     elapsed=time.perf_counter()-t0
     return {
         "seed":seed,
-        "resonance_gain":resonance_gain,
+        "use_field_outputs":use_field_outputs,
         "feed_rate":feed_rate,
         "steps":steps,
         "final_energy":world.energy,
@@ -276,7 +276,7 @@ def run_condition(
         "zero_fraction":zero_steps/steps,
         "recoveries":recoveries,
         "mean_motor_current":motor_current_sum/(steps*MOTOR_COUNT),
-        "mean_resonance_motor_current":resonance_current_sum/(steps*MOTOR_COUNT),
+        "max_output_activation":max_output_activation,
         "constructed":len(mem.nodes)-mem.grounded_count,
         "total_nethra":len(mem.nodes),
         "max_field_size":max_field_size,
@@ -294,12 +294,13 @@ def run_condition(
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--base",required=True)
-    ap.add_argument("--steps",type=int,default=60000)
+    ap.add_argument("--steps",type=int,default=12000)
     ap.add_argument("--checkpoint-every",type=int,default=12000)
     ap.add_argument("--sample-rate",type=float,default=.0625)
     ap.add_argument("--proposal-budget",type=int,default=64)
     ap.add_argument("--candidate-capacity",type=int,default=65536)
     ap.add_argument("--persistence-floor",type=float,default=.003)
+    ap.add_argument("--field-dt",type=float,default=.1)
     ap.add_argument("--seed",type=int,default=22001)
     ap.add_argument("--out",default="feeding_results.json")
     args=ap.parse_args()
@@ -310,20 +311,21 @@ def main():
         proposal_budget=args.proposal_budget,
         candidate_capacity=args.candidate_capacity,
         persistence_floor=args.persistence_floor,
+        field_dt=args.field_dt,
     )
 
     conditions=[
-        ("random_feed",0.0,.0045),
-        ("resonant_feed",1.0,.0045),
-        ("resonant_no_energy",1.0,0.0),
+        ("random_feed",False,.0045),
+        ("field_feed",True,.0045),
+        ("field_no_energy",True,0.0),
     ]
 
     rows={}
-    for name,gain,feed_rate in conditions:
+    for name,use_field,feed_rate in conditions:
         rows[name]=run_condition(
             args.base,
             seed=args.seed,
-            resonance_gain=gain,
+            use_field_outputs=use_field,
             feed_rate=feed_rate,
             steps=args.steps,
             checkpoint_every=args.checkpoint_every,
@@ -331,6 +333,7 @@ def main():
             proposal_budget=args.proposal_budget,
             candidate_capacity=args.candidate_capacity,
             persistence_floor=args.persistence_floor,
+            field_dt=args.field_dt,
         )
         gc.collect()
 
@@ -348,7 +351,8 @@ def main():
             "candidate_pair_cartesian_product":False,
             "candidate_memory_bound":args.candidate_capacity,
             "new_pair_proposals_per_sampled_interval":args.proposal_budget,
-            "output_transduction":"Nethra activation maps directly to continuous actuator current",
+            "field_law":"source current + symmetric conductance + leakage",
+            "output_transduction":"output Nethra field activation directly drives actuator current",
         },
     }
     Path(args.out).write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
@@ -358,7 +362,7 @@ def main():
             name:{
                 k:value
                 for k,value in row.items()
-                if k not in ("checkpoints",)
+                if k!="checkpoints"
             }
             for name,row in rows.items()
         },
