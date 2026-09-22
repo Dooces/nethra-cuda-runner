@@ -36,6 +36,7 @@ jobs:
           set -euxo pipefail
           mkdir -p benchmark-output
           cd feed_v3
+          ulimit -v 4194304
           /usr/bin/time -v env PYTHONPATH=. /usr/bin/python3 run_feeding.py             --base ../benchmark-output/base_hand_ball.json             --steps 12000             --checkpoint-every 12000             --sample-rate 0.0625             --proposal-budget 64             --candidate-capacity 65536             --persistence-floor 0.003             --seed 22001             --out ../benchmark-output/feeding-pilot.json             2>&1 | tee ../benchmark-output/feeding-pilot.txt
           cd ..
           cp feed_v3/core.py feed_v3/world.py feed_v3/run_feeding.py feed_v3/test_bounded.py benchmark-output/
