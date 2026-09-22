@@ -55,3 +55,5 @@ jobs:
           path: nethra-feed-v2.tar.gz
           if-no-files-found: error
           retention-days: 7
+
+# rerun: unified-Nethra feeding pilot after runner cancellation
