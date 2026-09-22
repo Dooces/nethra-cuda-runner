@@ -1,0 +1,228 @@
+from __future__ import annotations
+
+import json
+import math
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, Iterable, Tuple
+
+MASK = (1 << 64) - 1
+
+
+def _u01(t: int, seed: int) -> float:
+    z = (int(t) + 0x9E3779B97F4A7C15 * (int(seed) + 1)) & MASK
+    z = ((z ^ (z >> 30)) * 0xBF58476D1CE4E5B9) & MASK
+    z = ((z ^ (z >> 27)) * 0x94D049BB133111EB) & MASK
+    z ^= z >> 31
+    return ((z >> 11) & ((1 << 53) - 1)) / float(1 << 53)
+
+
+@dataclass(frozen=True)
+class PrimitiveNethra:
+    nid: int
+
+
+@dataclass
+class RelationNethra:
+    nid: int
+    a: int
+    b: int
+    weight: float
+    last_step: int
+    confirmations: int = 1
+
+
+class ResourceCloud:
+    """Threshold-free local competition over observed Nethra activity."""
+
+    def __init__(self, sample_rate: float = 0.0625, seed: int = 0):
+        if not (0.0 < sample_rate <= 1.0):
+            raise ValueError("sample_rate must be in (0,1]")
+        self.sample_rate = float(sample_rate)
+        self.seed = int(seed)
+        self.n = 0
+        self.source_count: Dict[int, int] = {}
+        self.target_count: Dict[int, int] = {}
+        self.joint: Dict[int, Dict[int, int]] = {}
+        self.evidence: Dict[int, Dict[int, float]] = {}
+
+    def observe(self, sources: Iterable[int], consequences: Iterable[int], step: int) -> bool:
+        if _u01(step, self.seed) >= self.sample_rate:
+            return False
+        xs = frozenset(map(int, sources))
+        ys = frozenset(map(int, consequences))
+        self.n += 1
+        for x in xs:
+            self.source_count[x] = self.source_count.get(x, 0) + 1
+        for y in ys:
+            self.target_count[y] = self.target_count.get(y, 0) + 1
+        for y in ys:
+            joint = self.joint.setdefault(y, {})
+            evidence = self.evidence.setdefault(y, {})
+            baseline = self.target_count[y] / self.n
+            gains = []
+            for x in xs:
+                joint[x] = joint.get(x, 0) + 1
+                conditional = joint[x] / self.source_count[x]
+                gain = math.log(conditional / baseline) if conditional > 0.0 and baseline > 0.0 else 0.0
+                gains.append((x, max(0.0, gain)))
+                evidence.setdefault(x, 0.0)
+            total = sum(g for _, g in gains)
+            if total > 0.0:
+                for x, gain in gains:
+                    if gain > 0.0:
+                        evidence[x] += gain / total
+        return True
+
+    def observed_pairs(self) -> int:
+        return sum(len(pool) for pool in self.joint.values())
+
+
+class NethraMemory:
+    """One graph containing primitive I/O Nethra and persistent relation Nethra."""
+
+    def __init__(self, primitive_count: int, *, half_life: float = 60000.0, tau: float = 100.0):
+        self.primitive_count = int(primitive_count)
+        self.half_life = float(half_life)
+        self.tau = float(tau)
+        self.primitives = tuple(PrimitiveNethra(i) for i in range(self.primitive_count))
+        self.next_nid = self.primitive_count
+        self.by_key: Dict[Tuple[int, int], RelationNethra] = {}
+        self.relations: Dict[int, RelationNethra] = {}
+        self.index: Dict[int, set[int]] = {}
+
+    def node(self, nid: int) -> PrimitiveNethra | RelationNethra:
+        nid = int(nid)
+        if 0 <= nid < self.primitive_count:
+            return self.primitives[nid]
+        return self.relations[nid]
+
+    @staticmethod
+    def key(a: int, b: int) -> Tuple[int, int]:
+        a = int(a); b = int(b)
+        return (a, b) if a < b else (b, a)
+
+    def effective_weight(self, rel: RelationNethra, step: int) -> float:
+        if self.half_life <= 0.0:
+            return 0.0
+        dt = max(0, int(step) - int(rel.last_step))
+        return rel.weight * (2.0 ** (-dt / self.half_life))
+
+    def conductance(self, rel: RelationNethra, step: int) -> float:
+        w = self.effective_weight(rel, step)
+        return 1.5 * (1.0 - math.exp(-max(0.0, w) / self.tau))
+
+    def _index_relation(self, rel: RelationNethra) -> None:
+        self.index.setdefault(rel.a, set()).add(rel.nid)
+        self.index.setdefault(rel.b, set()).add(rel.nid)
+
+    def checkpoint_from_cloud(self, cloud: ResourceCloud, step: int, persistence_floor: float = 0.003) -> dict:
+        floor = float(persistence_floor)
+        observed: Dict[Tuple[int, int], float] = {}
+        for y, pool in cloud.evidence.items():
+            for x, ev in pool.items():
+                if int(x) == int(y):
+                    continue
+                k = self.key(x, y)
+                if ev > observed.get(k, 0.0):
+                    observed[k] = float(ev)
+
+        created = reinforced = 0
+        processed = max(1, cloud.n)
+        for k, ev in observed.items():
+            density = 1000.0 * ev / processed
+            rel = self.by_key.get(k)
+            if rel is None:
+                if density < floor:
+                    continue
+                rel = RelationNethra(
+                    self.next_nid, k[0], k[1], ev / cloud.sample_rate, int(step), 1
+                )
+                self.next_nid += 1
+                self.by_key[k] = rel
+                self.relations[rel.nid] = rel
+                self._index_relation(rel)
+                created += 1
+            else:
+                rel.weight = self.effective_weight(rel, step) + ev / cloud.sample_rate
+                rel.last_step = int(step)
+                rel.confirmations += 1
+                reinforced += 1
+        return {
+            "processed_intervals": cloud.n,
+            "observed_pairs": cloud.observed_pairs(),
+            "created": created,
+            "reinforced": reinforced,
+            "persistent_relations": len(self.relations),
+            "total_nethra": self.primitive_count + len(self.relations),
+        }
+
+    def relation(self, a: int, b: int) -> RelationNethra | None:
+        return self.by_key.get(self.key(a, b))
+
+    def field(self, externally_active: Iterable[int], step: int) -> tuple[Dict[int, float], Dict[int, float]]:
+        """One symmetric relation-mediated resonance pass.
+
+        Primitive inputs are externally primed with unit activation. Each incident relation Nethra
+        receives endpoint activation through its own conductance, then feeds the same field back to
+        its member Nethra. No endpoint type is inspected.
+        """
+        endpoint = {int(n): 1.0 for n in externally_active}
+        relation_act: Dict[int, float] = {}
+        touched: set[int] = set()
+        for n in endpoint:
+            touched.update(self.index.get(n, ()))
+        for rid in touched:
+            rel = self.relations[rid]
+            g = self.conductance(rel, step)
+            if g <= 0.0:
+                continue
+            ra = g * (endpoint.get(rel.a, 0.0) + endpoint.get(rel.b, 0.0))
+            if ra <= 0.0:
+                continue
+            relation_act[rid] = ra
+        for rid, ra in relation_act.items():
+            rel = self.relations[rid]
+            g = self.conductance(rel, step)
+            endpoint[rel.a] = endpoint.get(rel.a, 0.0) + g * ra
+            endpoint[rel.b] = endpoint.get(rel.b, 0.0) + g * ra
+        return endpoint, relation_act
+
+    def save(self, path: str | Path, *, step: int, metadata: dict | None = None) -> None:
+        rows = [
+            {
+                "nid": r.nid, "a": r.a, "b": r.b, "weight": r.weight,
+                "last_step": r.last_step, "confirmations": r.confirmations,
+            }
+            for r in sorted(self.relations.values(), key=lambda r: r.nid)
+        ]
+        obj = {
+            "schema": "NETHRA_FEED_V2",
+            "primitive_count": self.primitive_count,
+            "half_life": self.half_life,
+            "tau": self.tau,
+            "next_nid": self.next_nid,
+            "step": int(step),
+            "relations": rows,
+            "metadata": dict(metadata or {}),
+        }
+        p = Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n")
+
+    @classmethod
+    def load(cls, path: str | Path) -> tuple["NethraMemory", int, dict]:
+        obj = json.loads(Path(path).read_text())
+        if obj.get("schema") != "NETHRA_FEED_V2":
+            raise RuntimeError("unsupported checkpoint schema")
+        mem = cls(obj["primitive_count"], half_life=obj["half_life"], tau=obj["tau"])
+        mem.next_nid = int(obj["next_nid"])
+        for row in obj["relations"]:
+            rel = RelationNethra(
+                int(row["nid"]), int(row["a"]), int(row["b"]),
+                float(row["weight"]), int(row["last_step"]), int(row["confirmations"])
+            )
+            mem.by_key[mem.key(rel.a, rel.b)] = rel
+            mem.relations[rel.nid] = rel
+            mem._index_relation(rel)
+        return mem, int(obj["step"]), dict(obj.get("metadata", {}))
