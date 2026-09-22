@@ -210,8 +210,26 @@ class NethraField:
         key = (before, after)
         existing = self.history_relation.get(key)
         if existing is not None:
-            self._route(existing, left, self._project(before, left), evidence)
-            self._route(existing, right, self._project(after, right), evidence)
+            # Experimental probe correction only: once a learned Nethra participates in later
+            # recursive closure, a witnessed history can contain that same handle.  Its own
+            # presence is not independent support for itself, so subtract it before strengthening
+            # the already-earned routes.  The frozen core branch remains unchanged.
+            left_support = frozenset(n for n in left if n is not existing)
+            right_support = frozenset(n for n in right if n is not existing)
+            if left_support:
+                self._route(
+                    existing,
+                    left_support,
+                    self._project(before, left_support),
+                    evidence,
+                )
+            if right_support:
+                self._route(
+                    existing,
+                    right_support,
+                    self._project(after, right_support),
+                    evidence,
+                )
             return existing
 
         accounted = self._accounted(before, after)
