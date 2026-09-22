@@ -1,0 +1,46 @@
+name: Retry Nethra feed v2 exact commit
+
+on:
+  push:
+    paths:
+      - '.github/workflows/retry-nethra-feed-v2.yml'
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 2141c7e221c580abde5a77b946c5e6559f936e73
+      - name: Host
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi || true
+      - name: Unified Nethra invariants
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd feed_v2
+          PYTHONPATH=. /usr/bin/python3 test_feed.py
+      - name: Feeding experiment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          cd feed_v2
+          PYTHONPATH=. /usr/bin/python3 run_feeding.py             --base ../benchmark-output/base_hand_ball.json             --lineages 6             --workers 6             --steps 60000             --checkpoint-every 12000             --sample-rate 0.0625             --persistence-floor 0.003             --execution-epsilon 0.01             --out ../benchmark-output/feeding_results.json             | tee ../benchmark-output/stdout.txt
+          cd ..
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retry-nethra-feed-v2
+          path: benchmark-output
+          if-no-files-found: warn
+          retention-days: 7
