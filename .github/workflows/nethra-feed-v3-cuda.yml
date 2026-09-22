@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          ulimit -v 4194304
+          ulimit -v 33554432
           mkdir -p benchmark-output
           cd feed_v3
           /usr/bin/time -v env PYTHONPATH=. /usr/bin/python3 test_cuda.py 2>&1 | tee ../benchmark-output/cuda-field.txt
