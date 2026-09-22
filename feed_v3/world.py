@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import FrozenSet, Mapping, Tuple
+from typing import Dict, FrozenSet, Mapping, Tuple
 
 MOTOR_COUNT=12
 JOINT_COUNT=6
@@ -34,7 +34,7 @@ class Obs:
     source_contact:bool
 
 class World:
-    """Physical environment only. Hidden evaluator state never enters learner support."""
+    """Physical environment only. Hidden evaluator state never enters learner activation."""
 
     SOURCE_X=.94
     SOURCE_Y=.24
@@ -81,12 +81,15 @@ class World:
 
     def geometry(self)->Tuple[Tuple[float,float],...]:
         elbow_a,wrist_a,index_a,middle_a,thumb_o,thumb_f=self.angle
+
         def rot(t:float,x:float,y:float=0.0):
             c=math.cos(t)
             s=math.sin(t)
             return c*x-s*y,s*x+c*y
+
         def add(a,b):
             return a[0]+b[0],a[1]+b[1]
+
         elbow=(.55,0.0)
         wrist=add(elbow,rot(elbow_a,.42))
         o=elbow_a+wrist_a
@@ -133,16 +136,19 @@ class World:
                 ((p[0]-q[0])/dt,(p[1]-q[1])/dt)
                 for p,q in zip(points,prev_points)
             ]
+
         for ball in self.balls:
             ball.vy+=gravity*dt
             ball.x+=ball.vx*dt
             ball.y+=ball.vy*dt
+
             if ball.x<X_MIN+radius:
                 ball.x=X_MIN+radius
                 ball.vx=abs(ball.vx)*.94
             elif ball.x>X_MAX-radius:
                 ball.x=X_MAX-radius
                 ball.vx=-abs(ball.vx)*.94
+
             if ball.y<Y_MIN+radius:
                 ball.y=Y_MIN+radius
                 ball.vy=abs(ball.vy)*.92
@@ -168,12 +174,17 @@ class World:
                         ball.vy-=1.88*vn*ny
                     ball.vx+=.18*hvx
                     ball.vy+=.18*hvy
+
         return contacts
 
-    def step(self,motors:Iterable[int])->Obs:
-        motors=frozenset(map(int,motors))
+    def step(self,motor_currents:Mapping[int,float])->Obs:
+        currents=tuple(
+            max(0.0,min(1.0,float(motor_currents.get(m,0.0))))
+            for m in range(MOTOR_COUNT)
+        )
+
         for j in range(JOINT_COUNT):
-            self._joint_step(j,2*j in motors,2*j+1 in motors)
+            self._joint_step(j,currents[2*j],currents[2*j+1])
 
         points=self.geometry()
         contacts=self._step_balls(points,self.prev_points)
@@ -216,7 +227,7 @@ class World:
         )
 
 def grounded_activation(obs:Obs)->Dict[int,float]:
-    """Map physically active grounded Nethra to unit transducer/actuator current."""
+    """Physical transducer/actuator current expressed directly as Nethra activation."""
     out={
         m:float(current)
         for m,current in enumerate(obs.motor_currents)
