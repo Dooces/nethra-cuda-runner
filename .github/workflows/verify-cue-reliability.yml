@@ -5,8 +5,7 @@ on:
     branches:
       - verify-cue-reliability-20260922
     paths:
-      - 'verification/cue_reliability_verify.py'
-      - 'verification/cue_two_history_verify.py'
+      - 'verification/cue_two_history_stress.py'
       - '.github/workflows/verify-cue-reliability.yml'
 
 permissions:
@@ -20,26 +19,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: verify-cue-reliability-20260922
-      - name: Run explicit two-history cue reliability verification
+      - name: Stress explicit two-history cue reliability
         shell: bash
         run: |
           set +e
-          mkdir -p verification
           {
             echo "timestamp=$(date --iso-8601=seconds)"
             echo "hostname=$(hostname)"
             /usr/bin/python3 --version
             echo "commit=$(git rev-parse HEAD)"
-            echo "=== TWO-HISTORY TEST OUTPUT ==="
-            PYTHONPATH=. /usr/bin/python3 verification/cue_two_history_verify.py
-            rc=$?
-            echo "=== EXIT CODE ==="
-            echo "$rc"
-          } > verification/cue_two_history_result.txt 2>&1
-          cat verification/cue_two_history_result.txt
+            PYTHONPATH=. /usr/bin/python3 verification/cue_two_history_stress.py
+            echo "exit=$?"
+          } > verification/cue_two_history_stress_result.txt 2>&1
+          cat verification/cue_two_history_stress_result.txt
           git config user.name "nethra-verification-bot"
           git config user.email "nethra-verification@local"
-          git add verification/cue_two_history_result.txt
-          git commit -m "Record explicit two-history cue verification" || true
+          git add verification/cue_two_history_stress_result.txt
+          git commit -m "Record cue reliability stress result" || true
           git push origin HEAD:verify-cue-reliability-20260922
           exit 0
