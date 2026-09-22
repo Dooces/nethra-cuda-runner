@@ -7,6 +7,7 @@ on:
     paths:
       - 'nethra.py'
       - 'observe_field_audit.py'
+      - 'complete_interval_contract_probe.py'
       - '.github/workflows/nethra-observe-field-audit.yml'
   workflow_dispatch:
 
@@ -29,3 +30,4 @@ jobs:
         run: |
           set -euxo pipefail
           PYTHONPATH=. /usr/bin/python3 observe_field_audit.py
+          PYTHONPATH=. /usr/bin/python3 complete_interval_contract_probe.py
