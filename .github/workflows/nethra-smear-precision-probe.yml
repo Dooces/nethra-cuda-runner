@@ -1,0 +1,31 @@
+name: Nethra smear precision probe
+
+on:
+  push:
+    branches:
+      - nethra-smear-precision-investigation
+    paths:
+      - 'nethra.py'
+      - 'smear_precision_probe.py'
+      - '.github/workflows/nethra-smear-precision-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+      - name: Run smear precision probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/python3 smear_precision_probe.py
