@@ -210,6 +210,8 @@ def synthetic_intuition(*,sample_rate:float,create_floor:float,decay:float,block
         return_blocks.append({'block':i,'history_weight':hw,'fresh_weight':fw,'history_exists':routeA in hist.relations,'fresh_exists':routeA in fresh.relations})
     return {'sample_rate':sample_rate,'create_floor':create_floor,'decay':decay,'block':block,'history_weight_before_return':hist_before,'return':return_blocks}
 
+# stress sweep: more checkpoints, same learning rule
+
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('--out',default='emergent_resource_decay_results.json');ap.add_argument('--epochs',type=int,default=6);ap.add_argument('--steps',type=int,default=12000);args=ap.parse_args()
     policies=[('sample25_decay85',.25,35.0,.85,10.0),('sample25_floor10_decay70',.25,10.0,.70,10.0),('sample25_floor3_decay65',.25,3.0,.65,10.0),('sample25_floor1_decay50',.25,1.0,.50,10.0),('sample125_floor3_decay70',.125,3.0,.70,10.0)]
