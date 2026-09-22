@@ -1,0 +1,33 @@
+name: Nethra interval boundary freeze
+
+on:
+  push:
+    branches:
+      - nethra-interval-boundary-frozen
+    paths:
+      - 'nethra.py'
+      - 'test_interval_boundary_freeze.py'
+      - '.github/workflows/nethra-interval-boundary-freeze.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+      - name: Run interval boundary regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/python3 -m unittest -v test_interval_boundary_freeze.py
+          git hash-object nethra.py
+          sha256sum nethra.py
