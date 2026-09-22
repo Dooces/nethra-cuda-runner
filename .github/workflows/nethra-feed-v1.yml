@@ -38,8 +38,8 @@ jobs:
           cd freeze_v1
           PYTHONPATH=. /usr/bin/python3 run_feeding.py             --base-checkpoint /home/dooces/Projects/20260918/nethra-checkpoints/freeze_v1_hand_ball_seed18001.json             --lineages 16             --workers 16             --steps 120000             --checkpoint-every 12000             --sample-rate 0.0625             --persistence-floor 0.003             --execution-epsilon 0.01             --out ../benchmark-output/feeding_results.json             | tee ../benchmark-output/stdout.txt
           cd ..
-          cp freeze_v1/core.py freeze_v1/world.py freeze_v1/feed_world.py freeze_v1/run_feeding.py benchmark-output/
-          sha256sum benchmark-output/core.py benchmark-output/world.py benchmark-output/feed_world.py benchmark-output/run_feeding.py > benchmark-output/source.sha256
+          cp freeze_v1/core.py freeze_v1/world.py freeze_v1/feed_world.py freeze_v1/run_feeding.py freeze_v1/test_feed.py benchmark-output/
+          sha256sum benchmark-output/core.py benchmark-output/world.py benchmark-output/feed_world.py benchmark-output/run_feeding.py benchmark-output/test_feed.py > benchmark-output/source.sha256
           cp /home/dooces/Projects/20260918/nethra-checkpoints/freeze_v1_hand_ball_seed18001.json benchmark-output/base_checkpoint.json
       - name: Bundle receipt
         if: always()
