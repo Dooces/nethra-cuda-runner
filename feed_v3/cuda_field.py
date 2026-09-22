@@ -68,6 +68,7 @@ class CudaFieldRuntime:
                 (self.data,self.indices,self.indptr),
                 shape=(self.n,self.n),
             )
+            self.data=self.matrix.data
         else:
             self.rows=cp.empty(0,dtype=cp.int64)
             self.edge_relation=cp.empty(0,dtype=cp.int64)
