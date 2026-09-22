@@ -1,0 +1,70 @@
+name: Nethra multidepth Fedora probe
+
+on:
+  push:
+    branches:
+      - nethra-multidepth-fedora-probe
+    paths:
+      - 'nethra.py'
+      - 'bench/multidepth_frozen_nethra.py'
+      - '.github/workflows/nethra-multidepth-fedora-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Host identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          whoami
+          nproc
+          lscpu
+          free -h
+          /usr/bin/python3 --version
+          uname -a
+          nvidia-smi || true
+
+      - name: Verify frozen core
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sha256sum nethra.py
+          python3 - <<'PY'
+          import hashlib
+          got=hashlib.sha256(open('nethra.py','rb').read()).hexdigest()
+          print("sha256",got)
+          PY
+
+      - name: Run parallel depth benchmark
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          /usr/bin/time -v /usr/bin/python3 bench/multidepth_frozen_nethra.py \
+            2>&1 | tee benchmark-output/stdout.txt
+          cp multidepth_results.json benchmark-output/
+          cp bench/multidepth_frozen_nethra.py benchmark-output/
+          cp nethra.py benchmark-output/
+          sha256sum benchmark-output/* > benchmark-output/source.sha256
+
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          tar -czf nethra-multidepth-fedora-probe.tar.gz benchmark-output
+
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-multidepth-fedora-probe
+          path: nethra-multidepth-fedora-probe.tar.gz
+          if-no-files-found: error
+          retention-days: 7
