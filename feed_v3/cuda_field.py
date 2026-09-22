@@ -106,6 +106,22 @@ class CudaFieldRuntime:
         w=self.weights*cp.exp2(-dt/float(self.memory.half_life))
         return 1.5*(1.0-cp.exp(-cp.maximum(0.0,w)/float(self.memory.tau)))
 
+    def prime(self, activation:Mapping[int,float])->None:
+        """Directly prime Nethra field activation from physical/exploratory activity.
+
+        Priming raises the named Nethra to at least the supplied activation. It does not inspect
+        node role and does not select downstream actions; subsequent propagation is the same
+        passive field law for every Nethra.
+        """
+        if not activation:
+            return
+        cp=self.cp
+        ids=np.fromiter(activation.keys(),dtype=np.int64,count=len(activation))
+        vals=np.fromiter(activation.values(),dtype=np.float64,count=len(activation))
+        gpu_ids=cp.asarray(ids)
+        gpu_vals=cp.asarray(vals,dtype=self.dtype)
+        self.state[gpu_ids]=cp.maximum(self.state[gpu_ids],gpu_vals)
+
     def step(
         self,
         source_current:Mapping[int,float],
