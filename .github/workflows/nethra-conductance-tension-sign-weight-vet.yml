@@ -1,0 +1,25 @@
+name: Nethra conductance tension sign weight vet
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'conductance_tension_sign_weight_vet.py'
+      - '.github/workflows/nethra-conductance-tension-sign-weight-vet.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run sign and weighting vet
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 conductance_tension_sign_weight_vet.py
