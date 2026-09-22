@@ -1,0 +1,43 @@
+name: Verify current Nethra probes
+
+on:
+  push:
+    branches:
+      - verify-current-nethra-probes-20260922
+    paths:
+      - '.github/workflows/verify-current-nethra-probes.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: verify-current-nethra-probes-20260922
+      - name: Run graded and adaptive probes
+        shell: bash
+        run: |
+          set +e
+          {
+            echo "timestamp=$(date --iso-8601=seconds)"
+            echo "hostname=$(hostname)"
+            /usr/bin/python3 --version
+            echo "commit=$(git rev-parse HEAD)"
+            echo "=== PER INCIDENCE ==="
+            PYTHONPATH=. /usr/bin/python3 per_incidence_resolution_probe.py
+            echo "per_incidence_rc=$?"
+            echo "=== ADAPTIVE EXPECTATION ==="
+            PYTHONPATH=. /usr/bin/python3 adaptive_expectation_signed_agreement_probe.py
+            echo "adaptive_rc=$?"
+          } > verification_current_probes.txt 2>&1
+          cat verification_current_probes.txt
+          git config user.name "nethra-verification-bot"
+          git config user.email "nethra-verification@local"
+          git add verification_current_probes.txt
+          git commit -m "Record fresh current Nethra probe verification" || true
+          git push origin HEAD:verify-current-nethra-probes-20260922
+          exit 0
