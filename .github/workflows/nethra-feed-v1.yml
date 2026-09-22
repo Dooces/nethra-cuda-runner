@@ -1,0 +1,58 @@
+name: Nethra feed v1
+
+on:
+  push:
+    paths:
+      - '.github/workflows/nethra-feed-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: nethra-feed-v1
+      - name: Host identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi || true
+      - name: Frozen invariants
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd freeze_v1
+          PYTHONPATH=. /usr/bin/python3 test_freeze.py
+          /usr/bin/python3 -m py_compile core.py world.py feed_world.py run_feeding.py
+      - name: Run feeding emergence test
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output /home/dooces/Projects/20260918/nethra-checkpoints
+          cd freeze_v1
+          PYTHONPATH=. /usr/bin/python3 run_feeding.py             --base-checkpoint /home/dooces/Projects/20260918/nethra-checkpoints/freeze_v1_hand_ball_seed18001.json             --lineages 16             --workers 16             --steps 120000             --checkpoint-every 12000             --sample-rate 0.0625             --persistence-floor 0.003             --execution-epsilon 0.01             --out ../benchmark-output/feeding_results.json             | tee ../benchmark-output/stdout.txt
+          cd ..
+          cp freeze_v1/core.py freeze_v1/world.py freeze_v1/feed_world.py freeze_v1/run_feeding.py benchmark-output/
+          sha256sum benchmark-output/core.py benchmark-output/world.py benchmark-output/feed_world.py benchmark-output/run_feeding.py > benchmark-output/source.sha256
+          cp /home/dooces/Projects/20260918/nethra-checkpoints/freeze_v1_hand_ball_seed18001.json benchmark-output/base_checkpoint.json
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          tar -czf nethra-feed-v1.tar.gz benchmark-output freeze_v1
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-feed-v1
+          path: nethra-feed-v1.tar.gz
+          if-no-files-found: error
+          retention-days: 7
