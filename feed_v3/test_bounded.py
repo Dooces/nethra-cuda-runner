@@ -84,8 +84,32 @@ def test_constructed_is_same_nethra_and_field_reaches_output():
     n=mem.constructed(100,0)
     assert n is not None
     assert type(n) is Nethra
-    activation=mem.field({100:1.0},500)
-    assert activation.get(0,0.0)>0.0
+    state={}
+    for step in range(500,506):
+        state=mem.field_step(state,{100:1.0},step,dt=.1)
+    assert state.get(0,0.0)>0.0
+
+
+def test_passive_derivative_matches_equation():
+    cloud=ResourceCloud(sample_rate=1.0,proposal_budget=4,candidate_capacity=32,seed=19)
+    for step in range(1,300):
+        src={100:1.0} if step%3==0 else {101:1.0}
+        dst={0:1.0} if step%3==0 else {102:1.0}
+        cloud.observe(src,dst,step)
+    mem=NethraMemory(GROUNDED_COUNT,leakage=1.0)
+    mem.checkpoint_from_cloud(cloud,300,0.0)
+    relation=mem.constructed(100,0)
+    assert relation is not None
+    g=mem.conductance(relation,300)
+    a={100:.4,relation.nid:.2,0:.1}
+    j={100:.3}
+    got=mem.passive_derivative(a,j,300)
+    expected_100=.3-1.0*.4+g*(.2-.4)
+    expected_rel=-1.0*.2+g*(.4-.2)+g*(.1-.2)
+    expected_0=-1.0*.1+g*(.2-.1)
+    assert abs(got[100]-expected_100)<1e-12
+    assert abs(got[relation.nid]-expected_rel)<1e-12
+    assert abs(got[0]-expected_0)<1e-12
 
 def test_checkpoint_roundtrip():
     cloud=ResourceCloud(sample_rate=1.0,proposal_budget=8,candidate_capacity=128,seed=7)
@@ -109,6 +133,7 @@ def main():
     test_activity_width_does_not_change_proposal_bound()
     test_output_nethra_current_is_direct()
     test_constructed_is_same_nethra_and_field_reaches_output()
+    test_passive_derivative_matches_equation()
     test_checkpoint_roundtrip()
     print("feed_v3 bounded invariants passed")
     print("process_max_rss_mb",rss_mb())
