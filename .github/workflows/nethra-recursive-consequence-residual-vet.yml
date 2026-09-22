@@ -1,0 +1,24 @@
+name: Nethra recursive consequence residual vet
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'recursive_consequence_source_residual_vet.py'
+      - '.github/workflows/nethra-recursive-consequence-residual-vet.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run recursive consequence residual vet
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 recursive_consequence_source_residual_vet.py
