@@ -112,7 +112,8 @@ class CudaFieldRuntime:
         step:int,
         *,
         dt:float=0.1,
-    )->Dict[int,float]:
+        return_active:bool=True,
+    )->Dict[int,float] | None:
         cp=self.cp
         if dt<=0.0:
             raise ValueError("dt must be positive")
@@ -145,9 +146,14 @@ class CudaFieldRuntime:
         self.state[:]=(self.state+float(dt)*(self.source+self.inbound))/denom
         self.state[self.state<=self.execution_epsilon]=0
 
-        active=cp.flatnonzero(self.state)
-        ids=cp.asnumpy(active)
-        vals=cp.asnumpy(self.state[active])
+        if return_active:
+            return self.snapshot()
+        return None
+
+    def snapshot(self)->Dict[int,float]:
+        active=self.cp.flatnonzero(self.state)
+        ids=self.cp.asnumpy(active)
+        vals=self.cp.asnumpy(self.state[active])
         return {int(i):float(v) for i,v in zip(ids,vals)}
 
     def motor_values(self,count:int=12)->np.ndarray:
