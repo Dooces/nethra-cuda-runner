@@ -22,4 +22,4 @@ jobs:
           set -euxo pipefail
           hostname
           /usr/bin/python3 --version
-          PYTHONPATH=. /usr/bin/python3 -m unittest -v test_subtraction_before_construction.py
+          PYTHONPATH=. /usr/bin/python3 -m unittest -v test_subtraction_before_construction.py test_interval_boundary_freeze.py
