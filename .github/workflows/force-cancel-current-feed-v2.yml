@@ -17,4 +17,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api --method POST repos/${{ github.repository }}/actions/runs/35680912485/force-cancel
+          gh api --method POST repos/${{ github.repository }}/actions/runs/35681677669/force-cancel
