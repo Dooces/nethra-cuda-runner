@@ -34,8 +34,8 @@ def test_constructed_is_same_type():
 def test_same_field_reaches_output_nethra():
     c=ResourceCloud(1.0,2)
     for t in range(1,500):
-        xs={100}
-        ys={0} if t%3 else {101}
+        xs={100} if t%3==0 else {101}
+        ys={0} if 100 in xs else set()
         c.observe(xs,ys,t)
     mem=NethraMemory(PRIMITIVE_COUNT)
     mem.checkpoint_from_cloud(c,500,0.0)
