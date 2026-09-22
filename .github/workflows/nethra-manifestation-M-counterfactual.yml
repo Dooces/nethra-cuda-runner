@@ -1,0 +1,40 @@
+name: Nethra manifestation M counterfactual
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'manifestation_M_counterfactual_probe.py'
+      - '.github/workflows/nethra-manifestation-M-counterfactual.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+      - name: Run manifestation M counterfactual probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -v /usr/bin/python3 manifestation_M_counterfactual_probe.py 2>&1 | tee manifestation-M.txt
+      - name: Upload raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifestation-M-counterfactual
+          path: |
+            manifestation_M_counterfactual_results.json
+            manifestation-M.txt
+          if-no-files-found: warn
+          retention-days: 7
