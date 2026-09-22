@@ -120,7 +120,7 @@ def lineage(seed:int,hand_epochs:int,ball_epochs:int,steps:int,sample_rate:float
         "hand_epochs":hand_rows,"ball_epochs":ball_rows,
     }
 
-def main():
+def lineage_job(args):\n    return lineage(*args)\n\ndef main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--lineages",type=int,default=16)
     ap.add_argument("--workers",type=int,default=16)
@@ -139,7 +139,7 @@ def main():
               for i in range(args.lineages)]
         t=time.perf_counter()
         with ProcessPoolExecutor(max_workers=workers) as ex:
-            rows=list(ex.map(lambda x: lineage(*x),jobs))
+            rows=list(ex.map(lineage_job,jobs))
         wall=time.perf_counter()-t
     summary={
         "lineages":len(rows),"workers":workers,"wall_s":wall,
