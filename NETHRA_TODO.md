@@ -159,6 +159,44 @@ This does NOT yet prove X is a complete lossless description of every within-int
 - Per-edge integrated-flow storage: SUPERSEDED by per-Nethra activation integrals `A_i`, from which `Phi` and `Q` reconstruct exactly during fixed-conductance intervals.
 - Global automatic `history_count/support_count/outcome_count/conditional/baseline` authority in live step: REMOVED FROM LIVE PATH; retained only for explicit regression comparison.
 
+## Blocking / shared-residual analogy — VETTED, NETHRA FORMULATION OPEN
+
+Behavioral literature:
+- Kamin blocking supports the empirical invariant that a continuation already well predicted by established cues produces much less learning about an added cue.
+- Blocking alone does not uniquely establish one error-correction mechanism; attentional/comparator alternatives exist.
+- Overexpectation provides a stronger shared-expectation control: separately established predictors compounded together can produce reduced responding when aggregate expectation exceeds the delivered outcome.
+- Extinction supplies the corresponding negative-expectation-error case, while recovery phenomena show that simple associative-strength erasure is not a complete model.
+
+Nethra-specific field test (Fedora run 35793479391):
+- no conventional `sum x*v` expectation was implemented;
+- after a context interval, expectation was read by continuing the SAME field for the next interval with no new source;
+- next manifestation was measured as the additional Nethra response caused by the actual new source pattern relative to that exact source-free continuation;
+- shared residual was `manifestation - field expectation`.
+
+Results:
+- established A->B: residual +0.003672;
+- established A plus incidental X -> B: same +0.003672 (blocking condition did not reopen residual);
+- weak A->B control: +0.091054;
+- separately established A->B or C->B alone: +0.005590 each;
+- compounded A+C -> B: -0.045802 (overexpectation);
+- extinction A -> no B: -0.070261;
+- unexpected D after A: B residual -0.070261, D residual +0.100775;
+- recursive future relation Nethra with no direct external source still produced positive manifestation under newly sourced members, so this paired field measure avoids the source-only residual failure. Residual magnitude was not fully calibrated by one saturated predictor path, so universal normalization remains open.
+
+F61 aggregate expectation control (Fedora run 35793616900):
+- one established predictor: expected B 0.070261;
+- two predictors with duplicate/correlated histories: 0.102783;
+- same topology with independent histories: 0.111074;
+- F61 therefore modulates aggregate expectation from the field itself: independent convergent predictors add the established convergence bonus while duplicate histories do not;
+- ordinary conductive combination still sums duplicate paths, so F61 reduces extra convergence rather than erasing duplicate topology.
+
+Interpretation:
+- the experimental invariant "existing expectation consumes already-accounted evidence" is strongly relevant to Nethra;
+- do not import Rescorla-Wagner's `sum x*v` as the Nethra expectation operator;
+- the field itself is now the leading candidate for `F`: evidence -> conductance -> ordinary resonance + F61 convergence -> prospective activation;
+- the paired source/no-source replay is an exact diagnostic counterfactual using the same field, but it costs an extra integration and is not yet frozen as the live agreement-registration mechanism;
+- the update magnitude/normalization remains open. The existing signed-agreement probe only established that per-incidence +success/-known-failure evidence is sufficient once occurrence/agreement is already identified.
+
 ## Current task
 
 **Current target: adaptive expectation / agreement registration.**
