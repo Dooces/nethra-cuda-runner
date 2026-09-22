@@ -3,6 +3,38 @@
 Reference freeze:
 - `nethra-interval-boundary-frozen`: completed interval stores exact external source current and exact Nethra activation delta. Live `step()` has no automatic provisional learner.
 
+## Ordering discipline
+
+The active questions are now explicitly separated:
+
+1. **Manifestation:** what happened to one persistent Nethra over a completed interval?
+2. **Prediction:** what prior Nethra manifestation/history predicts a later manifestation?
+3. **Causal sensitivity / plasticity:** what would have changed if an incidence had been stronger, and how should persistent evidence respond?
+
+Do not build or freeze a final evidence-update equation while #1 is unresolved. Counterfactual `g±delta` tests remain diagnostic for #3 only and must not define manifestation.
+
+### Manifestation audit — current result
+
+A scalar manifestation has not been justified.
+
+The strongest native completed-interval descriptor currently tested is:
+
+`X_i = (Delta a_i, A_i)`, with `A_i = integral a_i dt`.
+
+Keep `U_i = integral J_i dt` separately as original-source provenance, not folded into manifestation identity.
+
+Fedora audit run 35790036074 established:
+- prior boundary activation + `Delta a` reconstructs the completed endpoint;
+- neighbor `A` values reconstruct every fixed-conductance incidence potential integral `Phi_ij=A_i-A_j`;
+- therefore every conductive incidence charge reconstructs as `Q_ij=g_ij Phi_ij`;
+- `M_i=C Delta a_i + lambda A_i` reconstructs exactly from X;
+- with separate U and reconstructed conductive Q, total internal non-leak drive and net integrated F61 contribution reconstruct from the field balance;
+- `Delta a` alone collides between zero activity and sustained stationary activation;
+- `A` alone does not determine transition direction/magnitude;
+- `M` alone is a one-scalar projection of two independent native interval coordinates and cannot recover them.
+
+This does NOT yet prove X is a complete lossless description of every within-interval temporal pattern. In particular, nonlinear within-interval interaction details may distinguish trajectories sharing the same A and Delta. That is the next manifestation-specific question.
+
 ## Dependency chain under investigation
 
 1. **Interval-integrated local field flow — CLOSED: STORE PER-NETHRA INTEGRAL**
@@ -100,12 +132,6 @@ Reference freeze:
 
 ## Current task
 
-**Next target: #2 Local receiver residual / tension.**
+**Current target: completed-interval manifestation only.**
 
-Per-incidence representation and interval-flow representation are resolved. The next unresolved dependency is the consequence/residual quantity itself. The next candidate must:
-- operate on completed Nethra manifestations, including internally manifested relation Nethra;
-- retain original-source provenance separately;
-- include established F61 field contribution rather than conductive Q alone;
-- preserve local computability and avoid global probability ledgers;
-- treat `Phi` as local conductance opportunity unless tests justify a stronger interpretation;
-- be tested against full finite perturbations before any gradient language is used.
+Prediction/residual formulation and causal/plasticity equations are paused until manifestation is resolved. The next test should ask whether two physically realizable Nethra trajectories can share the same `(Delta a, A)` descriptor while differing in a completed-interval quantity that Nethra itself can later use without importing prediction or credit semantics.
