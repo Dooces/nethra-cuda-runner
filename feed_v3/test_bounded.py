@@ -111,6 +111,49 @@ def test_passive_derivative_matches_equation():
     assert abs(got[relation.nid]-expected_rel)<1e-12
     assert abs(got[0]-expected_0)<1e-12
 
+
+def test_noisy_field_preserves_reliable_output_without_saturation():
+    mem=NethraMemory(GROUNDED_COUNT,leakage=1.0)
+
+    def add(a,b,weight):
+        key=mem.member_key(a,b)
+        n=Nethra(
+            nid=mem.next_nid,
+            members=key,
+            weight=float(weight),
+            last_step=0,
+            confirmations=1,
+        )
+        mem.next_nid+=1
+        mem.nodes[n.nid]=n
+        mem.by_members[key]=n.nid
+        mem._index(n)
+
+    sensor=100
+    add(sensor,0,180.0)
+    add(sensor,1,30.0)
+    for i in range(200):
+        add(sensor,1000+i,1.0)
+
+    state={}
+    for step in range(1,201):
+        state=mem.field_step(
+            state,
+            {sensor:1.0},
+            step,
+            dt=.1,
+            execution_epsilon=1e-8,
+        )
+
+    assert 0.0<state.get(1,0.0)<state.get(0,0.0)<1.0
+    assert max(state.get(m,0.0) for m in range(MOTOR_COUNT))<1.0
+    print(
+        "noisy_field_outputs",
+        state.get(0,0.0),
+        state.get(1,0.0),
+        max(state.get(m,0.0) for m in range(MOTOR_COUNT)),
+    )
+
 def test_checkpoint_roundtrip():
     cloud=ResourceCloud(sample_rate=1.0,proposal_budget=8,candidate_capacity=128,seed=7)
     for step in range(1,300):
@@ -134,6 +177,7 @@ def main():
     test_output_nethra_current_is_direct()
     test_constructed_is_same_nethra_and_field_reaches_output()
     test_passive_derivative_matches_equation()
+    test_noisy_field_preserves_reliable_output_without_saturation()
     test_checkpoint_roundtrip()
     print("feed_v3 bounded invariants passed")
     print("process_max_rss_mb",rss_mb())
