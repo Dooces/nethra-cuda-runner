@@ -174,6 +174,27 @@ class NethraMemory:
         out.sort()
         return tuple(out)
 
+    def resonance(self, active: Iterable[int], step: int) -> Dict[int, float]:
+        """Return generic graded activation reaching neighboring Nethra."""
+        active_ids = frozenset(map(int, active))
+        out: Dict[int, float] = {}
+        seen: set[Tuple[int, int]] = set()
+        for x in active_ids:
+            for k in self.index.get(x, ()):
+                if k in seen:
+                    continue
+                seen.add(k)
+                rel = self.by_key[k]
+                g = self.conductance(rel, step)
+                if g <= 0.0:
+                    continue
+                a, b = k
+                if a in active_ids:
+                    out[b] = out.get(b, 0.0) + g
+                if b in active_ids:
+                    out[a] = out.get(a, 0.0) + g
+        return out
+
     def relation(self, a: int, b: int) -> PersistentNethra | None:
         return self.by_key.get(self.key(a, b))
 
