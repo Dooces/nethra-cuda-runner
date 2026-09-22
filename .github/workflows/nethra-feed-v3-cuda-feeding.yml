@@ -1,0 +1,59 @@
+name: Nethra feed v3 CUDA feeding
+
+on:
+  push:
+    branches:
+      - nethra-feed-v3-bounded
+    paths:
+      - 'feed_v3/run_feeding_cuda.py'
+      - '.github/workflows/nethra-feed-v3-cuda-feeding.yml'
+  workflow_dispatch:
+
+jobs:
+  feeding:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi
+      - name: Compile and bounded invariants
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd feed_v3
+          /usr/bin/python3 -m py_compile core.py world.py cuda_field.py run_feeding_cuda.py test_bounded.py
+          PYTHONPATH=. /usr/bin/python3 test_bounded.py
+      - name: CUDA feeding
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ulimit -v 33554432
+          mkdir -p benchmark-output
+          cd feed_v3
+          /usr/bin/time -v env PYTHONPATH=. /usr/bin/python3 run_feeding_cuda.py             --base ../benchmark-output/base_hand_ball_cuda.json             --steps 12000             --checkpoint-every 12000             --sample-rate 0.0625             --proposal-budget 64             --candidate-capacity 65536             --persistence-floor 0.003             --field-dt 0.1             --seed 22001             --out ../benchmark-output/feeding-cuda.json             2>&1 | tee ../benchmark-output/feeding-cuda.txt
+          cd ..
+          cp feed_v3/core.py feed_v3/world.py feed_v3/cuda_field.py feed_v3/run_feeding_cuda.py feed_v3/test_bounded.py benchmark-output/
+          sha256sum benchmark-output/core.py benchmark-output/world.py benchmark-output/cuda_field.py benchmark-output/run_feeding_cuda.py benchmark-output/test_bounded.py > benchmark-output/source.sha256
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          tar -czf nethra-feed-v3-cuda-feeding.tar.gz benchmark-output feed_v3
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-feed-v3-cuda-feeding
+          path: nethra-feed-v3-cuda-feeding.tar.gz
+          if-no-files-found: error
+          retention-days: 7
