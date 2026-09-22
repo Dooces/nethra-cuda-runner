@@ -31,3 +31,5 @@ jobs:
           PYTHONPATH=. /usr/bin/python3 -m unittest -v test_interval_boundary_freeze.py
           git hash-object nethra.py
           sha256sum nethra.py
+
+# freeze-head regression trigger
