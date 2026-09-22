@@ -175,11 +175,16 @@ class NethraField:
         persistent membership. The function returns evidence that already exists; it never invents
         equivalence between different transient states and never mutates topology.
         """
+        event_members = self._event_members(event)
         for route, conditions in relation.routes.items():
             projected = self._project(event, route)
-            if projected in conditions and conditions.get(projected, 0) > 0:
+            # The empty signature means an unqualified structural route.  An absent route also
+            # projects to empty, so it must never satisfy the state-qualified branch merely because
+            # an unqualified condition exists.  Unqualified support matches only by actual member
+            # presence below.
+            if projected and projected in conditions and conditions.get(projected, 0) > 0:
                 return route, projected
-            if conditions.get(frozenset(), 0) > 0 and route.issubset(self._event_members(event)):
+            if conditions.get(frozenset(), 0) > 0 and route.issubset(event_members):
                 return route, frozenset()
         return None
 
@@ -280,7 +285,9 @@ class NethraField:
                         changed = True
                         break
                     projected = self._project(event, route)
-                    if projected in conditions and conditions.get(projected, 0) > 0:
+                    # Empty projection means none of this route's members are represented in the
+                    # transient event.  It cannot refind an unqualified route by itself.
+                    if projected and projected in conditions and conditions.get(projected, 0) > 0:
                         active.add(n)
                         changed = True
                         break
