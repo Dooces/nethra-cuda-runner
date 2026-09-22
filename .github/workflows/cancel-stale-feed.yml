@@ -1,0 +1,20 @@
+name: Cancel stale Nethra feed run
+
+on:
+  push:
+    paths:
+      - '.github/workflows/cancel-stale-feed.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel stale self-hosted feed run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST             repos/${{ github.repository }}/actions/runs/35677909613/cancel
