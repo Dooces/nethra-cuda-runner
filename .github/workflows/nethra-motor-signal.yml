@@ -1,0 +1,35 @@
+name: Nethra motor signal diagnostic
+
+on:
+  push:
+    branches:
+      - nethra-long-reach-dynamics
+    paths:
+      - '.github/workflows/nethra-motor-signal.yml'
+
+jobs:
+  diagnose:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reuse exact primed checkpoint
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          rm -rf prior benchmark-output
+          mkdir -p prior benchmark-output
+          gh run download 35686582364 -n nethra-feed-v3-cuda-feeding -D prior
+          tar -xzf prior/nethra-feed-v3-cuda-feeding.tar.gz -C prior
+          cp prior/benchmark-output/base_hand_ball_cuda.json benchmark-output/base_hand_ball_cuda.json
+      - name: Diagnose motor signal
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd feed_v3
+          PYTHONPATH=. /usr/bin/python3 diagnose_motor_signal.py
