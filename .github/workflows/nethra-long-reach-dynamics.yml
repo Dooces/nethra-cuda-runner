@@ -1,0 +1,170 @@
+name: Nethra long reachable dynamics
+
+on:
+  push:
+    branches:
+      - nethra-long-reach-dynamics
+    paths:
+      - '.github/workflows/nethra-long-reach-dynamics.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Host
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi
+
+      - name: Reuse exact primed hand-ball checkpoint
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          rm -rf prior benchmark-output
+          mkdir -p prior benchmark-output/long-reach
+          gh run download 35686582364 -n nethra-feed-v3-cuda-feeding -D prior
+          tar -xzf prior/nethra-feed-v3-cuda-feeding.tar.gz -C prior
+          cp prior/benchmark-output/base_hand_ball_cuda.json benchmark-output/base_hand_ball_cuda.json
+
+      - name: Five-checkpoint reachable-position continuations
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd feed_v3
+          positions=(
+            "p0 1.02 0.06 25001"
+            "p3 0.98 -0.14 25003"
+            "p4 1.18 0.06 25004"
+          )
+          pids=()
+          labels=()
+          for spec in "${positions[@]}"; do
+            read -r label sx sy seed <<< "$spec"
+            env PYTHONPATH=. /usr/bin/python3 run_feeding_cuda.py \
+              --base ../benchmark-output/base_hand_ball_cuda.json \
+              --steps 60000 \
+              --checkpoint-every 12000 \
+              --sample-rate 0.0625 \
+              --proposal-budget 64 \
+              --candidate-capacity 65536 \
+              --persistence-floor 0.003 \
+              --field-dt 0.1 \
+              --basal-cost 0.00021 \
+              --motor-cost 0.0000275 \
+              --source-x "$sx" \
+              --source-y "$sy" \
+              --seed "$seed" \
+              --out "../benchmark-output/long-reach/$label.json" \
+              > "../benchmark-output/long-reach/$label.txt" 2>&1 &
+            pids+=("$!")
+            labels+=("$label")
+          done
+
+          failure=0
+          while :; do
+            alive=0
+            for i in "${!pids[@]}"; do
+              pid="${pids[$i]}"
+              if kill -0 "$pid" 2>/dev/null; then
+                alive=1
+                rss_kb=$(awk '/VmRSS:/ {print $2}' "/proc/$pid/status" 2>/dev/null || echo 0)
+                if [ "${rss_kb:-0}" -gt 2097152 ]; then
+                  echo "RSS safety limit exceeded for ${labels[$i]}: $rss_kb KiB" >&2
+                  kill -TERM "$pid" 2>/dev/null || true
+                  failure=99
+                fi
+              fi
+            done
+            [ "$alive" -eq 0 ] && break
+            [ "$failure" -ne 0 ] && break
+            sleep 2
+          done
+          if [ "$failure" -ne 0 ]; then
+            for pid in "${pids[@]}"; do kill -TERM "$pid" 2>/dev/null || true; done
+          fi
+          for i in "${!pids[@]}"; do
+            if ! wait "${pids[$i]}"; then
+              echo "run failed: ${labels[$i]}" >&2
+              failure=1
+            fi
+          done
+          exit "$failure"
+
+      - name: Summarize learning dynamics
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          /usr/bin/python3 - <<'PY'
+          import json,glob,os
+          out={"positions":{}}
+          for path in sorted(glob.glob("benchmark-output/long-reach/*.json")):
+              label=os.path.basename(path)[:-5]
+              d=json.load(open(path))
+              po={
+                  "source":[d["parameters"]["source_x"],d["parameters"]["source_y"]],
+                  "conditions":{}
+              }
+              for name,row in d["conditions"].items():
+                  cps=row.get("checkpoints",[])
+                  po["conditions"][name]={
+                      "final_energy":row["final_energy"],
+                      "mean_energy":row["mean_energy"],
+                      "contact":row["source_contact_fraction"],
+                      "low":row["low_fraction"],
+                      "zero":row["zero_fraction"],
+                      "constructed":row["constructed"],
+                      "windows":row["windows"],
+                      "checkpoint_created":[x.get("created",0) for x in cps],
+                      "checkpoint_reinforced":[x.get("reinforced",0) for x in cps],
+                      "checkpoint_candidates":[x.get("candidates",0) for x in cps],
+                  }
+              f=po["conditions"].get("field_feed")
+              r=po["conditions"].get("random_feed")
+              if f and r:
+                  po["field_minus_random"]={
+                      "final_energy":f["final_energy"]-r["final_energy"],
+                      "contact":f["contact"]-r["contact"],
+                      "window_contact":[
+                          fw["source_contact_fraction"]-rw["source_contact_fraction"]
+                          for fw,rw in zip(f["windows"],r["windows"])
+                      ],
+                      "window_final_energy":[
+                          fw["final_energy"]-rw["final_energy"]
+                          for fw,rw in zip(f["windows"],r["windows"])
+                      ],
+                  }
+              out["positions"][label]=po
+          open("benchmark-output/long-reach-summary.json","w").write(json.dumps(out,indent=2,sort_keys=True)+"\n")
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
+
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          tar -czf nethra-long-reachable-dynamics.tar.gz benchmark-output feed_v3
+
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-long-reachable-dynamics
+          path: nethra-long-reachable-dynamics.tar.gz
+          if-no-files-found: error
+          retention-days: 7
