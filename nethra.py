@@ -85,7 +85,12 @@ class NethraField:
         self.convergence_gain = float(convergence_gain)
 
         self.nethra = []
+        self.previous_explicit = frozenset()
         self.previous_closure = frozenset()
+        self.previous_source_event = frozenset()
+        self.current_source_event = frozenset()
+        # previous_event/current_event are recursive closure descriptions used only for
+        # refinding and route-state matching. They are not independent observation evidence.
         self.previous_event = frozenset()
         self.current_event = frozenset()
         self.history_count = Counter()
@@ -187,19 +192,21 @@ class NethraField:
                 return relation, left, right
         return None
 
-    def _mint_history(self, before, after, evidence):
-        """Materialize an earned recurring prospective distinction as ordinary Nethra.
+    def _mint_history(self, before, after, evidence, history_key=None):
+        """Materialize an earned source history using recursive closure only as description.
 
-        before and after are transient signed interval events. Their persistent participants become
-        arbitrary-size support routes; their signed manifestations remain route signatures.
+        before and after are recursive signed closure descriptions. They may contain already
+        refound Nethra and therefore are never themselves treated as independent evidence.
+        history_key is the independently observed source-history key that earned construction.
 
-        Construction first reuses an exact previously mapped history, then asks whether existing
-        Nethra already account for both manifestations. A new Nethra is allocated only when neither
-        is true. At least two distinct persistent participants are required so the result actually
-        expresses a relation rather than renaming one Nethra.
+        Exact source-history recurrence reuses its mapped Nethra and strengthens only routes that
+        the current recursive descriptions already refind. It never registers a self-containing
+        description as a new route. This is the one-file equivalent of L77/L78's rule that
+        self-containing descriptions are tautological and remain omitted.
 
-        The function does not perform qualification itself and therefore cannot promote a history
-        merely because a caller presents it once.
+        When no mapped or accounting Nethra exists, the recursive descriptions may supply the
+        initial arbitrary-size routes for a newly earned relation. The new relation cannot occur
+        in those descriptions because it does not yet exist.
         """
         left = self._event_members(before)
         right = self._event_members(after)
@@ -207,11 +214,17 @@ class NethraField:
         if len(participants) < 2:
             return None
 
-        key = (before, after)
+        key = (before, after) if history_key is None else history_key
         existing = self.history_relation.get(key)
         if existing is not None:
-            self._route(existing, left, self._project(before, left), evidence)
-            self._route(existing, right, self._project(after, right), evidence)
+            left_match = self._matching_route(existing, before)
+            right_match = self._matching_route(existing, after)
+            if left_match is not None:
+                route, signature = left_match
+                self._route(existing, route, signature, evidence)
+            if right_match is not None:
+                route, signature = right_match
+                self._route(existing, route, signature, evidence)
             return existing
 
         accounted = self._accounted(before, after)
@@ -264,67 +277,82 @@ class NethraField:
         return frozenset(active)
 
     def observe(self, explicit):
-        """Turn consecutive Nethra participation into transient evidence and prospective learning.
+        """Separate independent source evidence from recursive closure description.
 
-        explicit is the set physically/currently presented to the field. Complete closure is found
-        first. Comparing that closure with the preceding closure yields a signed interval event:
-        +1 entered, 0 remained present, -1 left. These signed tuples never receive persistent IDs.
+        explicit is the physically/currently presented Nethra set. Its signed interval delta is
+        the only event used for recurrence counts, prospective qualification, and residual
+        prediction evidence. This preserves original-signal provenance.
 
-        The preceding event is then tested as a prospective support for the current event. The
-        conditional occurrence rate must exceed both the event's observed global rate and every
-        actually observed proper sub-event baseline. That implements subtraction-before-
-        construction without enumerating a theoretical powerset.
+        Complete recursive closure is still computed every interval. Its signed delta is retained
+        separately as a transient description so existing relations may be refound, subtracted,
+        and used as members of later relations. A handle produced by closure therefore cannot
+        become independent evidence merely because it refound itself.
 
-        A history must recur at least twice and still carry positive residual prospective
-        information before _mint_history may alter persistent Nethra structure. Residuals for the
-        F61 convergence trace are derived internally from observed versus empirically predicted
-        next participation; no evaluator can inject an error signal.
+        This restores the older SourceRecord split in minimal form: source support earns learning;
+        recursive context describes structure. Neither transient view creates a second ontology.
         """
-        closed = self.closure(frozenset(explicit), self.current_event)
-        observed = closed | self.previous_closure
-        event = frozenset(
-            (n, int(n in closed) - int(n in self.previous_closure))
-            for n in observed
+        explicit = frozenset(explicit)
+        closed = self.closure(explicit, self.current_event)
+
+        source_observed = explicit | self.previous_explicit
+        source_event = frozenset(
+            (n, int(n in explicit) - int(n in self.previous_explicit))
+            for n in source_observed
         )
 
-        before = self.previous_event
-        if before and event:
-            prior = self.support_count[before]
+        description_observed = closed | self.previous_closure
+        description_event = frozenset(
+            (n, int(n in closed) - int(n in self.previous_closure))
+            for n in description_observed
+        )
+
+        before_source = self.previous_source_event
+        before_description = self.previous_event
+        if before_source and source_event:
+            prior = self.support_count[before_source]
             if prior:
-                present_now = {n for n, change in event if change >= 0}
-                predicted = self.next_presence_sum[before]
+                present_now = {n for n, change in source_event if change >= 0}
+                predicted = self.next_presence_sum[before_source]
                 residual = {
                     n: (1.0 if n in present_now else 0.0) - predicted[n] / prior
                     for n in self.nethra
                 }
                 self.update_residuals(residual)
 
-            key = (before, event)
+            key = (before_source, source_event)
             self.history_count[key] += 1
-            self.support_count[before] += 1
-            self.outcome_count[event] += 1
+            self.support_count[before_source] += 1
+            self.outcome_count[source_event] += 1
             self.total_histories += 1
-            for n, change in event:
+            for n, change in source_event:
                 if change >= 0:
-                    self.next_presence_sum[before][n] += 1
+                    self.next_presence_sum[before_source][n] += 1
 
             count = self.history_count[key]
-            conditional = count / self.support_count[before]
-            baseline = self.outcome_count[event] / self.total_histories
+            conditional = count / self.support_count[before_source]
+            baseline = self.outcome_count[source_event] / self.total_histories
             for smaller, seen in self.support_count.items():
-                if smaller < before and seen:
+                if smaller < before_source and seen:
                     baseline = max(
                         baseline,
-                        self.history_count[(smaller, event)] / seen,
+                        self.history_count[(smaller, source_event)] / seen,
                     )
             if count >= 2 and conditional > baseline:
                 increment = count if key not in self.history_relation else 1
-                self._mint_history(before, event, increment)
+                self._mint_history(
+                    before_description,
+                    description_event,
+                    increment,
+                    history_key=key,
+                )
 
+        self.previous_explicit = explicit
         self.previous_closure = closed
-        self.previous_event = event
-        self.current_event = event
-        return event
+        self.previous_source_event = source_event
+        self.current_source_event = source_event
+        self.previous_event = description_event
+        self.current_event = description_event
+        return source_event
 
     def conductance(self, evidence):
         """Map accumulated route evidence to bounded nonnegative field conductance.
