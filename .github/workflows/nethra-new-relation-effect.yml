@@ -41,3 +41,5 @@ jobs:
           path: benchmark-output/new-relation-effect.json
           if-no-files-found: error
           retention-days: 7
+
+# rerun after diagnostic fix
