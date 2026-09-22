@@ -3,6 +3,46 @@
 Reference freeze:
 - `nethra-interval-boundary-frozen`: completed interval stores exact external source current and exact Nethra activation delta. Live `step()` has no automatic provisional learner.
 
+## Autonomous temporal expression audit — CLOSED RESULT
+
+Fedora run `35791872891` tested the old crystallized temporal graph with the temporal provenance
+transducer removed at probe time.
+
+Archived crystallization contract:
+- source context `R_Q={A,B}`;
+- lag coordinate `delta_t[tau]` is an ordinary Nethra;
+- temporal Nethra `T_tau={R_Q,delta_t[tau]}`;
+- perspective relation `{T_tau,Y}`;
+- learned high perspective applicability requires current support containing `T_tau`.
+
+Probe:
+- crystallized lag labels 1,3,5,8;
+- source only X={A,B} for a finite pulse;
+- remove all external source afterward, including Y and temporal provenance;
+- evolve unchanged symmetric F61 field;
+- compare complete Y trajectories;
+- manual direct-T source retained as positive control.
+
+Results:
+- manual T-source learned control reproduced the old field margin: Y=0.0340340100 vs unlearned
+  Y=0.0013145613;
+- autonomous X-only Y peak time was 2.75 field-time for lag 1,3,5,8;
+- max Y-curve difference between lag-1 and lag-3/5/8 = exactly 0.0;
+- learned-vs-unlearned autonomous X-only Y-curve difference = exactly 0.0 for every lag.
+
+Conclusion:
+- old temporal evidence + crystallized topology could recognize/store a lagged statistical fact and
+  could influence F61 when the temporal handle was externally re-presented;
+- the learned lag value was NOT encoded as autonomous field dynamics;
+- X-only field evolution contains generic diffusion/persistence, but its timing does not depend on
+  the learned lag;
+- therefore the old temporal provenance layer supplied the learned timing at runtime.
+
+Do not cite the old temporal crystallization as proof that learned delay itself is a field predictor.
+The unresolved architectural seam is now explicit: if Nethra is to predict delayed manifestation
+autonomously, learned temporal evidence must alter ordinary Nethra dynamics/topology in a way whose
+free evolution actually carries that learned temporal relation. No replacement mechanism is frozen.
+
 ## Ordering discipline
 
 The active questions are now explicitly separated:
