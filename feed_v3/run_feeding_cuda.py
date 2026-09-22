@@ -214,6 +214,8 @@ def run_condition(
     seed:int,
     use_field_outputs:bool,
     feed_rate:float,
+    basal_cost:float,
+    motor_cost:float,
     steps:int,
     checkpoint_every:int,
     sample_rate:float,
@@ -229,6 +231,8 @@ def run_condition(
         source=True,
         energy=True,
         feed_rate=feed_rate,
+        basal_cost=basal_cost,
+        motor_cost=motor_cost,
         initial_energy=.60,
     )
     rng=random.Random(seed^0xBADC0DE)
@@ -398,6 +402,8 @@ def main():
     ap.add_argument("--candidate-capacity",type=int,default=65536)
     ap.add_argument("--persistence-floor",type=float,default=.003)
     ap.add_argument("--field-dt",type=float,default=.1)
+    ap.add_argument("--basal-cost",type=float,default=.00042)
+    ap.add_argument("--motor-cost",type=float,default=.000055)
     ap.add_argument("--seed",type=int,default=22001)
     ap.add_argument("--out",default="feeding-cuda.json")
     args=ap.parse_args()
@@ -424,6 +430,8 @@ def main():
             seed=args.seed,
             use_field_outputs=use_field,
             feed_rate=feed_rate,
+            basal_cost=args.basal_cost,
+            motor_cost=args.motor_cost,
             steps=args.steps,
             checkpoint_every=args.checkpoint_every,
             sample_rate=args.sample_rate,
