@@ -1,5 +1,7 @@
 # Nethra TODO — residual persistence return — 2026-09-22
 
+Active branch: `nethra-residual-persistence-return`
+
 Reference freeze:
 - `nethra-interval-boundary-frozen` @ `c7737da52080f87605803bbc6b33d90e48e93591`
 - completed interval preserves exact external source current and exact Nethra activation delta;
