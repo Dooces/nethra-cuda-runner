@@ -1,0 +1,49 @@
+name: Nethra dynamics result collector
+
+on:
+  push:
+    branches:
+      - nethra-long-reach-dynamics
+    paths:
+      - '.github/workflows/nethra-dynamics-result-collector.yml'
+
+jobs:
+  collect:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Collect prior receipts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          rm -rf collect
+          mkdir -p collect/frozen collect/moving
+          gh run download 35741287909 -n nethra-p0-frozen-control -D collect/frozen
+          tar -xzf collect/frozen/nethra-p0-frozen-control.tar.gz -C collect/frozen
+          gh run download 35741752544 -n nethra-moving-source-dynamics -D collect/moving
+          tar -xzf collect/moving/nethra-moving-source-dynamics.tar.gz -C collect/moving
+          /usr/bin/python3 - <<'PY'
+          import json
+          f=json.load(open("collect/frozen/benchmark-output/p0-frozen.json"))
+          m=json.load(open("collect/moving/benchmark-output/moving-summary.json"))
+          out={
+            "p0_frozen":{
+              "final_energy":f["final_energy"],
+              "mean_energy":f["mean_energy"],
+              "contact":f["source_contact_fraction"],
+              "mean_motor_current":f["mean_motor_current"],
+              "constructed":f["constructed"],
+              "windows":f["windows"],
+              "checkpoint_created":[x.get("created",0) for x in f["checkpoints"]],
+              "checkpoint_reinforced":[x.get("reinforced",0) for x in f["checkpoints"]],
+            },
+            "moving":m,
+          }
+          print(json.dumps(out,indent=2,sort_keys=True))
+          PY
