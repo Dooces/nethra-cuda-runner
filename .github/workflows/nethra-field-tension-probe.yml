@@ -8,6 +8,7 @@ on:
       - 'nethra.py'
       - 'field_tension_probe.py'
       - 'field_residual_probe.py'
+      - 'field_local_plasticity_probe.py'
       - 'all_incidence_residual_probe.py'
       - 'local_incidence_plasticity_probe.py'
       - 'relation_local_perspective_probe.py'
@@ -34,6 +35,7 @@ jobs:
           set -euxo pipefail
           PYTHONPATH=. /usr/bin/python3 field_tension_probe.py
           PYTHONPATH=. /usr/bin/python3 field_residual_probe.py
+          PYTHONPATH=. /usr/bin/python3 field_local_plasticity_probe.py
           PYTHONPATH=. /usr/bin/python3 all_incidence_residual_probe.py
           PYTHONPATH=. /usr/bin/python3 local_incidence_plasticity_probe.py
           PYTHONPATH=. /usr/bin/python3 relation_local_perspective_probe.py
