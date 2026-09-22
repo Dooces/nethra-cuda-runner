@@ -98,7 +98,11 @@ def developmental_epoch(
         candidate_capacity=candidate_capacity,
         seed=seed,
     )
-    previous_for_sample=None
+    previous_for_sample=(
+        runtime.snapshot()
+        if cloud.will_sample(step0+1)
+        else None
+    )
 
     for i in range(steps):
         step=step0+i+1
@@ -306,7 +310,11 @@ def run_condition(
                 candidate_capacity=candidate_capacity,
                 seed=(seed^0xCAFE)+(i+1),
             )
-            previous_for_sample=None
+            previous_for_sample=(
+                runtime.snapshot()
+                if cloud.will_sample(step+1)
+                else None
+            )
 
     if cloud.n:
         state=runtime.snapshot()
