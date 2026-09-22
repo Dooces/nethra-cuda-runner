@@ -39,6 +39,12 @@ Frozen completed-interval boundary:
 - live `step()` on the frozen branch does NOT invoke the old learner;
 - `_consider_completed_interval_provisional()` remains only for explicit regression comparison.
 
+Important branch warning:
+- `nethra-field-tension-investigation` contains a stale experimental copy of `nethra.py` whose `step()` still invokes `_consider_completed_interval_provisional()`;
+- do NOT treat that file as the authoritative live core;
+- the authoritative runtime semantics are the `nethra-interval-boundary-frozen` branch above;
+- investigation probes must be interpreted by what they actually call (many use direct/custom integration and do not exercise the stale live learner).
+
 Important implementation distinction:
 - the frozen core currently stores source current + Delta-a only;
 - it does NOT yet store the experimentally established interval integral A_i;
