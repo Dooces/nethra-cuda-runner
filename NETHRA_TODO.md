@@ -12,7 +12,7 @@ The temporary/candidate residual mechanism is treated as the intended subtractio
 
 Authoritative frozen field/boundary branch:
 - `nethra-interval-boundary-frozen`
-- head `c7737da52080f87605803bbc6b33d90e48e93591`
+- head `bbc023c07a81ff5e17c8d7f66db4cd442600290d`
 
 Frozen persistent ontology:
 - one persistent object type: `Nethra`;
@@ -223,14 +223,44 @@ Still open:
 
 Do not install a matcher, clustering layer, adaptive quantizer or semantic precision policy to close this gap.
 
-## Structural subtraction already present as regression evidence
+## Subtraction-before-construction — ESTABLISHED ORDERING
 
-The old/provisional one-file learner contains `_accounted(before, after)`:
-- it checks existing persistent Nethra before minting another handle;
-- it is a useful regression embodiment of "existing structure first";
-- it is NOT the live solution because its before/after descriptions come from the provisional discrete event/probability path.
+This is not an open architectural question anymore.
 
-Likewise, archived gain/subset work demonstrated why proper-substructure subtraction matters, but the count/probability machinery is no longer accepted as the live implementation.
+The historical line and current one-file regression machinery both enforce the same ordering:
+1. complete/refind existing structure first;
+2. subtract/reuse what existing structure already accounts for;
+3. construct only if unresolved structure remains.
+
+Archived evidence:
+- v17/v18/v21 construction audits forbade proposal before full existing-field expansion and forbade construction when existing closure already accounted for the observation;
+- E1 searched every valid description against existing learned contexts before construction;
+- the identity re-audit presented 25 recursively different descriptions after an existing context already accounted for the same consequence: all 25 reused existing predictive structure and zero new contexts were created;
+- V70 proper-substructure subtraction prevented demonstrated partial overconstruction while preserving the intended recursive relation.
+
+Current one-file regression mechanisms:
+- provisional discovery compares a candidate history against already-observed proper subhistories BEFORE calling `_mint_history()`;
+- `_mint_history()` checks exact history reuse, then `_accounted(before, after)`, and calls `self.new()` only if both fail;
+- recursive description/closure is available before the mint decision.
+
+Fedora regression run 35795735967 on the frozen branch passed:
+- proper-subhistory accounting prevented `_mint_history()` from being called at all;
+- removing the proper-subhistory explanation allowed construction in the matched control;
+- existing structural routes caused `_accounted()` to reuse the relation with zero new Nethra;
+- removing the accounting relation allowed one new Nethra;
+- recursive description was available before mint;
+- 100 randomized unqualified recursive graphs matched an independently computed membership fixed point;
+- state-qualified transient refinding remained functional.
+
+The regression exposed and fixed one real matcher bug:
+- an absent unqualified route projected to the empty signature and could falsely match the stored unqualified condition;
+- `_matching_route()` and `closure()` now require a nonempty projection for state-qualified matching; unqualified routes match only by actual member presence;
+- all subtraction regressions plus the frozen interval-boundary regressions pass after the fix.
+
+Therefore:
+- DO NOT reopen whether subtraction occurs before construction;
+- the rebuilt live plasticity path must preserve this established ordering;
+- the remaining work is how the temporary/unmaterialized residual candidate carries and accumulates the part that remains after this subtraction, using continuous completed-interval information rather than the provisional count/probability representation.
 
 ## Diagnostic work that remains useful but is not the mechanism
 
@@ -331,15 +361,18 @@ Do not reintroduce:
 
 ## Immediate test target
 
-Build the smallest faithful live test around the temporary candidate, not around an externally computed error:
+Do NOT retest the already-established ordering "existing structure before construction" except as regression coverage.
 
-1. establish an ordinary predictive relation through repeated experience;
-2. present the same completed relation again and verify existing closure/subtraction leaves negligible candidate residual;
-3. add an irrelevant X while the consequence is already accounted for and verify X does not acquire durable consequence evidence from the accounted component;
-4. change the continuation so a genuine residual remains and verify the temporary candidate stays primed;
-5. repeat that changed continuation and verify only the unresolved per-incidence support accumulates;
-6. crystallize the candidate into an ordinary Nethra and verify it enters the same symmetric field;
-7. repeat recursively with that new Nethra as support/consequence;
-8. run graded/noisy versions without binary event projection.
+Build the smallest faithful live test around what remains AFTER that subtraction:
 
-The experiment must expose the candidate/residual directly. A test that computes the desired answer externally and then updates evidence is not sufficient.
+1. use the established closure/accounted ordering unchanged;
+2. expose the temporary/unmaterialized candidate that carries the unresolved remainder;
+3. present an already-accounted recurrence and verify the candidate receives no durable new support from the accounted component;
+4. add an irrelevant X to that already-accounted recurrence and verify X does not acquire durable consequence evidence;
+5. change the continuation so a real remainder survives and verify the same temporary candidate stays primed;
+6. repeat the changed continuation and verify unresolved per-incidence support accumulates;
+7. crystallize that candidate into an ordinary Nethra only after recurrent prospective support;
+8. repeat recursively with the crystallized Nethra as ordinary support/consequence;
+9. repeat with graded/noisy completed-interval descriptors without binary event projection.
+
+The experiment must expose the candidate/remainder directly. A test that computes an external error and then updates evidence is not sufficient.
