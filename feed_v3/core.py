@@ -117,13 +117,16 @@ class ResourceCloud:
         self.by_consequence.setdefault(c.consequence,set()).add(cid)
         self.admitted+=1
 
+    def will_sample(self,step:int)->bool:
+        return _u01(step,self.seed)<self.sample_rate
+
     def observe(
         self,
         sources:Mapping[int,float],
         consequences:Mapping[int,float],
         step:int,
     )->bool:
-        if _u01(step,self.seed)>=self.sample_rate:
+        if not self.will_sample(step):
             return False
         if not sources or not consequences:
             return False
