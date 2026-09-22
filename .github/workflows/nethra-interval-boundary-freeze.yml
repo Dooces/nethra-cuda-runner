@@ -7,6 +7,7 @@ on:
     paths:
       - 'nethra.py'
       - 'test_interval_boundary_freeze.py'
+      - 'test_subtraction_before_construction.py'
       - '.github/workflows/nethra-interval-boundary-freeze.yml'
   workflow_dispatch:
 
@@ -28,7 +29,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          PYTHONPATH=. /usr/bin/python3 -m unittest -v test_interval_boundary_freeze.py
+          PYTHONPATH=. /usr/bin/python3 -m unittest -v test_interval_boundary_freeze.py test_subtraction_before_construction.py
           git hash-object nethra.py
           sha256sum nethra.py
 
