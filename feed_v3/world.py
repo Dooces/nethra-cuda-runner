@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import FrozenSet, Iterable, Tuple
+from typing import FrozenSet, Mapping, Tuple
 
 MOTOR_COUNT=12
 JOINT_COUNT=6
@@ -25,7 +25,7 @@ class Ball:
 
 @dataclass(frozen=True,slots=True)
 class Obs:
-    motors:FrozenSet[int]
+    motor_currents:Tuple[float,...]
     inputs:FrozenSet[int]
     hand_pixels:FrozenSet[int]
     ball_pixels:FrozenSet[int]
@@ -101,7 +101,7 @@ class World:
             add(tb,rot(o-.90+thumb_o-.55*thumb_f,.08)),
         )
 
-    def _joint_step(self,j:int,pos:bool,neg:bool)->None:
+    def _joint_step(self,j:int,pos:float,neg:float)->None:
         a=self.angle[j]
         v=self.vel[j]
         lo,hi=RANGES[j]
@@ -200,13 +200,13 @@ class World:
             )
 
         if self.energy_enabled:
-            self.energy-=self.basal_cost+self.motor_cost*len(motors)
+            self.energy-=self.basal_cost+self.motor_cost*sum(currents)
             if self.source and source_contact:
                 self.energy+=self.feed_rate
             self.energy=max(0.0,min(1.0,self.energy))
 
         return Obs(
-            motors=motors,
+            motor_currents=currents,
             inputs=frozenset(inputs),
             hand_pixels=hand,
             ball_pixels=ball,
@@ -217,7 +217,11 @@ class World:
 
 def grounded_activation(obs:Obs)->Dict[int,float]:
     """Map physically active grounded Nethra to unit transducer/actuator current."""
-    out={int(m):1.0 for m in obs.motors}
+    out={
+        m:float(current)
+        for m,current in enumerate(obs.motor_currents)
+        if float(current)>0.0
+    }
     for sensor in obs.inputs:
         out[MOTOR_COUNT+int(sensor)]=1.0
     return out
