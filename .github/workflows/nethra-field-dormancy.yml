@@ -1,0 +1,47 @@
+name: Nethra field dormancy benchmark
+
+on:
+  push:
+    paths:
+      - 'bench/field_dormancy_benchmark.py'
+      - '.github/workflows/nethra-field-dormancy.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          uname -a
+          nvidia-smi || true
+      - name: Run sparse field dormancy benchmark
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          cd benchmark-output
+          /usr/bin/python3 ../bench/field_dormancy_benchmark.py | tee stdout.txt
+          cp ../bench/field_dormancy_benchmark.py .
+          sha256sum field_dormancy_benchmark.py > source.sha256
+          cd ..
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          tar -czf nethra-field-dormancy.tar.gz benchmark-output
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-field-dormancy
+          path: nethra-field-dormancy.tar.gz
+          if-no-files-found: error
+          retention-days: 7
