@@ -1,0 +1,31 @@
+name: Nethra observe field audit
+
+on:
+  push:
+    branches:
+      - nethra-observe-field-audit
+    paths:
+      - 'nethra.py'
+      - 'observe_field_audit.py'
+      - '.github/workflows/nethra-observe-field-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+      - name: Run observe field audit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/python3 observe_field_audit.py
