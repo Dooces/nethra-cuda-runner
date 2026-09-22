@@ -1,0 +1,24 @@
+name: Nethra manifestation descriptor audit
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'manifestation_descriptor_audit.py'
+      - '.github/workflows/nethra-manifestation-descriptor-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run manifestation descriptor audit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 manifestation_descriptor_audit.py
