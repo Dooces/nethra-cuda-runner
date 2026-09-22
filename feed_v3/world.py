@@ -236,3 +236,10 @@ def grounded_activation(obs:Obs)->Dict[int,float]:
     for sensor in obs.inputs:
         out[MOTOR_COUNT+int(sensor)]=1.0
     return out
+
+def sensory_current(obs:Obs)->Dict[int,float]:
+    """Physical sensory transducer current only; output Nethra are driven by the field/babbling."""
+    return {
+        MOTOR_COUNT+int(sensor):1.0
+        for sensor in obs.inputs
+    }
