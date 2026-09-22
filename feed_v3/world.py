@@ -50,6 +50,8 @@ class World:
         basal_cost:float=.00042,
         motor_cost:float=.000055,
         initial_energy:float=.60,
+        source_x:float=.94,
+        source_y:float=.24,
     ):
         self.angle=list(REST)
         self.vel=[0.0]*JOINT_COUNT
@@ -61,6 +63,8 @@ class World:
         self.feed_rate=float(feed_rate)
         self.basal_cost=float(basal_cost)
         self.motor_cost=float(motor_cost)
+        self.source_x=float(source_x)
+        self.source_y=float(source_y)
         if balls:
             self.enable_balls()
 
@@ -202,11 +206,11 @@ class World:
 
         source_contact=False
         if self.source:
-            source_pixel=self._pixel(self.SOURCE_X,self.SOURCE_Y)
+            source_pixel=self._pixel(self.source_x,self.source_y)
             inputs.add(source_pixel)
             r2=self.SOURCE_RADIUS*self.SOURCE_RADIUS
             source_contact=any(
-                (x-self.SOURCE_X)**2+(y-self.SOURCE_Y)**2<=r2
+                (x-self.source_x)**2+(y-self.source_y)**2<=r2
                 for x,y in points
             )
 
