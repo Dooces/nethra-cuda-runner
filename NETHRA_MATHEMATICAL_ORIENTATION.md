@@ -53,7 +53,12 @@ of manifestation itself.
 Nethra consequence:
 - construction/reuse should ultimately be justified by prospectively different histories;
 - no semantic label is needed;
-- no requirement exists that one completed interval be compressed to one scalar.
+- no requirement exists that one completed interval be compressed to one scalar;
+- a learned temporal lag may be evidence used to qualify a prospective relation without becoming a
+  physical propagation-delay parameter;
+- present resonance of an earned temporal relation can express prediction of a later manifestation.
+  Exact source-free reenactment after the historical lag is a separate generative-rollout question,
+  not the criterion for whether the relation is predictive.
 
 ### D. Causal sensitivity / plasticity
 Only after the consequence representation is fixed do we ask:
