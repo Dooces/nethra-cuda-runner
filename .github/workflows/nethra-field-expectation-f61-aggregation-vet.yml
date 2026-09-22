@@ -1,0 +1,24 @@
+name: Nethra F61 expectation aggregation vet
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'field_expectation_f61_aggregation_vet.py'
+      - '.github/workflows/nethra-field-expectation-f61-aggregation-vet.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run F61 expectation aggregation vet
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 field_expectation_f61_aggregation_vet.py
