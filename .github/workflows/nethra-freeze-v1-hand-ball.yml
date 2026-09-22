@@ -1,0 +1,56 @@
+name: Nethra freeze v1 hand-ball
+
+on:
+  push:
+    branches:
+      - nethra-freeze-v1-hand-ball
+    paths:
+      - 'freeze_v1/**'
+      - '.github/workflows/nethra-freeze-v1-hand-ball.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi || true
+      - name: Freeze tests
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd freeze_v1
+          PYTHONPATH=. /usr/bin/python3 test_freeze.py
+      - name: Run persistent hand-ball lineages
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          cd freeze_v1
+          PYTHONPATH=. /usr/bin/python3 run_hand_ball.py             --lineages 16             --workers 16             --hand-epochs 8             --ball-epochs 8             --steps 12000             --sample-rate 0.0625             --persistence-floor 0.003             --half-life 60000             --out ../benchmark-output/hand_ball_results.json             | tee ../benchmark-output/stdout.txt
+          cd ..
+          cp freeze_v1/core.py freeze_v1/world.py freeze_v1/run_hand_ball.py freeze_v1/test_freeze.py benchmark-output/
+          sha256sum benchmark-output/core.py benchmark-output/world.py benchmark-output/run_hand_ball.py benchmark-output/test_freeze.py > benchmark-output/source.sha256
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          tar -czf nethra-freeze-v1-hand-ball.tar.gz benchmark-output freeze_v1
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-freeze-v1-hand-ball
+          path: nethra-freeze-v1-hand-ball.tar.gz
+          if-no-files-found: error
+          retention-days: 7
