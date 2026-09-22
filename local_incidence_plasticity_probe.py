@@ -146,13 +146,16 @@ def main():
     print("simultaneous_zero_origin",test_simultaneous_has_no_prior_temporal_receipt_from_zero())
     print("combined_predictors",test_combined_predictors_share_local_receipts())
 
-    # Promotion gate for this candidate: a correct A then Y sequence must give positive receipt to
-    # both incidences of the ordinary A--R--Y path, while an unrelated next Z must not.
-    assert result["correct_A_R"][0] > 0.0
-    assert result["correct_R_Y"][0] > 0.0
-    assert result["wrong_A_R"][0] <= 0.0
-    assert result["wrong_R_Y"][0] <= 0.0
-    print("candidate_sign_gate_passed")
+    # This candidate is rejected if the correct sequence does not reinforce the complete path
+    # or if the unrelated consequence still gives positive receipt on the consequence-side edge.
+    rejected = (
+        result["correct_A_R"][0] <= 0.0
+        or result["correct_R_Y"][0] <= 0.0
+        or result["wrong_A_R"][0] > 0.0
+        or result["wrong_R_Y"][0] > 0.0
+    )
+    assert rejected
+    print("candidate_rejected")
 
 
 if __name__=="__main__":
