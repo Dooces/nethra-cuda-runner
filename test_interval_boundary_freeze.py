@@ -69,6 +69,20 @@ class IntervalBoundaryFreezeTests(unittest.TestCase):
         self.assertEqual(f.previous_interval_delta,first_delta)
         self.assertEqual(f.current_interval_source[a],.7)
 
+    def test_step_has_no_automatic_construction_authority(self):
+        f=NethraField()
+        a=f.new(); b=f.new()
+        initial=len(f.nethra)
+        for _ in range(20):
+            a.push(1.0)
+            f.step(.05)
+            b.push(1.0)
+            f.step(.05)
+        self.assertEqual(len(f.nethra),initial)
+        self.assertEqual(len(f.history_count),0)
+        self.assertEqual(len(f.support_count),0)
+        self.assertEqual(len(f.outcome_count),0)
+
     def test_provisional_path_remains_separate_and_callable(self):
         self.assertTrue(hasattr(NethraField,"_consider_completed_interval_provisional"))
         f=NethraField()
