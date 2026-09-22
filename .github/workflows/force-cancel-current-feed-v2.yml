@@ -1,0 +1,20 @@
+name: Force cancel current Nethra feed v2
+
+on:
+  push:
+    paths:
+      - '.github/workflows/force-cancel-current-feed-v2.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Force cancel current queued feed v2 run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --method POST repos/${{ github.repository }}/actions/runs/35680912485/force-cancel
