@@ -1,0 +1,47 @@
+name: Nethra full-cloud permissive
+
+on:
+  push:
+    paths:
+      - 'bench/full_cloud_permissive.py'
+      - '.github/workflows/nethra-full-cloud.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host identity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          uname -a
+          nvidia-smi || true
+      - name: Run full-cloud permissive benchmark
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p benchmark-output
+          cd benchmark-output
+          PYTHONPATH=../bench /usr/bin/python3 ../bench/full_cloud_permissive.py | tee stdout.txt
+          cp ../bench/full_cloud_permissive.py ../bench/fixed_budget_persistence.py .
+          sha256sum full_cloud_permissive.py fixed_budget_persistence.py > source.sha256
+          cd ..
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          tar -czf nethra-full-cloud-permissive.tar.gz benchmark-output
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-full-cloud-permissive
+          path: nethra-full-cloud-permissive.tar.gz
+          if-no-files-found: error
+          retention-days: 7
