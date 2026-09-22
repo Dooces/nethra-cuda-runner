@@ -2,7 +2,7 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 from core import NethraMemory, ResourceCloud
-from world import BASE_COUNT, HandBallWorld, support
+from world import BASE_COUNT, HandBallWorld
 
 def test_singleton_competes_without_creation_threshold():
     c=ResourceCloud(1.0,1)
@@ -15,12 +15,15 @@ def test_singleton_competes_without_creation_threshold():
 def test_checkpoint_roundtrip():
     c=ResourceCloud(1.0,2)
     for t in range(1,300):
-        c.observe({1},{100},t)
+        xs={1} if t%3==0 else {2}
+        ys={100} if 1 in xs else set()
+        c.observe(xs,ys,t)
     m=NethraMemory(BASE_COUNT)
     out=m.checkpoint_from_cloud(c,300,0.0)
     assert out["created"]>=1
     with tempfile.TemporaryDirectory() as d:
-        p=Path(d)/"cp.json";m.save(p,step=300,metadata={"x":1})
+        p=Path(d)/"cp.json"
+        m.save(p,step=300,metadata={"x":1})
         q,step,meta=NethraMemory.load(p)
         assert step==300 and meta["x"]==1 and len(q.by_key)==len(m.by_key)
 
