@@ -1,0 +1,87 @@
+name: Nethra metabolic timescale sweep
+
+on:
+  push:
+    branches:
+      - nethra-feed-v3-bounded
+    paths:
+      - '.github/workflows/nethra-feed-v3-metabolic-sweep.yml'
+  workflow_dispatch:
+
+jobs:
+  sweep:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          free -h
+          nvidia-smi
+      - name: Reuse exact primed hand-ball checkpoint
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          rm -rf prior benchmark-output
+          mkdir -p prior benchmark-output
+          gh run download 35686582364 -n nethra-feed-v3-cuda-feeding -D prior
+          tar -xzf prior/nethra-feed-v3-cuda-feeding.tar.gz -C prior
+          cp prior/benchmark-output/base_hand_ball_cuda.json benchmark-output/base_hand_ball_cuda.json
+      - name: Metabolic sweep
+        shell: bash
+        run: |
+          set -euxo pipefail
+          cd feed_v3
+          for scale in 0.5 0.25 0.1 0.05; do
+            basal=$(awk -v s="$scale" 'BEGIN {printf "%.10f", 0.00042*s}')
+            motor=$(awk -v s="$scale" 'BEGIN {printf "%.10f", 0.000055*s}')
+            echo "=== SCALE $scale basal=$basal motor=$motor ==="
+            env PYTHONPATH=. /usr/bin/python3 run_feeding_cuda.py               --base ../benchmark-output/base_hand_ball_cuda.json               --steps 12000               --checkpoint-every 12000               --sample-rate 0.0625               --proposal-budget 64               --candidate-capacity 65536               --persistence-floor 0.003               --field-dt 0.1               --basal-cost "$basal"               --motor-cost "$motor"               --seed 22001               --out "../benchmark-output/metabolic-$scale.json"               > >(tee "../benchmark-output/metabolic-$scale.txt") 2>&1 &
+            pid=$!
+            (
+              while kill -0 "$pid" 2>/dev/null; do
+                rss_kb=$(awk '/VmRSS:/ {print $2}' "/proc/$pid/status" 2>/dev/null || echo 0)
+                if [[ "${rss_kb:-0}" -gt 4194304 ]]; then
+                  echo "RSS SAFETY LIMIT EXCEEDED: ${rss_kb} kB" >&2
+                  kill -TERM "$pid" || true
+                  exit 99
+                fi
+                sleep 1
+              done
+            ) &
+            watchdog=$!
+            set +e
+            wait "$pid"
+            status=$?
+            set -e
+            kill "$watchdog" 2>/dev/null || true
+            wait "$watchdog" 2>/dev/null || true
+            if [[ "$status" -ne 0 ]]; then
+              exit "$status"
+            fi
+          done
+          cd ..
+          cp feed_v3/core.py feed_v3/world.py feed_v3/cuda_field.py feed_v3/run_feeding_cuda.py benchmark-output/
+          sha256sum benchmark-output/core.py benchmark-output/world.py benchmark-output/cuda_field.py benchmark-output/run_feeding_cuda.py > benchmark-output/source.sha256
+      - name: Bundle receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euxo pipefail
+          tar -czf nethra-feed-v3-metabolic-sweep.tar.gz benchmark-output feed_v3
+      - name: Upload receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-feed-v3-metabolic-sweep
+          path: nethra-feed-v3-metabolic-sweep.tar.gz
+          if-no-files-found: error
+          retention-days: 7
