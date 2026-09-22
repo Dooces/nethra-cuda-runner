@@ -1,0 +1,24 @@
+name: Nethra manifestation M vs delta paired
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'manifestation_M_vs_delta_paired_probe.py'
+      - '.github/workflows/nethra-manifestation-M-vs-delta-paired.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run paired manifestation probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 manifestation_M_vs_delta_paired_probe.py
