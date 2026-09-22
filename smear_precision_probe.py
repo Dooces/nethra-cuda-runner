@@ -186,12 +186,49 @@ def test_local_hat_delta_axes():
     return worst
 
 
+
+def test_existing_f61_convergence_extracts_overlap_from_pair_smear():
+    def make(gain):
+        field = NethraField(leakage=0.4, convergence_gain=gain)
+        a = field.new()
+        b = field.new()
+        r = field.new()
+        field._route(r, (a, b), frozenset(), 80)
+        # Probe setup only: under existing F61 math, zero residual correlation means
+        # full supplier independence. No new learning rule is introduced here.
+        field.pair_stats[frozenset((a, b))] = (0.0, 1.0, 1.0, 1)
+        return field, a, b, r
+
+    control = make(0.0)
+    active = make(1.0)
+    control_rows = []
+    active_rows = []
+    for x in (0.05, 0.10, 0.25, 0.40, 0.50, 0.60, 0.75, 0.90, 0.95):
+        ja, jb = pair_smear(x)
+        cf, ca, cb, cr = control
+        af, aa, ab, ar = active
+        integrate_fixed_current(cf, {ca: ja, cb: jb})
+        integrate_fixed_current(af, {aa: ja, ab: jb})
+        control_rows.append((x, cr.activation))
+        active_rows.append((x, ar.activation))
+
+    control_span = max(v for _, v in control_rows) - min(v for _, v in control_rows)
+    assert control_span < 1e-10
+
+    active_map = dict(active_rows)
+    assert active_map[0.50] > active_map[0.05]
+    assert active_map[0.50] > active_map[0.95]
+    assert abs(active_map[0.05] - active_map[0.95]) < 1e-10
+    return control_rows, active_rows
+
+
 def main():
     recon, axis = test_exact_pair_encoding()
     boundary = test_learning_boundary_discards_amplitude()
     monotonic = test_field_uses_pair_ratio()
     band = test_field_can_form_local_band_from_three_fixed_smear_channels()
     local_axis = test_local_hat_delta_axes()
+    convergence_control, convergence_active = test_existing_f61_convergence_extracts_overlap_from_pair_smear()
 
     print("pair_reconstruction_max_error", recon)
     print("pair_delta_axis_max_error", axis)
@@ -200,6 +237,8 @@ def main():
     print("three_hat_positive_band", band[:2])
     print("three_hat_edge_center_edge_margins", band[2:])
     print("three_hat_local_axis_max_error", local_axis)
+    print("f61_overlap_control", convergence_control)
+    print("f61_overlap_active", convergence_active)
     print("pair_active_inputs", 2)
     print("hat3_max_active_inputs", 2)
     print("all_assertions_passed")
