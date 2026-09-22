@@ -1,0 +1,24 @@
+name: Nethra clamped boundary tension
+
+on:
+  push:
+    branches:
+      - nethra-field-tension-investigation
+    paths:
+      - 'clamped_delta_tension_probe.py'
+      - '.github/workflows/nethra-clamped-boundary-tension.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run clamped observation tension probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/python3 clamped_delta_tension_probe.py
