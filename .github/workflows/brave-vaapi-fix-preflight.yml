@@ -1,0 +1,37 @@
+name: Brave VAAPI fix preflight
+
+on:
+  push:
+    paths:
+      - '.github/workflows/brave-vaapi-fix-preflight.yml'
+
+jobs:
+  check:
+    runs-on: self-hosted
+    steps:
+      - name: Preflight
+        shell: bash
+        run: |
+          set +e
+          echo "=== Brave version ==="
+          /opt/brave.com/brave/brave --version
+          echo
+          echo "=== NVIDIA VAAPI package availability ==="
+          dnf -q info nvidia-vaapi-driver 2>&1 | head -80
+          echo
+          echo "=== Related installed packages ==="
+          rpm -qa | grep -Ei 'nvidia-vaapi|libva|mesa-va|vdpau' | sort
+          echo
+          echo "=== sudo noninteractive ==="
+          sudo -n true
+          echo "sudo_rc=$?"
+          echo
+          echo "=== Brave desktop command ==="
+          grep -R '^Exec=' /usr/share/applications/brave-browser*.desktop 2>/dev/null
+          echo
+          echo "=== User Brave flags/config ==="
+          ls -la "$HOME/.config/brave-flags.conf" "$HOME/.config/brave-flags.conf.d" 2>/dev/null
+          cat "$HOME/.config/brave-flags.conf" 2>/dev/null
+          echo
+          echo "=== Environment ==="
+          env | grep -E '^(LIBVA|NVD|GBM|__GL)' | sort
