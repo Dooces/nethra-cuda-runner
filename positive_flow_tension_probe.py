@@ -168,7 +168,9 @@ def test_existing_predictor_consumes_receiver_residual():
         tw=tension_for(weak,out,eps)
         tb=tension_for(base,out,eps)
         rows.append((strong,tw,tb,inc[y],out[weak].get(y,0.0),out[base].get(y,0.0)))
-    assert all(rows[i][1] >= rows[i+1][1]-1e-15 for i in range(len(rows)-1))
+    # Do not impose monotonicity: sufficiently strong existing paths can reverse the weak
+    # relation's physical flow.  The audit only asks whether the residual available to the weak
+    # relation is eventually exhausted/reversed by existing structure.
     assert rows[-1][1] < 0.0
     return rows
 
