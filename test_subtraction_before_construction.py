@@ -1,3 +1,4 @@
+# DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT
 import unittest
 
 from nethra import NethraField
@@ -48,6 +49,7 @@ class SubtractionBeforeConstructionTests(unittest.TestCase):
         f.previous_explicit=frozenset()
         f.previous_closure=frozenset()
         f.previous_source_event=larger
+# DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT
         f.previous_event=larger
 
         f.support_count[larger]=9
@@ -98,6 +100,7 @@ class SubtractionBeforeConstructionTests(unittest.TestCase):
 
     def test_recursive_description_is_available_before_mint(self):
         f=NethraField()
+# DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT
         a=f.new(); b=f.new()
         r1=f.new(); r2=f.new()
         f._route(r1,(a,),frozenset(),4)
@@ -148,6 +151,7 @@ class SubtractionBeforeConstructionTests(unittest.TestCase):
         self.assertNotIn(r,closed)
 
 
+# DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT
 
     def test_provisional_refinding_uses_current_source_event(self):
         f=NethraField()
@@ -198,6 +202,7 @@ class SubtractionBeforeConstructionTests(unittest.TestCase):
                 changed=False
                 for r in relations:
                     if r in expected:
+# DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT
                         continue
                     if any(route.issubset(expected) and conditions.get(frozenset(),0)>0
                            for route,conditions in r.routes.items()):
