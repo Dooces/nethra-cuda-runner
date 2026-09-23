@@ -64,10 +64,11 @@ def make_motifs():
     # other atoms; later motifs recombine these atoms in different orders and phase shifts.
     atoms=[]
     for a in range(16):
-        base=(a*11 + 3)%N_SYMBOLS
+        # Partition the 64-symbol library exactly once across the atom library. Motifs then
+        # reuse/reorder these atoms under different surrounding contexts.
         atoms.append(tuple(
-            f"S{((base + off) % N_SYMBOLS):02d}"
-            for off in (0, 7, 19, 31)
+            f"S{(4*a + off):02d}"
+            for off in (0, 1, 2, 3)
         ))
 
     motifs=[]
