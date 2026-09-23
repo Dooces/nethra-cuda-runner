@@ -100,6 +100,7 @@ def acc(rows,key):
         for j,s in enumerate(SYMBOLS):
             if resolved[j]:
                 ok=(1 if score[j]>=0 else -1)==truth[j]
+                ok=bool(ok)
                 vals.append(ok); per[s].append(ok)
                 strengths.append((abs(float(score[j])),ok))
     result={
