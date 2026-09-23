@@ -1,0 +1,28 @@
+name: AAPL single-target context
+
+on:
+  push:
+    branches:
+      - nethra-aapl-single-target-context
+    paths:
+      - 'aapl_single_target_context.py'
+      - '.github/workflows/aapl-single-target-context.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_MULTI_CACHE: '/tmp/nethra_multisymbol_exact.json'
+      NETHRA_SYMBOLS: 'AAPL,MSFT,NVDA,TSLA,JPM,XOM'
+      NETHRA_SINGLE_TRAIN: '800'
+      NETHRA_SINGLE_ONLINE: '200'
+    steps:
+      - uses: actions/checkout@v4
+      - name: AAPL single-target shared-context audit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'SINGLETARGET elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_single_target_context.py
