@@ -78,79 +78,111 @@ def train_ending_at(cycles,cue):
     return f,leaves
 
 
-def prospective_current(f,leaves):
-    """Read endogenous relation->leaf current from the live field without mutating it."""
-    before=tuple((n.activation,n.external) for n in f.nethra)
-    score={leaf:0.0 for leaf in leaves}
-    contributions={leaf:[] for leaf in leaves}
+def integrated_prospective_current(f,leaves,duration):
+    """Integrate relation->leaf endogenous charge over a finite source-free interval.
 
-    for a,b,g in f._edges():
-        if a.routes and b in score:
-            q=g*(a.activation-b.activation)
-            if q>0.0:
-                score[b]+=q
-                contributions[b].append(q)
-        elif b.routes and a in score:
-            q=g*(b.activation-a.activation)
-            if q>0.0:
-                score[a]+=q
-                contributions[a].append(q)
+    The original learned field is not mutated. No observation, learning, construction, threshold,
+    or symbolic continuation is run during the prospective interval.
+    """
+    import copy
+    g=copy.deepcopy(f)
+    gleaves=g.nethra[:SYMBOLS]
+    score={leaf:0.0 for leaf in gleaves}
+    steps=max(1,round(duration/.005))
+    dt=duration/steps
 
-    after=tuple((n.activation,n.external) for n in f.nethra)
-    assert before==after
-    return score,contributions
+    for n in g.nethra:
+        n.external=0.0
+
+    for _ in range(steps):
+        edges=g._edges()
+
+        def accumulate(state,weight):
+            for a,b,conductance in edges:
+                if a.routes and b in score:
+                    q=conductance*(state[a]-state[b])
+                    if q>0.0: score[b]+=weight*q
+                elif b.routes and a in score:
+                    q=conductance*(state[b]-state[a])
+                    if q>0.0: score[a]+=weight*q
+
+        a0={n:n.activation for n in g.nethra}
+        k1=g._derivative_at(a0)
+        a1={n:a0[n]+.5*dt*k1[n] for n in g.nethra};k2=g._derivative_at(a1)
+        a2={n:a0[n]+.5*dt*k2[n] for n in g.nethra};k3=g._derivative_at(a2)
+        a3={n:a0[n]+dt*k3[n] for n in g.nethra};k4=g._derivative_at(a3)
+
+        accumulate(a0,dt/6.0)
+        accumulate(a1,dt/3.0)
+        accumulate(a2,dt/3.0)
+        accumulate(a3,dt/6.0)
+
+        for n in g.nethra:
+            n.activation=a0[n]+dt*(k1[n]+2*k2[n]+2*k3[n]+k4[n])/6.0
+
+    return [score[n] for n in gleaves]
+
+
+def score_row(cycles,cue,horizon):
+    f,leaves=train_ending_at(cycles,cue)
+    expected=(cue+1)%SYMBOLS
+    scores=integrated_prospective_current(f,leaves,horizon)
+    candidates=[i for i in range(SYMBOLS) if i!=cue]
+    order=sorted(candidates,key=lambda i:scores[i],reverse=True)
+    rival=max(scores[i] for i in candidates if i!=expected)
+    expected_score=scores[expected]
+    margin=expected_score-rival
+    total=sum(scores[i] for i in candidates)
+    return {
+        "cycles":cycles,
+        "horizon":horizon,
+        "cue":cue,
+        "expected":expected,
+        "relations":sum(bool(n.routes) for n in f.nethra),
+        "expected_score":expected_score,
+        "rival_score":rival,
+        "margin":margin,
+        "normalized_margin":margin/total if total>0.0 else 0.0,
+        "rank":order.index(expected)+1,
+        "scores":scores,
+    }
 
 
 def prediction_sweep():
+    # First hold the prospective interval fixed at one observed interval and vary experience.
     cycles_grid=(2,3,5,10,30,100,300)
     all_rows=[]
     for cycles in cycles_grid:
-        rows=[]
-        for cue in range(SYMBOLS):
-            f,leaves=train_ending_at(cycles,cue)
-            expected=(cue+1)%SYMBOLS
-            score,parts=prospective_current(f,leaves)
-            candidates=[i for i in range(SYMBOLS) if i!=cue]
-            order=sorted(candidates,key=lambda i:score[leaves[i]],reverse=True)
-            rank=order.index(expected)+1
-            rival=max(score[leaves[i]] for i in candidates if i!=expected)
-            expected_score=score[leaves[expected]]
-            margin=expected_score-rival
-            total=sum(score[leaves[i]] for i in candidates)
-            normalized=margin/total if total>0.0 else 0.0
-            row={
-                "cycles":cycles,
-                "cue":cue,
-                "expected":expected,
-                "relations":sum(bool(n.routes) for n in f.nethra),
-                "expected_score":expected_score,
-                "rival_score":rival,
-                "margin":margin,
-                "normalized_margin":normalized,
-                "rank":rank,
-                "scores":[score[n] for n in leaves],
-                "expected_contributors":len(parts[leaves[expected]]),
-            }
-            rows.append(row)
-            all_rows.append(row)
-            print("PREDICTION",row)
+        rows=[score_row(cycles,cue,DT) for cue in range(SYMBOLS)]
+        all_rows.extend(rows)
+        for row in rows: print("PREDICTION",row)
+        print("PREDICTION_SUMMARY",{
+            "cycles":cycles,
+            "horizon":DT,
+            "rank1":sum(r["rank"]==1 for r in rows),
+            "positive_margin":sum(r["margin"]>0.0 for r in rows),
+            "mean_margin":sum(r["margin"] for r in rows)/len(rows),
+            "mean_normalized_margin":sum(r["normalized_margin"] for r in rows)/len(rows),
+        })
 
-        rank1=sum(r["rank"]==1 for r in rows)
-        positive=sum(r["margin"]>0.0 for r in rows)
-        mean_margin=sum(r["margin"] for r in rows)/len(rows)
-        mean_norm=sum(r["normalized_margin"] for r in rows)/len(rows)
-        print(
-            "PREDICTION_SUMMARY",
-            {"cycles":cycles,"rank1":rank1,"positive_margin":positive,
-             "mean_margin":mean_margin,"mean_normalized_margin":mean_norm},
-        )
+    # Then hold mature experience fixed and vary only how long the source-free field is allowed to
+    # express its continuation. This is the finite-interval analogue of "confidence develops".
+    for horizon in (.025,.05,.10,.15,.30,.60,1.20):
+        rows=[score_row(300,cue,horizon) for cue in range(SYMBOLS)]
+        all_rows.extend(rows)
+        print("HORIZON_SUMMARY",{
+            "cycles":300,
+            "horizon":horizon,
+            "rank1":sum(r["rank"]==1 for r in rows),
+            "positive_margin":sum(r["margin"]>0.0 for r in rows),
+            "mean_margin":sum(r["margin"] for r in rows)/len(rows),
+            "mean_normalized_margin":sum(r["normalized_margin"] for r in rows)/len(rows),
+            "scores":[r["scores"] for r in rows],
+        })
 
-    # Readout must remain a continuous observation: scores can be zero/negative-margin, and no
-    # prediction threshold has authority to change topology or field state.
     assert all(math.isfinite(r["margin"]) for r in all_rows)
-    print("PREDICTION_READOUT_MUTATION",False)
+    print("PREDICTION_THRESHOLD_USED",False)
     return all_rows
-
 
 def main():
     print("=== LEARNING_ADMISSION_ONLY ===")
