@@ -1,0 +1,66 @@
+name: Multi-symbol time-only priming
+
+on:
+  push:
+    branches:
+      - nethra-multisymbol-time-priming
+    paths:
+      - 'multisymbol_time_priming.py'
+      - '.github/workflows/multisymbol-time-priming.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_MULTI_CACHE: '/tmp/nethra_multisymbol_exact.json'
+      NETHRA_SYMBOLS: 'AAPL,MSFT,NVDA,TSLA,JPM,XOM'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi || true
+          rm -f "$NETHRA_MULTI_CACHE"
+      - name: Small reference semantics
+        shell: bash
+        run: |
+          set -euxo pipefail
+          NETHRA_MULTI_MODE=smoke NETHRA_MULTI_TRAIN=500 NETHRA_MULTI_ONLINE=100           NETHRA_FAST_SYNC=0 PYTHONPATH=. /usr/bin/time -f 'SMOKE_REF elapsed=%e maxrss_kb=%M'             /usr/bin/python3 multisymbol_time_priming.py | tee /tmp/multi_ref.log
+      - name: Small optimized semantics
+        shell: bash
+        run: |
+          set -euxo pipefail
+          NETHRA_MULTI_MODE=smoke NETHRA_MULTI_TRAIN=500 NETHRA_MULTI_ONLINE=100           NETHRA_FAST_SYNC=1 PYTHONPATH=. /usr/bin/time -f 'SMOKE_FAST elapsed=%e maxrss_kb=%M'             /usr/bin/python3 multisymbol_time_priming.py | tee /tmp/multi_fast.log
+      - name: Require exact small-run equivalence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          /usr/bin/python3 - <<'PY'
+          import json
+          def load(path):
+              with open(path) as f:
+                  for line in f:
+                      if line.startswith("RESULT "):
+                          return json.loads(line[7:])
+              raise SystemExit("missing RESULT "+path)
+          a=load("/tmp/multi_ref.log")
+          b=load("/tmp/multi_fast.log")
+          keys=("train_depth","final_depth","mature_depth","relations_final","incidences_final",
+                "topology_fingerprint","margin_sha256")
+          diff={k:(a[k],b[k]) for k in keys if a[k]!=b[k]}
+          if diff:
+              raise SystemExit("equivalence failure "+repr(diff))
+          print("SMOKE_EQUIVALENCE_PASS",json.dumps({k:a[k] for k in keys},sort_keys=True))
+          PY
+      - name: Expanded shared-field run
+        shell: bash
+        run: |
+          set -euxo pipefail
+          NETHRA_MULTI_MODE=main NETHRA_MULTI_TRAIN=3000 NETHRA_MULTI_ONLINE=500           NETHRA_FAST_SYNC=1 PYTHONPATH=. /usr/bin/time -f 'MAIN elapsed=%e maxrss_kb=%M'             /usr/bin/python3 multisymbol_time_priming.py | tee /tmp/multi_main.log
