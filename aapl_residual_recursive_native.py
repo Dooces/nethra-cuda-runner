@@ -63,6 +63,7 @@ import statistics
 import time
 import urllib.parse
 import urllib.request
+from collections import defaultdict
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
@@ -337,6 +338,13 @@ class NativeReplay:
         self.reused=0
         self.accounted=0
 
+        # Exact structural indexes. These only narrow searches; final route matching still uses the
+        # core _matching_route semantics. They have no activation and no learning authority.
+        self._indexed_conditions=set()
+        self._atom_relations=defaultdict(set)
+        self._unqualified_relations=set()
+        self._account_equivalence_checks=0
+
         # Exact execution accelerators. closure_cache is valid only for one topology version and is
         # cleared on every persistent topology change. The statistics arrays are persistent shadow
         # execution storage for the same relation-local quantities previously copied through dicts.
@@ -378,12 +386,56 @@ class NativeReplay:
             self.stats_abs=grow(self.stats_abs,np.float64)
             self.relmask=grow(self.relmask,np.bool_)
 
+    def _index_relation_routes(self, relation):
+        """Incrementally index already-earned route conditions for exact accounting search."""
+        for route,bucket in relation.routes.items():
+            for signature,evidence in bucket.items():
+                if evidence<=0:
+                    continue
+                token=(relation,route,signature)
+                if token in self._indexed_conditions:
+                    continue
+                self._indexed_conditions.add(token)
+                if signature:
+                    for atom in signature:
+                        self._atom_relations[atom].add(relation)
+                else:
+                    self._unqualified_relations.add(relation)
+
+    def _accounted_indexed(self,before,after):
+        """Exact _accounted() semantics with an index used only to reject impossible candidates."""
+        cb=set(self._unqualified_relations)
+        ca=set(self._unqualified_relations)
+        for atom in before:
+            cb.update(self._atom_relations.get(atom,()))
+        for atom in after:
+            ca.update(self._atom_relations.get(atom,()))
+        candidates=cb & ca
+
+        found=None
+        if candidates:
+            for relation in sorted(candidates,key=self.index.__getitem__):
+                left=self.f._matching_route(relation,before)
+                if left is None:
+                    continue
+                right=self.f._matching_route(relation,after)
+                if right is not None:
+                    found=(relation,left,right)
+                    break
+
+        # During early execution prove the narrowing index returns the exact same first relation,
+        # route and signature as the core whole-scan implementation.
+        if self._account_equivalence_checks<256:
+            reference=self.f._accounted(before,after)
+            if found!=reference:
+                raise AssertionError(("indexed accounting mismatch",found,reference))
+            self._account_equivalence_checks+=1
+        return found
+
     def sync_topology(self,new_relation=None):
-        # Preserve all continuous incidence plasticity accumulated since the previous topology
-        # compilation before adding/recompiling persistent structure.
-        if self.edge_keys:
-            self.push_evidence_back()
+        """Compile only newly exposed incidences; existing numerical evidence remains canonical."""
         self._sync_indices()
+
         if new_relation is not None and new_relation not in self.birth_members:
             members=set()
             for route in new_relation.routes:
@@ -393,13 +445,21 @@ class NativeReplay:
             self.birth_e[new_relation]=SEED_E
             self.created+=1
             self.relmask[self.index[new_relation]]=True
-            # A new persistent route can change closure for any previously cached event.
             self.closure_cache.clear()
 
-        # Any route added to a reused relation may expose a new physical incidence.
-        for r in self.f.nethra:
-            if not r.routes:continue
-            rid=self.index[r]
+        # A topology-changing call names the only relation whose routes can be new. Initial
+        # compilation scans all relations once; subsequent construction/reuse scans just the
+        # changed relation.
+        if new_relation is None:
+            scan=[r for r in self.f.nethra if r.routes]
+        else:
+            scan=[new_relation]
+
+        new_keys=[]
+        for r in scan:
+            if not r.routes:
+                continue
+            self._index_relation_routes(r)
             for route in r.routes:
                 for m in route:
                     if m is r:
@@ -408,12 +468,23 @@ class NativeReplay:
                     if key not in self.incidence_e:
                         self.incidence_e[key]=SEED_E
                         self.birth_e.setdefault(r,SEED_E)
+                        new_keys.append(key)
 
-        keys=sorted(self.incidence_e,key=lambda x:(self.index[x[0]],self.index[x[1]]))
-        self.edge_keys=keys
-        self.er=np.asarray([self.index[r] for r,m in keys],np.int32)
-        self.em=np.asarray([self.index[m] for r,m in keys],np.int32)
-        self.ee=np.asarray([self.incidence_e[k] for k in keys],np.float64)
+        if new_keys:
+            old_E=len(self.edge_keys)
+            self.edge_keys.extend(new_keys)
+            add_er=np.asarray([self.index[r] for r,m in new_keys],np.int32)
+            add_em=np.asarray([self.index[m] for r,m in new_keys],np.int32)
+            add_ee=np.asarray([SEED_E]*len(new_keys),np.float64)
+            if old_E:
+                self.er=np.concatenate((self.er,add_er))
+                self.em=np.concatenate((self.em,add_em))
+                self.ee=np.concatenate((self.ee,add_ee))
+            else:
+                self.er=add_er
+                self.em=add_em
+                self.ee=add_ee
+
         self.topology_dirty=False
 
     def push_evidence_back(self):
@@ -456,13 +527,34 @@ class NativeReplay:
                 # incidence-local below, so no topology/refinding fact changes here.
                 self.reused+=1
             else:
-                n_before=len(self.f.nethra)
-                relation=self.f._mint_history(before,description_event,1,history_key=key)
-                if len(self.f.nethra)>n_before:
-                    self.sync_topology(relation)
-                elif relation is not None:
-                    # Existing earned topology accounted for this newly encountered history.
+                accounted=self._accounted_indexed(before,description_event)
+                if accounted is not None:
+                    relation,left_match,right_match=accounted
+                    left_route,left_signature=left_match
+                    right_route,right_signature=right_match
+                    self.f._route(relation,left_route,left_signature,1)
+                    self.f._route(relation,right_route,right_signature,1)
+                    self.f.history_relation[key]=relation
                     self.accounted+=1
+                    # Existing relation may have acquired a new route/signature/member incidence.
+                    self.sync_topology(relation)
+                else:
+                    # Faithful new-relation branch of NethraField._mint_history(): recursive
+                    # descriptions supply arbitrary-size routes, while source recurrence remains
+                    # the independent construction key.
+                    left=self.f._event_members(before)
+                    right=self.f._event_members(description_event)
+                    participants=left|right
+                    if len(participants)>=2:
+                        relation=self.f.new()
+                        if left:
+                            self.f._route(relation,left,self.f._project(before,left),1)
+                        if right:
+                            self.f._route(
+                                relation,right,self.f._project(description_event,right),1
+                            )
+                        self.f.history_relation[key]=relation
+                        self.sync_topology(relation)
 
         self.f.previous_explicit=explicit
         self.f.previous_closure=closed
