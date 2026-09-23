@@ -1,0 +1,16 @@
+name: Nethra relation only support coupling audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_relation_only_support_coupling_audit.py'
+      - '.github/workflows/nethra-relation-only-support-coupling-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_relation_only_support_coupling_audit.py
