@@ -446,7 +446,7 @@ class NethraField:
             ),
         )
 
-    def _admit_whole_support(self, current_closed, unresolved):
+    def _admit_whole_support(self, current_closed, current_description, unresolved):
         """Permissively admit one ordinary weak Nethra from the whole unresolved active support.
 
         Existing recursive closure has already been refound and the field's prospective prediction
@@ -462,6 +462,17 @@ class NethraField:
             return None
 
         relation = self._existing_whole_support_relation(route)
+
+        # Structural subtraction remains independent of instantaneous field strength. If an
+        # existing Nethra already accounts for both completed recursive descriptions, reuse it
+        # rather than minting a second handle merely because its current prediction was weak.
+        if relation is None and self.current_event and current_description:
+            accounted = self._accounted(self.current_event, current_description)
+            if accounted is not None:
+                relation = accounted[0]
+                if relation not in route and route not in relation.routes:
+                    self._route(relation, route, frozenset(), self.admission_seed)
+
         if relation is None:
             relation = self.new()
             self._route(relation, route, frozenset(), self.admission_seed)
@@ -481,7 +492,7 @@ class NethraField:
         )
         return relation
 
-    def _native_learn(self, source_current, dt, current_closed):
+    def _native_learn(self, source_current, dt, current_closed, current_description):
         """Apply the settled whole-support prospective plasticity to the completed prior interval.
 
         From the prior interval activation integrals, each physical incidence has exact charge
@@ -575,7 +586,7 @@ class NethraField:
             max(0.0, epsilon.get(n, 0.0))
             for n in source_current
         )
-        self._admit_whole_support(current_closed, unresolved)
+        self._admit_whole_support(current_closed, current_description, unresolved)
         return epsilon
 
     def _edges(self):
@@ -744,7 +755,7 @@ class NethraField:
 
         source_event, closed, description_event = self._describe_source_support(explicit)
         if self.native_learning and self.current_interval_integral:
-            self._native_learn(source_current, dt, closed)
+            self._native_learn(source_current, dt, closed, description_event)
 
         self.previous_source_event = self.current_source_event
         self.current_source_event = source_event
