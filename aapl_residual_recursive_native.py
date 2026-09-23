@@ -338,6 +338,7 @@ class NativeReplay:
         self.created=0
         self.reused=0
         self.accounted=0
+        self.pending_route_relations=set()
 
         # Exact execution accelerators. closure_cache is valid only for one topology version and is
         # cleared on every persistent topology change. The statistics arrays are persistent shadow
@@ -398,11 +399,15 @@ class NativeReplay:
             # A new persistent route can change closure for any previously cached event.
             self.closure_cache.clear()
 
-        # A newly created relation is the only object whose incidences can be new on this call.
-        # FAST_SYNC avoids rescanning every older relation while preserving the same final sorted
-        # edge order below. Initial compilation and reference mode retain the original whole scan.
+        # Reference semantics rescan every relation only when sync_topology() is called. Existing
+        # relations can gain routes through _mint_history() between those calls. FAST_SYNC records
+        # exactly those dirty relations and scans them together with the newly-created relation at
+        # the SAME later synchronization point; nothing becomes field-visible earlier.
         if FAST_SYNC and new_relation is not None:
-            scan=(new_relation,)
+            scan=sorted(
+                self.pending_route_relations | {new_relation},
+                key=self.index.__getitem__,
+            )
         else:
             scan=self.f.nethra
         for r in scan:
@@ -421,6 +426,8 @@ class NativeReplay:
         self.er=np.asarray([self.index[r] for r,m in keys],np.int32)
         self.em=np.asarray([self.index[m] for r,m in keys],np.int32)
         self.ee=np.asarray([self.incidence_e[k] for k in keys],np.float64)
+        if FAST_SYNC and new_relation is not None:
+            self.pending_route_relations.clear()
         self.topology_dirty=False
 
     def push_evidence_back(self):
@@ -469,7 +476,12 @@ class NativeReplay:
                     self.sync_topology(relation)
                 elif relation is not None:
                     # Existing earned topology accounted for this newly encountered history.
+                    # _mint_history() may have attached a new route. The reference implementation
+                    # does not expose it numerically until the next sync_topology() call, so fast
+                    # mode records it as dirty but deliberately does NOT compile it yet.
                     self.accounted+=1
+                    if FAST_SYNC:
+                        self.pending_route_relations.add(relation)
 
         self.f.previous_explicit=explicit
         self.f.previous_closure=closed
