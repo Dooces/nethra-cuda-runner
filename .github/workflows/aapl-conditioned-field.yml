@@ -1,0 +1,27 @@
+name: AAPL conditioned native field
+
+on:
+  push:
+    branches:
+      - nethra-aapl-conditioned-field
+    paths:
+      - 'aapl_conditioned_field.py'
+      - '.github/workflows/aapl-conditioned-field.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    timeout-minutes: 6
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_COND_TRAIN: '1200'
+      NETHRA_COND_ONLINE: '5000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test route-conditioned native field
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'COND elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 aapl_conditioned_field.py
