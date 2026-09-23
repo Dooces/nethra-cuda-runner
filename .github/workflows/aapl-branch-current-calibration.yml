@@ -1,0 +1,29 @@
+name: AAPL branch-current calibration
+
+on:
+  push:
+    branches:
+      - nethra-aapl-confidence-calibration
+    paths:
+      - 'aapl_branch_current_calibration.py'
+      - '.github/workflows/aapl-branch-current-calibration.yml'
+  workflow_dispatch:
+
+jobs:
+  calibrate:
+    runs-on: self-hosted
+    timeout-minutes: 4
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_MULTI_CACHE: '/tmp/nethra_multisymbol_exact.json'
+      NETHRA_SYMBOLS: 'AAPL,MSFT,NVDA,TSLA,JPM,XOM'
+      NETHRA_CONF_TRAIN: '800'
+      NETHRA_CONF_ONLINE: '2000'
+      NETHRA_CONF_CAL: '1000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Chronological branch-current confidence calibration
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'BRANCHCAL elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_branch_current_calibration.py
