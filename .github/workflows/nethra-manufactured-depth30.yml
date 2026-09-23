@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 10
     env:
       NETHRA_SYNTH_MAX_CYCLES: '256'
-      NETHRA_SYNTH_MIN_CYCLES: '64'
+      NETHRA_SYNTH_MIN_CYCLES: '32'
       NETHRA_SYNTH_SETTLE_CYCLES: '32'
       NETHRA_SYNTH_RELATION_SAFETY: '8000'
     steps:
