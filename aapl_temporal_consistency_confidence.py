@@ -117,3 +117,4 @@ def main():
     print("RESULT",json.dumps(result,sort_keys=True),flush=True)
     print("all_assertions_passed",flush=True)
 if __name__=="__main__":main()
+# workflow trigger
