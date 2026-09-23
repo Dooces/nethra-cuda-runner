@@ -1,0 +1,22 @@
+name: Nethra continuous recursive handles
+
+on:
+  push:
+    branches:
+      - nethra-threshold-plasticity-audit
+    paths:
+      - 'continuous_recursive_handle_probe.py'
+      - '.github/workflows/nethra-continuous-recursive-handles.yml'
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Continuous recursive handle probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 continuous_recursive_handle_probe.py
