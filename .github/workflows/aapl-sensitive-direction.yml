@@ -1,0 +1,26 @@
+name: AAPL sensitive direction
+
+on:
+  push:
+    branches:
+      - nethra-aapl-sensitive-direction
+    paths:
+      - 'aapl_sensitive_direction.py'
+      - '.github/workflows/aapl-sensitive-direction.yml'
+  workflow_dispatch:
+
+jobs:
+  direction:
+    runs-on: self-hosted
+    timeout-minutes: 4
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_DIR_TRAIN: '1200'
+      NETHRA_DIR_ONLINE: '5000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Map continuation to direction
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'DIRECTION elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_sensitive_direction.py
