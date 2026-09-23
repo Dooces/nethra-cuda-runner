@@ -108,6 +108,7 @@ class SingleTargetReplay(MultiReplay):
         plus_sum=minus_sum=0.0
         plus_c=minus_c=0.0
         plus_max=minus_max=0.0
+        plus_q=minus_q=0.0
         for r,s in self.birth_symbol.items():
             if s!=TARGET: continue
             members=self.birth_after_members.get(r,frozenset())
@@ -117,12 +118,18 @@ class SingleTargetReplay(MultiReplay):
             if sign>0:
                 plus_sum+=a; plus_max=max(plus_max,a)
                 e=self.incidence_e.get((r,self.pplus[TARGET]),0.0)
-                plus_c+=a*float(g_of_e(float(e)))
+                g=float(g_of_e(float(e)))
+                plus_c+=a*g
+                q=g*(float(state[self.index[r]])-float(state[self.index[self.pplus[TARGET]]]))*OBS_DT
+                if q>0.0: plus_q+=q
             else:
                 minus_sum+=a; minus_max=max(minus_max,a)
                 e=self.incidence_e.get((r,self.pminus[TARGET]),0.0)
-                minus_c+=a*float(g_of_e(float(e)))
-        return plus_sum-minus_sum, plus_c-minus_c, plus_max-minus_max
+                g=float(g_of_e(float(e)))
+                minus_c+=a*g
+                q=g*(float(state[self.index[r]])-float(state[self.index[self.pminus[TARGET]]]))*OBS_DT
+                if q>0.0: minus_q+=q
+        return plus_sum-minus_sum, plus_c-minus_c, plus_max-minus_max, plus_q-minus_q
 
     def interval_target(self,currents,elapsed):
         if self.topology_dirty:self.sync_topology()
@@ -138,7 +145,7 @@ class SingleTargetReplay(MultiReplay):
         prospective=self.state.copy()
 
         ground=float(pred[self.pplus_idx[self.j]]-pred[self.pminus_idx[self.j]])
-        full_activation,full_coupled,strongest=self.relation_readouts(prospective)
+        full_activation,full_coupled,strongest,branch_current=self.relation_readouts(prospective)
 
         # Reveal simultaneous market vector into physical state.
         actual,target=outcome_origin_multi(
@@ -171,6 +178,7 @@ class SingleTargetReplay(MultiReplay):
             "activation":full_activation,
             "coupled":full_coupled,
             "strongest":strongest,
+            "branch_current":branch_current,
             "remaining":remaining,
             "closure":closure,
         }
@@ -249,6 +257,7 @@ def main():
         "full_activation":score(rows,"activation"),
         "full_coupled":score(rows,"coupled"),
         "strongest_relation":score(rows,"strongest"),
+        "branch_current":score(rows,"branch_current"),
         "consensus_ground_activation":score(rows,"ground",("activation",)),
         "consensus_ground_coupled":score(rows,"ground",("coupled",)),
         "consensus_ground_strongest":score(rows,"ground",("strongest",)),
