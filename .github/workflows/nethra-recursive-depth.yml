@@ -1,0 +1,22 @@
+name: Nethra recursive depth probe
+
+on:
+  push:
+    branches:
+      - nethra-threshold-plasticity-audit
+    paths:
+      - 'recursive_depth_gate_probe.py'
+      - '.github/workflows/nethra-recursive-depth.yml'
+  workflow_dispatch:
+
+jobs:
+  depth:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recursive depth
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -v /usr/bin/python3 recursive_depth_gate_probe.py
