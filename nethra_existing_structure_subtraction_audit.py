@@ -10,6 +10,7 @@ No field dynamics, route matching, evidence updates, or admission count threshol
 """
 from __future__ import annotations
 import copy
+from types import MethodType
 from nethra import NethraField
 
 SYMBOLS=4
@@ -104,10 +105,15 @@ def raw_step(f):
     a3={n:a0[n]+DT*k3[n] for n in f.nethra};k4=f._derivative_at(a3)
     for n in f.nethra:n.activation=a0[n]+DT*(k1[n]+2*k2[n]+2*k3[n]+k4[n])/6.
 
-def evaluate(f):
+def ungated_route_evidence(self,route,conditions,event):
+    return max(conditions.values(),default=0)
+
+def evaluate(f,ungated=False):
     rows=[]
     for cue in range(SYMBOLS):
         g,leaves=setup(f,cue);expected=(cue+1)%SYMBOLS
+        if ungated:
+            g._route_evidence=MethodType(ungated_route_evidence,g)
         cand=[i for i in range(SYMBOLS) if i!=cue]
         d0=g.derivative();charge={i:0. for i in range(SYMBOLS)}
         for _ in range(STEPS):
@@ -132,7 +138,9 @@ def main():
     for label,cls in (("CURRENT",NethraField),("EXISTING_ONLY",ExistingOnlyField)):
         print("\n",label)
         f=make(cls);describe(f)
-        rows=evaluate(f)
-        for r in rows:print("eval",r)
-        print("dadt_rank1",sum(r[2]==1 for r in rows),"charge_rank1",sum(r[3]==1 for r in rows))
+        for gate_label,ungated in (("GATED",False),("UNGATED",True)):
+            print(gate_label)
+            rows=evaluate(f,ungated)
+            for r in rows:print("eval",r)
+            print("dadt_rank1",sum(r[2]==1 for r in rows),"charge_rank1",sum(r[3]==1 for r in rows))
 if __name__=="__main__":main()
