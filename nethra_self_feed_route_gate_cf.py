@@ -54,12 +54,14 @@ def raw_step(f):
 def ungated_route_evidence(self,route,conditions,event):
     return max(conditions.values(),default=0)
 
-def eval_mode(f,cue,ungated=False):
+def eval_mode(f,cue,mode="CURRENT"):
     g,leaves=setup(f,cue)
-    if ungated:
-        g._route_evidence=MethodType(ungated_route_evidence,g)
-
     expected=(cue+1)%SYMBOLS
+    if mode=="UNGATED":
+        g._route_evidence=MethodType(ungated_route_evidence,g)
+    elif mode=="ORACLE_NEXT_EVENT":
+        g.current_event=frozenset(((leaves[cue],-1),(leaves[expected],1)))
+
     candidates=[i for i in range(SYMBOLS) if i!=cue]
     base={n:n.activation for n in g.nethra}
     d0=g.derivative()
@@ -93,8 +95,8 @@ def eval_mode(f,cue,ungated=False):
 
 def main():
     f=train()
-    for mode,ungated in (("CURRENT",False),("UNGATED",True)):
-        rows=[eval_mode(f,cue,ungated) for cue in range(SYMBOLS)]
+    for mode in ("CURRENT","UNGATED","ORACLE_NEXT_EVENT"):
+        rows=[eval_mode(f,cue,mode) for cue in range(SYMBOLS)]
         print(mode)
         for r in rows:print(r)
         print("dadt_rank1",sum(r["dadt"][0]==1 for r in rows),
