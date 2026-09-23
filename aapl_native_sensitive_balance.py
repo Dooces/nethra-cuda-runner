@@ -91,7 +91,7 @@ def chronological_thresholds(rows,key):
             acc=statistics.mean((r[key]>0)==(r["truth"]>0) for r in selected)
             majority=max(truth_up,1.0-truth_up)
         else:
-            truth_up=pred_up=acc=majority=None
+            truth_up=pred_up=acc=majority=persistence=None
         out[f"cal_top_{int(frac*100)}pct"]={
             "cutoff":cutoff,
             "n":len(selected),
@@ -128,6 +128,7 @@ def expanding_percentile_gate(rows,key,warmup=100):
             pred_up=statistics.mean(r[key]>0 for r in xs)
             acc=statistics.mean((r[key]>0)==(r["truth"]>0) for r in xs)
             majority=max(truth_up,1.0-truth_up)
+            persistence=statistics.mean(r["previous_truth"]==r["truth"] for r in xs)
         else:
             truth_up=pred_up=acc=majority=None
         out[f"prior_top_{int((1-q)*100+0.5)}pct"]={
@@ -137,6 +138,7 @@ def expanding_percentile_gate(rows,key,warmup=100):
             "truth_up_fraction":truth_up,
             "prediction_up_fraction":pred_up,
             "majority_baseline":majority,
+            "persistence_baseline":persistence,
         }
     return out
 
@@ -203,8 +205,11 @@ def main():
         up_excess=sum(v-floor for v in up_vals)
         dn_excess=sum(v-floor for v in dn_vals)
 
+        truth=1 if currents[i]>=0 else -1
+        previous_truth=1 if currents[i-1]>=0 else -1
         rows.append({
-            "truth":1 if currents[i]>=0 else -1,
+            "truth":truth,
+            "previous_truth":previous_truth,
             "kind":int(kinds[i]),
             "n_up":len(up_only),
             "n_down":len(dn_only),
