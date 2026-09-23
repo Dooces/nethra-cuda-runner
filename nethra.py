@@ -1,5 +1,10 @@
 """Nethra one-file core.
 
+MAINTENANCE INSTRUCTION — READ BEFORE INTERPRETING OR MODIFYING THIS FILE:
+Read NETHRA_MISTAKE_LEDGER.md from this repository first. Append every newly discovered mistake,
+regression, contamination, false claim, or shortcut made since its latest entry before making a
+semantic change here. Do not repeat a ledgered mistake under another name.
+
 Persistent ontology: one type, Nethra.
 Everything else in this file is transient evidence, indexing, or execution of Nethra dynamics.
 A helper is allowed to influence future behavior only by changing Nethra topology/evidence; it has
@@ -63,9 +68,11 @@ class NethraField:
     ordinary Nethra.
     """
 
-    def __init__(self, *, g_min=.20, g_max=1.50, tau=100.0,
+    def __init__(self, *, g_min=0.0, g_max=1.50, tau=100.0,
                  capacitance=1.0, leakage=1.0, trace_decay=.90,
-                 convergence_gain=1.0):
+                 convergence_gain=1.0, native_learning=True,
+                 admission_threshold=1e-12, admission_seed=.01,
+                 eta_out=1200.0, eta_in=2400.0):
         """Initialize one field without creating semantic structure.
 
         g_min/g_max/tau map earned route evidence to conductance. capacitance and leakage belong
@@ -83,6 +90,11 @@ class NethraField:
         self.leakage = float(leakage)
         self.trace_decay = float(trace_decay)
         self.convergence_gain = float(convergence_gain)
+        self.native_learning = bool(native_learning)
+        self.admission_threshold = float(admission_threshold)
+        self.admission_seed = float(admission_seed)
+        self.eta_out = float(eta_out)
+        self.eta_in = float(eta_in)
 
         self.nethra = []
 
@@ -104,22 +116,15 @@ class NethraField:
         # strengths without introducing another persistent participant type.
         self.incidence_evidence = {}
 
-        # Everything below through the prospective counters belongs to the provisional
-        # construction path retained for regression comparison, not to interval observation.
+        # Transient source/closure coordinates. Independent external source support earns
+        # construction; recursive closure is the structural description available to a newly
+        # admitted ordinary Nethra. Neither coordinate is another persistent object type.
         self.previous_explicit = frozenset()
         self.previous_closure = frozenset()
         self.previous_source_event = frozenset()
         self.current_source_event = frozenset()
-        # previous_event/current_event are recursive closure descriptions used only for
-        # refinding and route-state matching. They are not independent observation evidence.
         self.previous_event = frozenset()
         self.current_event = frozenset()
-        self.history_count = Counter()
-        self.support_count = Counter()
-        self.outcome_count = Counter()
-        self.total_histories = 0
-        self.history_relation = {}
-        self.next_presence_sum = defaultdict(Counter)
 
         self.rho = {}
         self.pair_stats = {}
@@ -177,7 +182,7 @@ class NethraField:
             raise ValueError("support route references unknown Nethra")
         signature = frozenset(signature)
         bucket = nethra.routes.setdefault(route, Counter())
-        bucket[signature] += int(evidence)
+        bucket[signature] += float(evidence)
 
         # Lossless lift of the existing route evidence into per-incidence storage.  At creation
         # every member receives the same evidence, preserving historical field behaviour exactly.
@@ -188,7 +193,7 @@ class NethraField:
                 (nethra, route, member),
                 Counter(),
             )
-            ibucket[signature] += int(evidence)
+            ibucket[signature] += float(evidence)
 
     def _matching_route(self, relation, event):
         """Find an already-earned route of relation that is supported by this transient event.
@@ -228,59 +233,6 @@ class NethraField:
             if left is not None and right is not None:
                 return relation, left, right
         return None
-
-    def _mint_history(self, before, after, evidence, history_key=None):
-        """Materialize an earned source history using recursive closure only as description.
-
-        before and after are recursive signed closure descriptions. They may contain already
-        refound Nethra and therefore are never themselves treated as independent evidence.
-        history_key is the independently observed source-history key that earned construction.
-
-        Exact source-history recurrence reuses its mapped Nethra and strengthens only routes that
-        the current recursive descriptions already refind. It never registers a self-containing
-        description as a new route. This is the one-file equivalent of L77/L78's rule that
-        self-containing descriptions are tautological and remain omitted.
-
-        When no mapped or accounting Nethra exists, the recursive descriptions may supply the
-        initial arbitrary-size routes for a newly earned relation. The new relation cannot occur
-        in those descriptions because it does not yet exist.
-        """
-        left = self._event_members(before)
-        right = self._event_members(after)
-        participants = left | right
-        if len(participants) < 2:
-            return None
-
-        key = (before, after) if history_key is None else history_key
-        existing = self.history_relation.get(key)
-        if existing is not None:
-            left_match = self._matching_route(existing, before)
-            right_match = self._matching_route(existing, after)
-            if left_match is not None:
-                route, signature = left_match
-                self._route(existing, route, signature, evidence)
-            if right_match is not None:
-                route, signature = right_match
-                self._route(existing, route, signature, evidence)
-            return existing
-
-        accounted = self._accounted(before, after)
-        if accounted is not None:
-            relation, left_match, right_match = accounted
-            left_route, left_signature = left_match
-            right_route, right_signature = right_match
-            self._route(relation, left_route, left_signature, evidence)
-            self._route(relation, right_route, right_signature, evidence)
-            self.history_relation[key] = relation
-            return relation
-
-        relation = self.new()
-        if left:
-            self._route(relation, left, self._project(before, left), evidence)
-        if right:
-            self._route(relation, right, self._project(after, right), evidence)
-        self.history_relation[key] = relation
-        return relation
 
     def closure(self, explicit, event=None):
         """Compute complete recursive refinding from explicit Nethra and transient state.
@@ -362,105 +314,16 @@ class NethraField:
         self.current_interval_integral = area
         return source, change, area
 
-    def _consider_completed_interval_provisional(self, explicit):
-        """Run the retained provisional construction path after an interval is complete.
-
-        THIS FUNCTION IS NOT PART OF THE FROZEN INTERVAL-OBSERVATION CONTRACT.
-
-        It is the former observe() implementation, renamed because it does far more than observe:
-        it projects source participation to discrete state, refinds recursive descriptions,
-        updates a prospective probability ledger, fabricates a binary participation residual, and
-        may construct or strengthen Nethra. It remains only so established regressions can be
-        compared while the native plasticity rule is investigated.
-
-        Separate independent source evidence from recursive closure description.
-
-        explicit is the physically/currently presented Nethra set. Its signed interval delta is
-        the only event used for recurrence counts, prospective qualification, and residual
-        prediction evidence. This preserves original-signal provenance.
-
-        Complete recursive closure is still computed every interval. Its signed delta is retained
-        separately as a transient description so existing relations may be refound, subtracted,
-        and used as members of later relations. A handle produced by closure therefore cannot
-        become independent evidence merely because it refound itself.
-
-        This restores the older SourceRecord split in minimal form: source support earns learning;
-        recursive context describes structure. Neither transient view creates a second ontology.
-        """
-        explicit = frozenset(explicit)
-
-        # State-qualified closure must see THIS observation's source event.  Using current_event
-        # here is one interval stale and can hide the state distinction being presented now.
-        source_observed = explicit | self.previous_explicit
-        source_event = frozenset(
-            (n, int(n in explicit) - int(n in self.previous_explicit))
-            for n in source_observed
-        )
-        closed = self.closure(explicit, source_event)
-
-        description_observed = closed | self.previous_closure
-        description_event = frozenset(
-            (n, int(n in closed) - int(n in self.previous_closure))
-            for n in description_observed
-        )
-
-        before_source = self.previous_source_event
-        before_description = self.previous_event
-        if before_source and source_event:
-            prior = self.support_count[before_source]
-            if prior:
-                present_now = {n for n, change in source_event if change >= 0}
-                predicted = self.next_presence_sum[before_source]
-                residual = {
-                    n: (1.0 if n in present_now else 0.0) - predicted[n] / prior
-                    for n in self.nethra
-                }
-                self.update_residuals(residual)
-
-            key = (before_source, source_event)
-            self.history_count[key] += 1
-            self.support_count[before_source] += 1
-            self.outcome_count[source_event] += 1
-            self.total_histories += 1
-            for n, change in source_event:
-                if change >= 0:
-                    self.next_presence_sum[before_source][n] += 1
-
-            count = self.history_count[key]
-            conditional = count / self.support_count[before_source]
-            baseline = self.outcome_count[source_event] / self.total_histories
-            for smaller, seen in self.support_count.items():
-                if smaller < before_source and seen:
-                    baseline = max(
-                        baseline,
-                        self.history_count[(smaller, source_event)] / seen,
-                    )
-            if count >= 2 and conditional > baseline:
-                increment = count if key not in self.history_relation else 1
-                self._mint_history(
-                    before_description,
-                    description_event,
-                    increment,
-                    history_key=key,
-                )
-
-        self.previous_explicit = explicit
-        self.previous_closure = closed
-        self.previous_source_event = source_event
-        self.current_source_event = source_event
-        self.previous_event = description_event
-        self.current_event = description_event
-        return source_event
-
     def conductance(self, evidence):
-        """Map accumulated route evidence to bounded nonnegative field conductance.
+        """Map earned incidence evidence to bounded field conductance with g(0)=0.
 
-        Evidence strengthens an already-earned Nethra route continuously; it does not act as a
-        permission gate. g_min leaves an existing route weakly conductive even when the current
-        transient signature does not contribute additional evidence, while saturation prevents
-        evidence count from producing unbounded conductance.
+        Zero evidence is exactly field-inert. Positive evidence changes conductance continuously;
+        there is no second plasticity threshold after admission. g_min is retained only as the
+        positive-evidence floor coordinate for explicit experiments; the native default is zero.
         """
         e = max(0.0, float(evidence))
+        if e <= 0.0:
+            return 0.0
         return self.g_min + (self.g_max - self.g_min) * (1.0 - exp(-e / self.tau))
 
     def _route_evidence(self, route, conditions, event):
@@ -490,6 +353,228 @@ class NethraField:
             return 0
         projected = self._project(event, route)
         return max(conditions.get(projected, 0), conditions.get(frozenset(), 0))
+
+    def _incidence_active_key(self, relation, route, member, event):
+        """Return the evidence key currently supplying one route-member incidence.
+
+        Exact state-qualified evidence is preferred only when it is at least as strong as the
+        unqualified evidence. Native whole-support routes are unqualified, but this preserves
+        compatibility with already-earned state-qualified routes without inventing a selector.
+        """
+        conditions = self.incidence_evidence.get((relation, route, member))
+        if conditions is None or not conditions:
+            return frozenset()
+        projected = self._project(event, route)
+        unqualified = float(conditions.get(frozenset(), 0.0))
+        if projected:
+            qualified = float(conditions.get(projected, 0.0))
+            if qualified >= unqualified and qualified > 0.0:
+                return projected
+        return frozenset()
+
+    def _physical_incidences(self, event):
+        """Compile physical incidences and retain which route evidence produced each maximum.
+
+        Several structural routes may imply the same symmetric physical relation-member edge.
+        Field execution uses the strongest conductance exactly as _edges() does. If multiple routes
+        tie for that same physical edge, later evidence credit is divided across the tied receipts
+        instead of manufacturing duplicate physical current.
+        """
+        physical = {}
+        for relation in self.nethra:
+            for route in relation.routes:
+                for member in route:
+                    key = self._incidence_active_key(relation, route, member, event)
+                    evidence = self.incidence_evidence.get(
+                        (relation, route, member),
+                        relation.routes[route],
+                    ).get(key, 0.0)
+                    g = self.conductance(evidence)
+                    edge = (relation, member)
+                    row = physical.get(edge)
+                    receipt = (route, key)
+                    if row is None or g > row["g"]:
+                        physical[edge] = {"g": g, "receipts": [receipt]}
+                    elif g == row["g"]:
+                        row["receipts"].append(receipt)
+        return physical
+
+    def _set_incidence_evidence(self, relation, route, member, signature, value):
+        """Set one continuous incidence-evidence coordinate and refresh route activity evidence."""
+        value = max(0.0, float(value))
+        bucket = self.incidence_evidence.setdefault((relation, route, member), Counter())
+        bucket[signature] = value
+
+        route_bucket = relation.routes[route]
+        route_bucket[signature] = max(
+            (
+                float(self.incidence_evidence.get((relation, route, m), Counter()).get(signature, 0.0))
+                for m in route
+            ),
+            default=0.0,
+        )
+
+    def _describe_source_support(self, explicit):
+        """Refind the complete recursive description grounded in this interval's source support."""
+        explicit = frozenset(explicit)
+        source_observed = explicit | self.previous_explicit
+        source_event = frozenset(
+            (n, int(n in explicit) - int(n in self.previous_explicit))
+            for n in source_observed
+        )
+        closed = self.closure(explicit, source_event)
+        description_observed = closed | self.previous_closure
+        description_event = frozenset(
+            (n, int(n in closed) - int(n in self.previous_closure))
+            for n in description_observed
+        )
+        return source_event, closed, description_event
+
+    def _existing_whole_support_relation(self, route):
+        """Return an already-stored ordinary Nethra with this exact whole-support route."""
+        route = frozenset(route)
+        rows = [n for n in self.nethra if route in n.routes]
+        if not rows:
+            return None
+        return max(
+            rows,
+            key=lambda n: max(
+                (float(v) for v in n.routes[route].values()),
+                default=0.0,
+            ),
+        )
+
+    def _admit_whole_support(self, current_closed, unresolved):
+        """Permissively admit one ordinary weak Nethra from the whole unresolved active support.
+
+        Existing recursive closure has already been refound and the field's prospective prediction
+        has already been subtracted. No proper subsets are enumerated. The route is the union of
+        the previous and current recursive descriptions grounded by independent source support.
+        Per-incidence plasticity is responsible for weakening nuisance members afterward.
+        """
+        if unresolved <= self.admission_threshold or not self.previous_closure:
+            return None
+
+        route = frozenset(self.previous_closure | frozenset(current_closed))
+        if len(route) < 2:
+            return None
+
+        relation = self._existing_whole_support_relation(route)
+        if relation is None:
+            relation = self.new()
+            self._route(relation, route, frozenset(), self.admission_seed)
+            return relation
+
+        # A retained but field-inert hypothesis is reused rather than duplicated.
+        for member in route:
+            bucket = self.incidence_evidence.setdefault(
+                (relation, route, member),
+                Counter(),
+            )
+            if float(bucket.get(frozenset(), 0.0)) <= 0.0:
+                bucket[frozenset()] = self.admission_seed
+        relation.routes[route][frozenset()] = max(
+            float(self.incidence_evidence[(relation, route, m)].get(frozenset(), 0.0))
+            for m in route
+        )
+        return relation
+
+    def _native_learn(self, source_current, dt, current_closed):
+        """Apply the settled whole-support prospective plasticity to the completed prior interval.
+
+        From the prior interval activation integrals, each physical incidence has exact charge
+
+            Q_ij = g_ij (A_i - A_j).
+
+        Existing relations first predict current independently sourced Nethra:
+
+            P_m = sum_R max(0, Q_Rm)
+            epsilon_m = S_m - P_m
+            T_R = sum_m p_Rm epsilon_m.
+
+        Outgoing relation-to-member evidence receives eta_out * p_Rm * epsilon_m. Incoming
+        member-to-relation incidences share eta_in * T_R in proportion to their actual positive
+        incoming charge. Evidence is clamped only at zero. After those existing predictions have
+        been subtracted, any positive unresolved source remainder may permissively admit one weak
+        ordinary Nethra over the whole recursively closed support. No subset candidate machinery,
+        probability ledger, winner rule, or external consequence selector exists here.
+        """
+        if not self.current_interval_integral:
+            return {}
+
+        physical = self._physical_incidences(self.current_event)
+        predicted = defaultdict(float)
+        outgoing = defaultdict(dict)
+        incoming = defaultdict(dict)
+
+        A = self.current_interval_integral
+        for (relation, member), row in physical.items():
+            g = float(row["g"])
+            if g <= 0.0:
+                continue
+            q = g * (float(A.get(relation, 0.0)) - float(A.get(member, 0.0)))
+            if q > 0.0:
+                predicted[member] += q
+                outgoing[relation][member] = q
+            elif q < 0.0:
+                incoming[relation][member] = -q
+
+        target = {
+            n: float(current) * float(dt)
+            for n, current in source_current.items()
+        }
+        epsilon = {
+            n: float(target.get(n, 0.0)) - float(predicted.get(n, 0.0))
+            for n in self.nethra
+        }
+
+        tension = {}
+        for relation, row in outgoing.items():
+            tension[relation] = sum(
+                p * epsilon.get(member, 0.0)
+                for member, p in row.items()
+            )
+
+        updates = defaultdict(float)
+        for relation, row in outgoing.items():
+            for member, p in row.items():
+                updates[(relation, member)] += self.eta_out * p * epsilon.get(member, 0.0)
+
+        for relation, row in incoming.items():
+            total = sum(row.values())
+            if total <= 0.0:
+                continue
+            t = float(tension.get(relation, 0.0))
+            for member, q in row.items():
+                updates[(relation, member)] += self.eta_in * t * (q / total)
+
+        for edge, delta in updates.items():
+            physical_row = physical.get(edge)
+            if physical_row is None or not physical_row["receipts"]:
+                continue
+            relation, member = edge
+            receipts = physical_row["receipts"]
+            share = float(delta) / len(receipts)
+            for route, signature in receipts:
+                bucket = self.incidence_evidence.setdefault(
+                    (relation, route, member),
+                    Counter(),
+                )
+                old = float(bucket.get(signature, 0.0))
+                self._set_incidence_evidence(
+                    relation,
+                    route,
+                    member,
+                    signature,
+                    old + share,
+                )
+
+        unresolved = sum(
+            max(0.0, epsilon.get(n, 0.0))
+            for n in source_current
+        )
+        self._admit_whole_support(current_closed, unresolved)
+        return epsilon
 
     def _edges(self):
         """Compile persistent support routes into symmetric Nethra-to-Nethra incidences.
@@ -540,8 +625,9 @@ class NethraField:
     def update_residuals(self, residual):
         """Update F61 residual traces and local supplier-independence statistics.
 
-        residual is produced internally by observe from next participation minus the empirical
-        prediction of the preceding event. Each Nethra receives a decaying signed trace rho.
+        residual must already be each Nethra's own predictive/consequence residual. Native
+        whole-support plasticity does not manufacture a substitute F61 residual from a common
+        downstream error. Each Nethra receives a decaying signed trace rho.
         Pair statistics are maintained only for Nethra that currently converge on a common
         receiver, because only those cross-terms are needed by the convergence equation.
 
@@ -636,24 +722,35 @@ class NethraField:
         return self._derivative_at({n: n.activation for n in self.nethra})
 
     def step(self, dt=.1):
-        """Advance the Nethra field one interval and expose that interval to learning.
+        """Advance one finite interval with native whole-support learning at its causal boundary.
 
-        The field is integrated with RK4 using the same F61 derivative at every stage. Nethra with
-        nonzero external current are the explicit physical/current participants for this interval.
-        After integration, _complete_interval() records exact sparse external-source current,
-        exact sparse Nethra activation delta, and the RK4-consistent activation integral A_i over
-        the same interval. That boundary is frozen and has no learning authority.
+        The externally supplied source for this interval is known before integration. Existing
+        structure first uses the completed PRIOR interval field flow to predict that source; native
+        per-incidence plasticity and permissive residual admission are therefore applied before the
+        current interval evolves. The outcome cannot alter the prediction that preceded it.
 
-        _consider_completed_interval_provisional() remains available only for explicit historical
-        regression comparison. step() does not invoke it, so the frozen interval boundary itself
-        has no construction authority. External current is consumed after the exact interval
-        record is stored.
+        Recursive closure of the current independent source support is then fixed for this
+        interval, the symmetric F61 field advances by RK4, and _complete_interval() stores exact
+        source current, activation delta, and activation integral A_i. External current is consumed
+        after the completed interval is stored.
         """
         dt = float(dt)
         if dt <= 0.0:
             raise ValueError("dt must be positive")
         source_current = {n: n.external for n in self.nethra if n.external != 0.0}
         explicit = frozenset(source_current)
+
+        source_event, closed, description_event = self._describe_source_support(explicit)
+        if self.native_learning and self.current_interval_integral:
+            self._native_learn(source_current, dt, closed)
+
+        self.previous_source_event = self.current_source_event
+        self.current_source_event = source_event
+        self.previous_event = self.current_event
+        self.current_event = description_event
+        self.previous_explicit = explicit
+        self.previous_closure = closed
+
         a0 = {n: n.activation for n in self.nethra}
         k1 = self._derivative_at(a0)
         a1 = {n: a0[n] + .5 * dt * k1[n] for n in self.nethra}
@@ -673,8 +770,6 @@ class NethraField:
 
         self._complete_interval(source_current, delta, integral)
 
-        # The historical construction path remains manually callable for regression comparison.
-        # It is deliberately not part of live step() because the plasticity law is unresolved.
         for n in self.nethra:
             n.external = 0.0
         return delta
