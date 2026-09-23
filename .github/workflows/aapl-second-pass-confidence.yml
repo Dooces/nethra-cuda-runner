@@ -1,0 +1,46 @@
+name: AAPL second-pass confidence
+
+on:
+  push:
+    branches:
+      - nethra-aapl-second-pass-confidence
+    paths:
+      - 'aapl_residual_recursive_native.py'
+      - '.github/workflows/aapl-second-pass-confidence.yml'
+  workflow_dispatch:
+
+jobs:
+  fedora:
+    runs-on: self-hosted
+    timeout-minutes: 4
+    env:
+      NETHRA_STOCK_PRICES: '20000'
+      NETHRA_STOCK_REPLAYS: '2'
+      NETHRA_STOCK_ABLATION: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Two passes with confidence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 aapl_residual_recursive_native.py
+
+  cloud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    env:
+      NETHRA_STOCK_PRICES: '20000'
+      NETHRA_STOCK_REPLAYS: '2'
+      NETHRA_STOCK_ABLATION: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencies
+        run: python -m pip install --quiet numpy numba
+      - name: Two passes with confidence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' python aapl_residual_recursive_native.py
