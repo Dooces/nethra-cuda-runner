@@ -1,0 +1,26 @@
+name: AAPL continuation baseline comparison
+
+on:
+  push:
+    branches:
+      - nethra-aapl-continuation-baselines
+    paths:
+      - 'aapl_continuation_baselines.py'
+      - '.github/workflows/aapl-continuation-baselines.yml'
+  workflow_dispatch:
+
+jobs:
+  compare:
+    runs-on: self-hosted
+    timeout-minutes: 4
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_COMPARE_TRAIN: '1200'
+      NETHRA_COMPARE_ONLINE: '5000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare continuation rankings
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'COMPARE elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_continuation_baselines.py
