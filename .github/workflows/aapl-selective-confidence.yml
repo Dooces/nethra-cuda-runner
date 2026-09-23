@@ -6,6 +6,7 @@ on:
       - nethra-aapl-selective-confidence
     paths:
       - 'aapl_single_target_context.py'
+      - 'aapl_residual_recursive_native.py'
       - '.github/workflows/aapl-selective-confidence.yml'
   workflow_dispatch:
 
