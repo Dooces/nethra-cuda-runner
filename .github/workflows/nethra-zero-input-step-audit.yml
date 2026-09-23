@@ -1,0 +1,16 @@
+name: Nethra zero input normal step audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_zero_input_step_audit.py'
+      - '.github/workflows/nethra-zero-input-step-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_zero_input_step_audit.py
