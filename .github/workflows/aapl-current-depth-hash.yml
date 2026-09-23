@@ -1,0 +1,32 @@
+name: AAPL current depth hash determinism
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'aapl_current_depth_hash_probe.py'
+      - '.github/workflows/aapl-current-depth-hash.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache one exact AAPL dataset
+        shell: bash
+        run: |
+          export NETHRA_PRICE_CACHE="$PWD/aapl_hash_cache.json"
+          PYTHONPATH=. /usr/bin/python3 - <<'PY'
+          from aapl_residual_recursive_native import fetch_aapl
+          p=fetch_aapl()
+          print("cached_points",len(p))
+          PY
+      - name: Sweep hash seeds on identical cached data
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export NETHRA_PRICE_CACHE="$PWD/aapl_hash_cache.json"
+          for s in 0 1 2 3 7 42 101; do
+            echo "HASH_SEED=$s"
+            PYTHONHASHSEED="$s" PYTHONPATH=. /usr/bin/python3 aapl_current_depth_hash_probe.py
+          done
