@@ -1,0 +1,28 @@
+name: Live full-field readout
+
+on:
+  push:
+    branches:
+      - nethra-live-full-field-readout
+    paths:
+      - 'live_full_field_readout.py'
+      - '.github/workflows/live-full-field-readout.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_MULTI_CACHE: '/tmp/nethra_multisymbol_exact.json'
+      NETHRA_SYMBOLS: 'AAPL,MSFT,NVDA,TSLA,JPM,XOM'
+      NETHRA_FULL_TRAIN: '800'
+      NETHRA_FULL_ONLINE: '200'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Persistent full-field prediction audit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'FULLFIELD elapsed=%e maxrss_kb=%M'             /usr/bin/python3 live_full_field_readout.py
