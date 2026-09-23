@@ -1,9 +1,9 @@
-name: AAPL 10k native predict
+name: AAPL native 10k long holdout
 
 on:
   push:
     branches:
-      - nethra-aapl-10k-native-predict
+      - nethra-aapl-native-10k-long-holdout
     paths:
       - 'aapl_residual_recursive_native.py'
       - '.github/workflows/aapl-10k-native-predict.yml'
@@ -12,12 +12,12 @@ on:
 jobs:
   exact_compare:
     runs-on: self-hosted
-    timeout-minutes: 6
+    timeout-minutes: 10
     env:
       NETHRA_STOCK_PRICES: '10000'
       NETHRA_STOCK_REPLAYS: '1'
       NETHRA_STOCK_ABLATION: '0'
-      NETHRA_STOCK_HOLDOUT: '1000'
+      NETHRA_STOCK_HOLDOUT: '10000'
       NETHRA_PRICE_CACHE: '/tmp/nethra_aapl_exact.json'
       PYTHONHASHSEED: '0'
     steps:
