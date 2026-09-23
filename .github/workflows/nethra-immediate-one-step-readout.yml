@@ -1,0 +1,16 @@
+name: Nethra immediate one step readout
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_immediate_one_step_readout.py'
+      - '.github/workflows/nethra-immediate-one-step-readout.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_immediate_one_step_readout.py
