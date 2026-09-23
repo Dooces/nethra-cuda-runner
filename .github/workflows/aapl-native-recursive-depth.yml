@@ -1,0 +1,34 @@
+name: AAPL native recursive depth
+
+on:
+  push:
+    branches:
+      - nethra-aapl-native-recursive-depth
+    paths:
+      - 'aapl_native_recursive_depth.py'
+      - '.github/workflows/aapl-native-recursive-depth.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          /usr/bin/python3 - <<'PY'
+          import numba
+          print("numba", numba.__version__)
+          PY
+      - name: Run 20k-price 50-replay recursive audit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 aapl_native_recursive_depth.py
