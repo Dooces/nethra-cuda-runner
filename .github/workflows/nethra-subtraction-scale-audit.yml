@@ -1,0 +1,16 @@
+name: Nethra subtraction scale audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_subtraction_scale_audit.py'
+      - '.github/workflows/nethra-subtraction-scale-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' env PYTHONPATH=. /usr/bin/python3 nethra_subtraction_scale_audit.py
