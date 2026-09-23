@@ -73,6 +73,37 @@ def score_agreement(rows,a,b):
     return out
 
 
+def chronological_thresholds(rows,key):
+    split=len(rows)//2
+    calibration=[r for r in rows[:split] if abs(float(r[key]))>EPS]
+    evaluation=rows[split:]
+    strengths=sorted((abs(float(r[key])) for r in calibration),reverse=True)
+    out={"calibration_rows":split,"evaluation_rows":len(evaluation),"calibration_resolved":len(calibration)}
+    if not strengths:
+        return out
+    for frac in (.01,.02,.05,.10,.25,.50):
+        k=max(1,int(len(strengths)*frac))
+        cutoff=strengths[k-1]
+        selected=[r for r in evaluation if abs(float(r[key]))>=cutoff]
+        if selected:
+            truth_up=statistics.mean(r["truth"]>0 for r in selected)
+            pred_up=statistics.mean(r[key]>0 for r in selected)
+            acc=statistics.mean((r[key]>0)==(r["truth"]>0) for r in selected)
+            majority=max(truth_up,1.0-truth_up)
+        else:
+            truth_up=pred_up=acc=majority=None
+        out[f"cal_top_{int(frac*100)}pct"]={
+            "cutoff":cutoff,
+            "n":len(selected),
+            "coverage":len(selected)/len(evaluation) if evaluation else 0.0,
+            "accuracy":acc,
+            "truth_up_fraction":truth_up,
+            "prediction_up_fraction":pred_up,
+            "majority_baseline":majority,
+        }
+    return out
+
+
 def main():
     base.FAST_SYNC=True
     points=fetch_aapl()
@@ -157,6 +188,7 @@ def main():
             subset=[r for r in rows if r["kind"]==kind]
             result[key+"_"+name]=score(subset,key)
 
+    result["ground_chronological_thresholds"]=chronological_thresholds(rows,"ground")
     print("RESULT",json.dumps(result,sort_keys=True),flush=True)
     print("all_assertions_passed",flush=True)
 
