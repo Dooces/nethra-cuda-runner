@@ -104,6 +104,43 @@ def chronological_thresholds(rows,key):
     return out
 
 
+def expanding_percentile_gate(rows,key,warmup=100):
+    qs=(0.90,0.95,0.98,0.99)
+    selected={q:[] for q in qs}
+    history=[]
+    for r in rows:
+        v=float(r[key])
+        if abs(v)<=EPS:
+            continue
+        strength=abs(v)
+        if len(history)>=warmup:
+            arr=np.asarray(history,np.float64)
+            for q in qs:
+                cutoff=float(np.quantile(arr,q))
+                if strength>=cutoff:
+                    selected[q].append(r)
+        history.append(strength)
+    out={"warmup_resolved":warmup,"resolved_seen":len(history)}
+    for q in qs:
+        xs=selected[q]
+        if xs:
+            truth_up=statistics.mean(r["truth"]>0 for r in xs)
+            pred_up=statistics.mean(r[key]>0 for r in xs)
+            acc=statistics.mean((r[key]>0)==(r["truth"]>0) for r in xs)
+            majority=max(truth_up,1.0-truth_up)
+        else:
+            truth_up=pred_up=acc=majority=None
+        out[f"prior_top_{int((1-q)*100+0.5)}pct"]={
+            "n":len(xs),
+            "coverage_all":len(xs)/len(rows) if rows else 0.0,
+            "accuracy":acc,
+            "truth_up_fraction":truth_up,
+            "prediction_up_fraction":pred_up,
+            "majority_baseline":majority,
+        }
+    return out
+
+
 def main():
     base.FAST_SYNC=True
     points=fetch_aapl()
@@ -189,6 +226,7 @@ def main():
             result[key+"_"+name]=score(subset,key)
 
     result["ground_chronological_thresholds"]=chronological_thresholds(rows,"ground")
+    result["ground_expanding_percentile"]=expanding_percentile_gate(rows,"ground")
     print("RESULT",json.dumps(result,sort_keys=True),flush=True)
     print("all_assertions_passed",flush=True)
 
