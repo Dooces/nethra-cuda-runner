@@ -115,6 +115,36 @@ def acc(rows,key):
     return result
 
 
+def consensus(rows,keys):
+    per={s:[] for s in SYMBOLS}
+    allv=[]
+    strengths=[]
+    for row in rows:
+        truth=np.asarray(row["truth"])
+        scores=[np.asarray(row[k]) for k in keys]
+        for j,s in enumerate(SYMBOLS):
+            vals=[float(x[j]) for x in scores]
+            if any(abs(v)<=1e-18 for v in vals):
+                continue
+            signs=[1 if v>=0 else -1 for v in vals]
+            if len(set(signs))!=1:
+                continue
+            ok=bool(signs[0]==truth[j])
+            per[s].append(ok); allv.append(ok)
+            strengths.append((min(abs(v) for v in vals),ok))
+    strengths.sort(reverse=True,key=lambda x:x[0])
+    out={
+        "accuracy":statistics.mean(allv) if allv else None,
+        "resolved":len(allv),
+        "coverage":len(allv)/(len(rows)*len(SYMBOLS)),
+        "per_symbol":{s:(statistics.mean(v) if v else None) for s,v in per.items()},
+    }
+    for frac in (.10,.25,.50):
+        k=max(1,int(len(strengths)*frac)) if strengths else 0
+        out[f"top_{int(frac*100)}pct"]=(statistics.mean(ok for _,ok in strengths[:k]) if k else None)
+    return out
+
+
 def main():
     base.FAST_SYNC=True
     stamps,prices,kinds,dates=load_aligned()
@@ -178,6 +208,10 @@ def main():
         "full_activation_sum":acc(rows,"activation_sum"),
         "full_coupled_activation":acc(rows,"coupled_activation"),
         "full_strongest_relation":acc(rows,"strongest_relation"),
+        "consensus_ground_activation":consensus(rows,("ground","activation_sum")),
+        "consensus_ground_coupled":consensus(rows,("ground","coupled_activation")),
+        "consensus_ground_strongest":consensus(rows,("ground","strongest_relation")),
+        "consensus_all_four":consensus(rows,("ground","activation_sum","coupled_activation","strongest_relation")),
         "examples":rows[:3],
     }
     print("RESULT",json.dumps(result,sort_keys=True),flush=True)
