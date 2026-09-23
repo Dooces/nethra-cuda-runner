@@ -1,0 +1,16 @@
+name: Nethra recursive topology provenance
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_recursive_topology_provenance.py'
+      - '.github/workflows/nethra-recursive-topology-provenance.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_recursive_topology_provenance.py
