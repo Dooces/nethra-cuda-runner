@@ -1,0 +1,16 @@
+name: Nethra recursive activation phase audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_recursive_activation_phase_audit.py'
+      - '.github/workflows/nethra-recursive-activation-phase-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_recursive_activation_phase_audit.py
