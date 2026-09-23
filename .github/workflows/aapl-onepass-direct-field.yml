@@ -1,0 +1,46 @@
+name: AAPL one-pass direct field
+
+on:
+  push:
+    branches:
+      - nethra-aapl-onepass-direct-field
+    paths:
+      - 'aapl_residual_recursive_native.py'
+      - '.github/workflows/aapl-onepass-direct-field.yml'
+  workflow_dispatch:
+
+jobs:
+  fedora:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    env:
+      NETHRA_STOCK_PRICES: '20000'
+      NETHRA_STOCK_REPLAYS: '1'
+      NETHRA_STOCK_ABLATION: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: One pass direct field
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 aapl_residual_recursive_native.py
+
+  cloud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      NETHRA_STOCK_PRICES: '20000'
+      NETHRA_STOCK_REPLAYS: '1'
+      NETHRA_STOCK_ABLATION: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Dependencies
+        run: python -m pip install --quiet numpy numba
+      - name: One pass direct field
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' python aapl_residual_recursive_native.py
