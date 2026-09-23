@@ -7,12 +7,13 @@ No relations are hand-created.
 Evaluation reconstructs a short observed prefix, then external current is set to zero. From that
 point onward only the Nethra field equation runs. We measure:
   * whether learned relation Nethra of increasing recursive origin depth continue gaining activation;
-  * whether the next source Nethra in the learned sequence gains more activation than alternatives;
+  * what is already primed at the instant the final external cue ends;
+  * whether the next source Nethra in the learned sequence is favored over alternatives;
   * whether deeper learned Nethra peak later, which would be evidence of actual recursive field
     propagation rather than an external loop replaying the sequence.
 
 The evaluation does not convert activations into new symbolic input and does not inject a decoder,
-selector, transition table, or threshold.
+selector, transition table, fitted threshold, or outcome-fed calibration.
 """
 
 from __future__ import annotations
@@ -42,7 +43,7 @@ def train():
 
 
 def origin_depths(f):
-    """Creation-causal recursive depth: only routes into already-existing members can raise depth."""
+    """Creation-causal recursive depth using routes whose members already existed."""
     index = {n: i for i, n in enumerate(f.nethra)}
     depth = {}
     for n in f.nethra:
@@ -74,12 +75,10 @@ def clone_and_prefix(f, cue_index):
     g = copy.deepcopy(f)
     leaves = g.nethra[:SYMBOLS]
 
-    # Clear physical state, retain learned topology/evidence.
     for n in g.nethra:
         n.activation = 0.0
         n.external = 0.0
 
-    # Clear only transient chronological boundary so every evaluation begins identically.
     g.previous_explicit = frozenset()
     g.previous_closure = frozenset()
     g.previous_source_event = frozenset()
@@ -91,7 +90,6 @@ def clone_and_prefix(f, cue_index):
     g.previous_interval_delta = {}
     g.current_interval_delta = {}
 
-    # Present enough real source history to refind the learned context, ending at cue_index.
     start = (cue_index - PREFIX + 1) % SYMBOLS
     seq = [(start + k) % SYMBOLS for k in range(PREFIX)]
     assert seq[-1] == cue_index
@@ -99,64 +97,93 @@ def clone_and_prefix(f, cue_index):
         leaves[idx].push(1.0)
         g.step(TRAIN_DT)
 
-    # Evaluation begins here. No further external source is ever applied.
     for n in g.nethra:
         n.external = 0.0
     return g, leaves
 
 
-def evaluate_one(f, depth, cue_index):
+def rank_of(index, candidates, score):
+    ranked = sorted(candidates, key=lambda i: score(i), reverse=True)
+    return ranked.index(index) + 1, ranked
+
+
+def evaluate_one(f, cue_index):
     g, leaves = clone_and_prefix(f, cue_index)
-    gdepth = {g.nethra[i]: depth[f.nethra[i]] for i in range(len(f.nethra))}
+    depth = origin_depths(g)
 
     base = {n: n.activation for n in g.nethra}
     peak_gain = {n: 0.0 for n in g.nethra}
+    peak_abs = dict(base)
     peak_time = {n: 0.0 for n in g.nethra}
-
+    integral = {n: 0.0 for n in g.nethra}
     initial_derivative = g.derivative()
+
+    expected = (cue_index + 1) % SYMBOLS
+    alternatives = [i for i in range(SYMBOLS) if i != cue_index]
+    base_rank, base_order = rank_of(expected, alternatives, lambda i: base[leaves[i]])
+    dadt_rank, dadt_order = rank_of(expected, alternatives, lambda i: initial_derivative[leaves[i]])
 
     for step in range(1, EVAL_STEPS + 1):
         raw_step(g, EVAL_DT)
         t = step * EVAL_DT
         for n in g.nethra:
+            integral[n] += n.activation * EVAL_DT
             gain = n.activation - base[n]
             if gain > peak_gain[n]:
                 peak_gain[n] = gain
                 peak_time[n] = t
+            if n.activation > peak_abs[n]:
+                peak_abs[n] = n.activation
 
-    expected = (cue_index + 1) % SYMBOLS
-    alternatives = [i for i in range(SYMBOLS) if i != cue_index]
-    ranked = sorted(alternatives, key=lambda i: peak_gain[leaves[i]], reverse=True)
-    next_rank = ranked.index(expected) + 1
+    future_rank, future_order = rank_of(expected, alternatives, lambda i: peak_abs[leaves[i]])
+    integral_rank, integral_order = rank_of(expected, alternatives, lambda i: integral[leaves[i]])
 
     by_depth = defaultdict(list)
     for n in g.nethra[SYMBOLS:]:
         if n.routes:
-            by_depth[gdepth[n]].append(n)
+            by_depth[depth[n]].append(n)
 
     depth_rows = []
     for d in sorted(by_depth):
         nodes = by_depth[d]
         best = max(nodes, key=lambda n: peak_gain[n])
-        depth_rows.append((d, peak_gain[best], peak_time[best]))
+        depth_rows.append((d, peak_gain[best], peak_time[best], base[best], peak_abs[best]))
 
     print(
         "cue", cue_index,
         "expected", expected,
-        "next_rank", next_rank,
-        "expected_gain", f"{peak_gain[leaves[expected]]:.9e}",
-        "expected_dadt0", f"{initial_derivative[leaves[expected]]:.9e}",
-        "leaf_gains", [f"{peak_gain[n]:.6e}" for n in leaves],
+        "relations", sum(bool(n.routes) for n in g.nethra),
+        "max_depth", max(depth.values(), default=0),
+    )
+    print(
+        "leaf_base", [f"{base[n]:.9e}" for n in leaves],
+        "base_rank", base_rank, "base_order", base_order,
+    )
+    print(
+        "leaf_dadt0", [f"{initial_derivative[n]:.9e}" for n in leaves],
+        "dadt_rank", dadt_rank, "dadt_order", dadt_order,
+    )
+    print(
+        "leaf_peak_abs", [f"{peak_abs[n]:.9e}" for n in leaves],
+        "future_rank", future_rank, "future_order", future_order,
+    )
+    print(
+        "leaf_peak_gain", [f"{peak_gain[n]:.9e}" for n in leaves],
+        "leaf_integral", [f"{integral[n]:.9e}" for n in leaves],
+        "integral_rank", integral_rank, "integral_order", integral_order,
     )
     print(
         "depth_peaks",
-        " ".join(f"{d}:{gain:.3e}@{t:.2f}" for d, gain, t in depth_rows[:32]),
+        " ".join(
+            f"{d}:gain={gain:.3e}@{t:.2f},base={b:.3e},peak={p:.3e}"
+            for d, gain, t, b, p in depth_rows[:32]
+        ),
     )
-    return next_rank, depth_rows
+    return base_rank, dadt_rank, future_rank, integral_rank, depth_rows
 
 
 def main():
-    f, leaves = train()
+    f, _leaves = train()
     depth = origin_depths(f)
     relations = [n for n in f.nethra if n.routes]
     max_depth = max((depth[n] for n in relations), default=0)
@@ -167,22 +194,28 @@ def main():
     print("max_origin_depth", max_depth)
     print("field_activation_nonzero", sum(abs(n.activation) > 1e-15 for n in f.nethra))
 
-    ranks = []
+    base_ranks = []
+    dadt_ranks = []
+    future_ranks = []
+    integral_ranks = []
     deepest_positive = 0
+
     for cue in range(SYMBOLS):
-        rank, rows = evaluate_one(f, depth, cue)
-        ranks.append(rank)
-        for d, gain, _t in rows:
+        br, dr, fr, ir, rows = evaluate_one(f, cue)
+        base_ranks.append(br)
+        dadt_ranks.append(dr)
+        future_ranks.append(fr)
+        integral_ranks.append(ir)
+        for d, gain, _t, _b, _p in rows:
             if gain > 1e-12:
                 deepest_positive = max(deepest_positive, d)
 
-    print("next_ranks", ranks)
-    print("rank1_count", sum(r == 1 for r in ranks), "of", len(ranks))
+    print("base_ranks", base_ranks, "rank1", sum(r == 1 for r in base_ranks))
+    print("dadt_ranks", dadt_ranks, "rank1", sum(r == 1 for r in dadt_ranks))
+    print("future_ranks", future_ranks, "rank1", sum(r == 1 for r in future_ranks))
+    print("integral_ranks", integral_ranks, "rank1", sum(r == 1 for r in integral_ranks))
     print("deepest_endogenously_rising_depth", deepest_positive)
 
-    # This assertion is purely ontological: recursive learned Nethra must genuinely receive field
-    # activation with no external current after the observed prefix. Sequence prediction is reported
-    # as a result rather than forced as an assertion.
     assert max_depth >= 2, max_depth
     assert deepest_positive >= 2, deepest_positive
     print("recursive_self_feed_confirmed", True)
