@@ -379,6 +379,10 @@ class NativeReplay:
             self.relmask=grow(self.relmask,np.bool_)
 
     def sync_topology(self,new_relation=None):
+        # Preserve all continuous incidence plasticity accumulated since the previous topology
+        # compilation before adding/recompiling persistent structure.
+        if self.edge_keys:
+            self.push_evidence_back()
         self._sync_indices()
         if new_relation is not None and new_relation not in self.birth_members:
             members=set()
