@@ -1,0 +1,29 @@
+name: AAPL establish then passive prediction
+
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'aapl_establish_then_passive_predict.py'
+      - 'NETHRA_PREDICTION_READOUT.md'
+      - '.github/workflows/aapl-establish-passive-predict.yml'
+  workflow_dispatch:
+
+jobs:
+  establish_predict:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    env:
+      NETHRA_AAPL_ESTABLISH_PRICES: '20000'
+      NETHRA_AAPL_ESTABLISH_MAX_REPLAYS: '12'
+      NETHRA_AAPL_SETTLE_PASSES: '3'
+      NETHRA_AAPL_AUDIT_STEPS: '40'
+      NETHRA_AAPL_PRINT_STEPS: '20'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Establish first, then audit passive predictions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 aapl_establish_then_passive_predict.py
