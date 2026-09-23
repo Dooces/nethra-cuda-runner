@@ -50,6 +50,7 @@ MAX_CYCLES=int(os.environ.get("NETHRA_WIDE_MAX_CYCLES","96"))
 PLATEAU_CYCLES=int(os.environ.get("NETHRA_WIDE_PLATEAU_CYCLES","20"))
 AUDIT_STEPS=int(os.environ.get("NETHRA_WIDE_AUDIT_STEPS","48"))
 TOPK=int(os.environ.get("NETHRA_WIDE_TOPK","5"))
+MACRO_PASSES=int(os.environ.get("NETHRA_WIDE_MACRO_PASSES","2"))
 RELATION_SAFETY=int(os.environ.get("NETHRA_WIDE_RELATION_SAFETY","12000"))
 
 N_SYMBOLS=64
@@ -98,7 +99,7 @@ def make_supercycle():
 
     # A second deterministic pass reuses selected motifs later, separated by different neighbors.
     order2=[(x*9+5)%N_MOTIFS for x in order]
-    macro=tuple(order + order2)
+    macro=tuple(order if MACRO_PASSES<=1 else order + order2)
 
     stream=[]
     motif_boundaries=[]
