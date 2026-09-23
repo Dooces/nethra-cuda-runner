@@ -127,3 +127,13 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
   manifested Nethra to count as consequences.
 - Prevention: external source support is a provenance/construction coordinate, never a universal
   consequence coordinate.
+
+## 2026-09-23 — post-outcome construction expanded ontology before state commit
+
+- After restoring the prior counterfactual manifestation target, the first transplant allowed native
+  learning to mint a new Nethra before the already-computed interval activation state was committed.
+- A later loop iterated the expanded ontology and would try to read an activation value for a Nethra
+  that did not exist during the interval.
+- Prevention: freeze the interval participant tuple before integration; completed-interval state,
+  delta and integral apply only to those participants. Newly admitted Nethra start at their normal
+  zero activation after the causal boundary.
