@@ -1,0 +1,30 @@
+name: Nethra threshold plasticity audit
+
+on:
+  push:
+    branches:
+      - nethra-threshold-plasticity-audit
+    paths:
+      - 'threshold_plasticity_audit.py'
+      - '.github/workflows/nethra-threshold-plasticity-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+      - name: Run threshold plasticity sweep
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -v /usr/bin/python3 threshold_plasticity_audit.py
