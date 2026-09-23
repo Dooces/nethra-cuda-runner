@@ -1,0 +1,27 @@
+name: Nethra manufactured depth-30 series
+
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_manufactured_depth30_series.py'
+      - '.github/workflows/nethra-manufactured-depth30.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    env:
+      NETHRA_SYNTH_MAX_CYCLES: '256'
+      NETHRA_SYNTH_MIN_CYCLES: '64'
+      NETHRA_SYNTH_SETTLE_CYCLES: '32'
+      NETHRA_SYNTH_RELATION_SAFETY: '8000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run current Nethra on deterministic depth-30 manufactured stream
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 nethra_manufactured_depth30_series.py
