@@ -397,10 +397,19 @@ class NethraField:
             conditional = count / self.support_count[before_source]
             baseline = self.outcome_count[source_event] / self.total_histories
             for smaller, seen in self.support_count.items():
-                if smaller < before_source and seen:
+                smaller_key = (smaller, source_event)
+                # Subtraction is allowed only from structure that has actually earned a persistent
+                # Nethra. A transient one-shot history that never materialized is evidence, not
+                # existing structure, and therefore cannot permanently veto a recurring larger
+                # history merely because its temporary empirical ratio happened to be 1/1.
+                if (
+                    smaller < before_source
+                    and seen
+                    and smaller_key in self.history_relation
+                ):
                     baseline = max(
                         baseline,
-                        self.history_count[(smaller, source_event)] / seen,
+                        self.history_count[smaller_key] / seen,
                     )
             if count >= 2 and conditional > baseline:
                 increment = count if key not in self.history_relation else 1
