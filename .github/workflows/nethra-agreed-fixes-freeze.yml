@@ -7,6 +7,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  portable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Portable frozen regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          python3 --version
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            python3 -m unittest -v \
+              test_interval_boundary_freeze.py \
+              test_subtraction_before_construction.py
+
   freeze:
     runs-on: self-hosted
     timeout-minutes: 3
