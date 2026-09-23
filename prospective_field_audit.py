@@ -35,7 +35,7 @@ import numpy as np
 
 import aapl_residual_recursive_native as base
 from aapl_residual_recursive_native import (
-    CAPACITANCE, OBS_DT, integrate, preflow, plasticity, g_of_e,
+    CAPACITANCE, OBS_DT, ADMISSION_RESIDUAL, integrate, preflow, plasticity, g_of_e,
 )
 from multisymbol_time_priming import (
     SYMBOLS, MultiReplay, load_aligned, make_intervals,
@@ -89,10 +89,11 @@ class ProspectiveReplay(MultiReplay):
             self.pplus_idx,self.pminus_idx,self.er,self.em,self.ee
         )
 
+        eps=target-pred
         price_eps=0.0
         for j in range(len(SYMBOLS)):
-            price_eps+=abs(float(target[self.pplus_idx[j]]-pred[self.pplus_idx[j]]))
-            price_eps+=abs(float(target[self.pminus_idx[j]]-pred[self.pminus_idx[j]]))
+            price_eps+=abs(float(eps[self.pplus_idx[j]]))
+            price_eps+=abs(float(eps[self.pminus_idx[j]]))
 
         if learn and self.er.shape[0]:
             plasticity(
@@ -102,21 +103,32 @@ class ProspectiveReplay(MultiReplay):
 
         self.state=actual
 
-        # Context is the actually manifested symbol-specific price Nethra. Constant symbol labels
-        # are deliberately absent, so cross-symbol provenance must be earned by structure.
+        # Differentiate-first construction: the full observation updates plasticity, but new
+        # structure sees only grounded manifestations the existing field under-predicted. Expected
+        # manifestations have already been accounted for by the field and are subtracted here.
         explicit={self.time}
+        unresolved_residual=0.0
+        unresolved_count=0
         for j,s in enumerate(SYMBOLS):
-            explicit.add(self.pplus[s] if currents[j]>=0 else self.pminus[s])
+            node=self.pplus[s] if currents[j]>=0 else self.pminus[s]
+            idx=self.index[node]
+            remaining=max(0.0,float(eps[idx]))
+            if remaining>ADMISSION_RESIDUAL:
+                explicit.add(node)
+                unresolved_residual+=remaining
+                unresolved_count+=1
 
         closure_size=0
         if construct:
-            _r,closure_size=self.structural_step(explicit,price_eps)
+            _r,closure_size=self.structural_step(explicit,unresolved_residual)
 
         return {
             "pred_plus":np.asarray([float(pred[i]) for i in self.pplus_idx]),
             "pred_minus":np.asarray([float(pred[i]) for i in self.pminus_idx]),
             "surprise":price_eps,
             "closure_size":closure_size,
+            "unresolved_count":unresolved_count,
+            "unresolved_residual":unresolved_residual,
             "snapshot":snapshot,
         }
 
@@ -316,6 +328,8 @@ def main():
             "truth":truth.tolist(),
             "correct":(pred==truth).tolist(),
             "surprise":float(out["surprise"]),
+            "unresolved_count":int(out["unresolved_count"]),
+            "unresolved_residual":float(out["unresolved_residual"]),
             "snapshot":out["snapshot"],
         })
         if k in detailed_at:
@@ -356,6 +370,8 @@ def main():
         "deepest_cross_symbol_depth":max((model.depth[r] for r in cross),default=0),
         "aggregate_resolved":agg_resolved,
         "aggregate_accuracy":agg_correct/agg_resolved if agg_resolved else None,
+        "mean_unresolved_outputs":statistics.mean(r["unresolved_count"] for r in rows),
+        "mean_unresolved_residual":statistics.mean(r["unresolved_residual"] for r in rows),
         "field_summary":summarize_snapshots([r["snapshot"] for r in rows]),
         "detailed_snapshots":detailed,
     }
