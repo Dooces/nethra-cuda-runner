@@ -466,6 +466,38 @@ class NativeReplay:
             if n.routes:mask[self.index[n]]=True
         return mask
 
+    def recursive_current_closure(self,explicit):
+        """Resolve current explicit observation and its recursive transient event together.
+
+        Active Nethra grow monotonically from the current explicit observation. After each growth,
+        the current recursive event is recomputed as the delta between that active set and the
+        previous closure. State-qualified routes therefore see CURRENT higher-Nethra changes rather
+        than the previous interval's event.
+        """
+        explicit=frozenset(explicit)
+        active=set(explicit)
+        while True:
+            observed=active|set(self.f.previous_closure)
+            event=frozenset(
+                (n,int(n in active)-int(n in self.f.previous_closure))
+                for n in observed
+            )
+            added=[]
+            for n in self.f.nethra:
+                if n in active or not n.routes:
+                    continue
+                for route,conditions in n.routes.items():
+                    if conditions.get(frozenset(),0)>0 and route.issubset(active):
+                        added.append(n)
+                        break
+                    projected=self.f._project(event,route)
+                    if projected and conditions.get(projected,0)>0:
+                        added.append(n)
+                        break
+            if not added:
+                return frozenset(active),event
+            active.update(added)
+
     def structural_step(self,explicit,residual):
         explicit=frozenset(explicit)
 
@@ -479,16 +511,13 @@ class NativeReplay:
             for n in source_observed
         )
 
-        cache_key=(explicit,source_event)
-        closed=self.closure_cache.get(cache_key)
-        if closed is None:
-            closed=self.f.closure(explicit,source_event)
-            self.closure_cache[cache_key]=closed
-        description_observed=closed|self.f.previous_closure
-        description_event=frozenset(
-            (n,int(n in closed)-int(n in self.f.previous_closure))
-            for n in description_observed
-        )
+        cache_key=(explicit,self.f.previous_closure)
+        cached=self.closure_cache.get(cache_key)
+        if cached is None:
+            closed,description_event=self.recursive_current_closure(explicit)
+            self.closure_cache[cache_key]=(closed,description_event)
+        else:
+            closed,description_event=cached
         before=self.f.previous_event
 
         relation=None
