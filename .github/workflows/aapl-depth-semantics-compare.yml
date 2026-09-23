@@ -1,0 +1,19 @@
+name: AAPL depth semantics comparison
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'aapl_depth_semantics_compare.py'
+      - '.github/workflows/aapl-depth-semantics-compare.yml'
+  workflow_dispatch:
+jobs:
+  compare:
+    runs-on: self-hosted
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 aapl_depth_semantics_compare.py
