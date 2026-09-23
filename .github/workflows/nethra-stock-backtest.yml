@@ -1,0 +1,38 @@
+name: Nethra stock backtest
+
+on:
+  push:
+    branches:
+      - nethra-stock-backtest-audit
+    paths:
+      - 'stock_nethra_backtest.py'
+      - '.github/workflows/nethra-stock-backtest.yml'
+  workflow_dispatch:
+
+jobs:
+  backtest:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi || true
+          /usr/bin/python3 - <<'PY'
+          try:
+              import cupy
+              print("cupy",cupy.__version__)
+          except Exception as e:
+              print("cupy unavailable",repr(e))
+          PY
+      - name: Chronological multi-stock backtest
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 stock_nethra_backtest.py
