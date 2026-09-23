@@ -8,9 +8,10 @@ semantic change here. Do not repeat a ledgered mistake under another name.
 Persistent ontology: one type, Nethra.
 Everything else in this file is transient evidence, indexing, or execution of Nethra dynamics.
 A helper is allowed to influence future behavior only by changing Nethra topology/evidence; it has
-no activation of its own. Interval learning observes signed participation deltas, never creates
-persistent state objects, and uses ordered interval history for temporal direction while the field
-itself remains bidirectional.
+no activation of its own. Learning first refinds existing recursive structure, subtracts its
+prospective field contribution, permissively admits an ordinary weak Nethra only from unresolved
+whole support, then changes route-member incidence evidence continuously. The field itself remains
+bidirectional; temporal direction comes from ordered completed intervals.
 """
 
 from collections import Counter, defaultdict
@@ -75,10 +76,11 @@ class NethraField:
                  eta_out=1200.0, eta_in=2400.0):
         """Initialize one field without creating semantic structure.
 
-        g_min/g_max/tau map earned route evidence to conductance. capacitance and leakage belong
-        to the field equation. trace_decay and convergence_gain belong to the F61 residual-
-        independence/convergence term. The remaining containers store transient chronological
-        evidence and exact indexes; they cannot themselves inject current or become active.
+        g_min/g_max/tau map earned incidence evidence to conductance; the native default gives
+        g(0)=0. capacitance and leakage belong to the field equation. trace_decay and
+        convergence_gain belong to the F61 residual-independence/convergence term. Admission uses
+        one permissive residual threshold and a weak seed only at construction; eta_out/eta_in set
+        the continuous signed local plasticity rates afterward.
 
         Nothing here declares relation arity, input/output classes, object labels, directions,
         candidate budgets, or an externally preferred consequence.
