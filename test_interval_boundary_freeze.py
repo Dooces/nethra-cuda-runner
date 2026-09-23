@@ -1,3 +1,4 @@
+# DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT
 import unittest
 
 from nethra import NethraField
@@ -48,6 +49,7 @@ class IntervalBoundaryFreezeTests(unittest.TestCase):
             a.push(j)
             f.step(.1)
             return f.current_interval_source[a],f.current_interval_delta[a],len(f.nethra)
+# DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT
 
         lo=run(.1)
         hi=run(.9)
@@ -98,6 +100,7 @@ class IntervalBoundaryFreezeTests(unittest.TestCase):
         self.assertGreaterEqual(len(f.nethra),3)
 
 
+# DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT
     def test_interval_integral_reconstructs_fixed_conductance_charge(self):
         f=NethraField(g_min=0.0,leakage=.6,convergence_gain=0.0)
         a=f.new(); r=f.new()
@@ -148,6 +151,7 @@ class IntervalBoundaryFreezeTests(unittest.TestCase):
                 pool=leaves+relations
                 members=tuple(rng.sample(pool,rng.randint(1,min(4,len(pool)))))
                 if rng.random()<.5:
+# DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT
                     signature=frozenset((m,rng.choice((-1,0,1))) for m in members)
                 else:
                     signature=frozenset()
