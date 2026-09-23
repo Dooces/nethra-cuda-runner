@@ -1,0 +1,16 @@
+name: Nethra TIME support residual audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_time_support_residual_audit.py'
+      - '.github/workflows/nethra-time-support-residual-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_time_support_residual_audit.py
