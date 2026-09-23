@@ -247,3 +247,39 @@ The next manifestation test should be a sufficiency/collision experiment, not a 
 - F61 convergence is part of field drive and must not be silently omitted from future accounting.
 - A short local temporal history can approximate true conductance sensitivity for the tested
   external-source objective; arbitrary-Nethra manifestation remains unresolved.
+
+
+## 6. Available passive one-step prediction readout
+
+A passive one-step prediction workflow is now established and documented in
+`NETHRA_PREDICTION_READOUT.md`.
+
+The prediction target is the prospective live field at one requested future TIME from the complete
+real state known now. Prediction does not require Nethra to recursively consume its own output.
+
+Operationally:
+- clone the complete live Nethra state;
+- supply only genuinely known future inputs, normally TIME;
+- evolve the disposable shadow to the requested horizon;
+- rank externally bound input Nethra from the prospective field;
+- record top-k and separation/confidence diagnostics;
+- discard the shadow;
+- only then reveal the real observation to the live Nethra and continue ordinary learning.
+
+The primary finite-horizon input readout currently used by the passive audits is
+
+    r_i(T) = a_i^shadow(T) - a_i^live(0) exp(-lambda T / C)
+
+with
+
+    margin = score(top1) - score(top2)
+
+and optional normalized separation
+
+    |top1-top2| / (|top1|+|top2|+epsilon).
+
+The normalized separation is a field-separation diagnostic, not a calibrated probability.
+
+This prediction procedure must remain causally separate from imaginative rollout. A multi-step
+imagined trajectory may use a disposable simulation that feeds hypothetical predictions forward,
+but hypothetical observations must never become real evidence in the live learner.
