@@ -1,3 +1,4 @@
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
 # Nethra mistake ledger
 
 This file is cumulative. Never rewrite history to make prior work look cleaner.
@@ -8,6 +9,24 @@ Whenever an assistant or developer reads `nethra.py` for interpretation, debuggi
 benchmarking, or explanation, they must also read this ledger first. Before making a semantic change,
 append any newly discovered mistake, regression, contamination, false claim, or shortcut introduced
 since the last ledger entry. Do not repeat a listed mistake under a new name.
+
+## Permanent prohibitions
+
+1. NEVER FABRICATE ANY PROBLEM. Do not invent, manufacture, reopen, or elaborate a problem unless an observed failure, contradiction, or explicit user request establishes that problem. Settled Nethra mechanisms stay settled until concrete evidence falsifies them.
+2. NETHRA IS NOT A LEARNER / ML SYSTEM / NEURAL NETWORK / PLANNER / POLICY / VALUE MODEL OR OTHER CONVENTIONAL MACHINE-LEARNING ARCHITECTURE. Never assume or introduce a separate learner, predictor, evaluator, reward module, policy, planner, selector, or analogous subsystem merely because conventional ML uses one. Start from Nethra's own field, relations, temporal deltas, refinding, construction, and incidence evidence.
+
+## 2026-09-23 — fabricated problems from already-settled Nethra behavior
+
+- Repeated analysis manufactured new design requirements from hypothetical edge cases before any observed Nethra failure established them.
+- This repeatedly reopened settled mechanisms and generated unnecessary candidate systems, evaluators, confidence machinery, exploration machinery, and other invented obligations.
+- Prevention: never fabricate a problem. Require a concrete observed failure, contradiction, or explicit request before opening a new design problem.
+
+## 2026-09-23 — conventional learner / ML assumptions repeatedly imposed on Nethra
+
+- Repeated analysis translated Nethra terms such as learning, prediction, choice, consequence, attention, and motivation into conventional ML architecture and then proposed separate learners, predictors, evaluators, policies, rewards, or planning layers.
+- That changes the object being investigated and contaminates both implementation and explanation.
+- Prevention: treat Nethra as Nethra. Derive behavior from its field, Nethra relations, temporal deltas, recursive refinding, construction, and incidence-local evidence. Do not assume a conventional learner or ML subsystem.
+
 
 ## 2026-09-23 — stale branch promoted over the frozen interval boundary
 
@@ -30,6 +49,7 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - Prevention: a harness that replaces `step()`, `_edges()`, construction, or learning semantics
   is a probe of that harness, never evidence that the core learned autonomously.
 
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
 ## 2026-09-23 — provisional learner modified while accidentally live
 
 - `bc81934...` changed subtraction logic inside
@@ -80,6 +100,7 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
   paths, and exact diffs directly.
 
 ## 2026-09-23 — improvised recovery integration substituted a new residual coordinate
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
 
 - A recovery branch attempted to integrate plasticity using raw source current/charge as the generic
   consequence coordinate and reached only shallow recursive depth.
@@ -130,6 +151,7 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 
 ## 2026-09-23 — post-outcome construction expanded ontology before state commit
 
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
 - After restoring the prior counterfactual manifestation target, the first transplant allowed native
   learning to mint a new Nethra before the already-computed interval activation state was committed.
 - A later loop iterated the expanded ontology and would try to read an activation value for a Nethra
