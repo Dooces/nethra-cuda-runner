@@ -92,6 +92,17 @@ class NethraField:
         self.current_interval_source = {}
         self.previous_interval_delta = {}
         self.current_interval_delta = {}
+        # Exact finite-interval activation integrals A_i = integral a_i(t) dt.  Together with
+        # fixed interval conductance they reconstruct every incidence potential/charge without
+        # storing an O(E) transient edge-flow history.
+        self.previous_interval_integral = {}
+        self.current_interval_integral = {}
+
+        # Persistent evidence is represented per route-member incidence.  Route counters remain
+        # the structural/state-qualified evidence used by refinding and subtraction; this second
+        # coordinate allows members of one arbitrary-size route to carry different earned field
+        # strengths without introducing another persistent participant type.
+        self.incidence_evidence = {}
 
         # Everything below through the prospective counters belongs to the provisional
         # construction path retained for regression comparison, not to interval observation.
@@ -167,6 +178,17 @@ class NethraField:
         signature = frozenset(signature)
         bucket = nethra.routes.setdefault(route, Counter())
         bucket[signature] += int(evidence)
+
+        # Lossless lift of the existing route evidence into per-incidence storage.  At creation
+        # every member receives the same evidence, preserving historical field behaviour exactly.
+        # Later experimental plasticity may differentiate these counters independently; the frozen
+        # core itself grants no learning authority to do so.
+        for member in route:
+            ibucket = self.incidence_evidence.setdefault(
+                (nethra, route, member),
+                Counter(),
+            )
+            ibucket[signature] += int(evidence)
 
     def _matching_route(self, relation, event):
         """Find an already-earned route of relation that is supported by this transient event.
@@ -293,16 +315,17 @@ class NethraField:
                         break
         return frozenset(active)
 
-    def _complete_interval(self, source_current, delta):
+    def _complete_interval(self, source_current, delta, integral):
         """Freeze the physical record of one completed Nethra-field interval.
 
         source_current is the exact externally injected current by persistent Nethra for the
         interval that just completed. delta is the exact activation change produced by the actual
-        Nethra field over that same finite interval.
+        Nethra field over that same finite interval. integral is the RK4-consistent finite-interval
+        activation integral A_i = integral a_i(t) dt.
 
-        Both are stored sparsely: an omitted Nethra is exactly zero on that coordinate. This
-        preserves original-source provenance without confusing internally propagated field change
-        with external observation.
+        All three are stored sparsely: an omitted Nethra is exactly zero on that coordinate. This
+        preserves original-source provenance, endpoint change, and the interval field trajectory
+        needed to reconstruct incidence potential Phi_ij=A_i-A_j when conductance is fixed.
 
         This operation has no learning authority. It does not discretize, classify, round, match,
         compare for equality, estimate recurrence or probability, fabricate residuals, refind or
@@ -319,16 +342,25 @@ class NethraField:
             for n, value in delta.items()
             if float(value) != 0.0
         }
+        area = {
+            n: float(value)
+            for n, value in integral.items()
+            if float(value) != 0.0
+        }
         if any(n not in self.nethra for n in source):
             raise ValueError("completed interval source references unknown Nethra")
         if any(n not in self.nethra for n in change):
             raise ValueError("completed interval delta references unknown Nethra")
+        if any(n not in self.nethra for n in area):
+            raise ValueError("completed interval integral references unknown Nethra")
 
         self.previous_interval_source = self.current_interval_source
         self.previous_interval_delta = self.current_interval_delta
+        self.previous_interval_integral = self.current_interval_integral
         self.current_interval_source = source
         self.current_interval_delta = change
-        return source, change
+        self.current_interval_integral = area
+        return source, change, area
 
     def _consider_completed_interval_provisional(self, explicit):
         """Run the retained provisional construction path after an interval is complete.
@@ -356,13 +388,15 @@ class NethraField:
         recursive context describes structure. Neither transient view creates a second ontology.
         """
         explicit = frozenset(explicit)
-        closed = self.closure(explicit, self.current_event)
 
+        # State-qualified closure must see THIS observation's source event.  Using current_event
+        # here is one interval stale and can hide the state distinction being presented now.
         source_observed = explicit | self.previous_explicit
         source_event = frozenset(
             (n, int(n in explicit) - int(n in self.previous_explicit))
             for n in source_observed
         )
+        closed = self.closure(explicit, source_event)
 
         description_observed = closed | self.previous_closure
         description_event = frozenset(
@@ -441,6 +475,22 @@ class NethraField:
         projected = self._project(event, route)
         return max(conditions.get(projected, 0), conditions.get(frozenset(), 0))
 
+    def _incidence_route_evidence(self, relation, route, member, event):
+        """Read state-qualified evidence for one relation-route-member incidence.
+
+        This is the per-incidence analogue of _route_evidence().  Existing routes are mirrored
+        into these counters when registered, so the representation change is behaviour-preserving
+        until an experimental learner deliberately differentiates member evidence.
+        """
+        conditions = self.incidence_evidence.get((relation, route, member))
+        if conditions is None:
+            # Compatibility for structures created before per-incidence storage existed.
+            conditions = relation.routes.get(route, Counter())
+        if not conditions:
+            return 0
+        projected = self._project(event, route)
+        return max(conditions.get(projected, 0), conditions.get(frozenset(), 0))
+
     def _edges(self):
         """Compile persistent support routes into symmetric Nethra-to-Nethra incidences.
 
@@ -456,8 +506,15 @@ class NethraField:
         edges = {}
         for relation in self.nethra:
             for route, conditions in relation.routes.items():
-                g = self.conductance(self._route_evidence(route, conditions, self.current_event))
                 for member in route:
+                    g = self.conductance(
+                        self._incidence_route_evidence(
+                            relation,
+                            route,
+                            member,
+                            self.current_event,
+                        )
+                    )
                     key = frozenset((relation, member))
                     if g > edges.get(key, 0.0):
                         edges[key] = g
@@ -583,9 +640,9 @@ class NethraField:
 
         The field is integrated with RK4 using the same F61 derivative at every stage. Nethra with
         nonzero external current are the explicit physical/current participants for this interval.
-        After integration, _complete_interval() records the exact sparse external-source current
-        and exact sparse Nethra activation delta. That boundary is frozen and has no learning
-        authority.
+        After integration, _complete_interval() records exact sparse external-source current,
+        exact sparse Nethra activation delta, and the RK4-consistent activation integral A_i over
+        the same interval. That boundary is frozen and has no learning authority.
 
         _consider_completed_interval_provisional() remains available only for explicit historical
         regression comparison. step() does not invoke it, so the frozen interval boundary itself
@@ -607,12 +664,14 @@ class NethraField:
         k4 = self._derivative_at(a3)
 
         delta = {}
+        integral = {}
         for n in self.nethra:
             old = a0[n]
+            integral[n] = dt * (a0[n] + 2*a1[n] + 2*a2[n] + a3[n]) / 6.0
             n.activation = old + dt * (k1[n] + 2*k2[n] + 2*k3[n] + k4[n]) / 6.0
             delta[n] = n.activation - old
 
-        self._complete_interval(source_current, delta)
+        self._complete_interval(source_current, delta, integral)
 
         # The historical construction path remains manually callable for regression comparison.
         # It is deliberately not part of live step() because the plasticity law is unresolved.
