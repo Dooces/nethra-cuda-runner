@@ -1,0 +1,26 @@
+name: AAPL native continuation audit
+
+on:
+  push:
+    branches:
+      - nethra-aapl-native-continuation
+    paths:
+      - 'aapl_native_continuation_audit.py'
+      - '.github/workflows/aapl-native-continuation-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_NATIVE_TRAIN: '1200'
+      NETHRA_NATIVE_ONLINE: '400'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native Nethra continuation
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'NATIVE elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_native_continuation_audit.py
