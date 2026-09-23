@@ -1,0 +1,30 @@
+name: Prospective field audit
+
+on:
+  push:
+    branches:
+      - nethra-prospective-field-audit
+    paths:
+      - 'prospective_field_audit.py'
+      - '.github/workflows/prospective-field-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_MULTI_CACHE: '/tmp/nethra_multisymbol_exact.json'
+      NETHRA_SYMBOLS: 'AAPL,MSFT,NVDA,TSLA,JPM,XOM'
+      NETHRA_AUDIT_TRAIN: '300'
+      NETHRA_AUDIT_ONLINE: '20'
+      NETHRA_AUDIT_TOP: '8'
+      NETHRA_AUDIT_PATH: '3'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Full TIME-only prospective field
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'AUDIT elapsed=%e maxrss_kb=%M'             /usr/bin/python3 prospective_field_audit.py
