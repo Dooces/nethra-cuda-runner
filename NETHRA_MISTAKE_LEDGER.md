@@ -137,3 +137,14 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - Prevention: freeze the interval participant tuple before integration; completed-interval state,
   delta and integral apply only to those participants. Newly admitted Nethra start at their normal
   zero activation after the causal boundary.
+
+## 2026-09-23 — removing the retired learner also disconnected frozen F61 residual input
+
+- V61 froze `rho_j <- epsilon_j` where epsilon is each Nethra's own predictive/consequence
+  residual, never a common downstream error.
+- Removing the retired provisional learner also removed its old call site to `update_residuals()`.
+  The first native integration therefore left F61 convergence statistics permanently un-fed even
+  though the native learner now computes the correct per-Nethra manifestation residual.
+- Prevention: native `epsilon_j = manifestation_j - prediction_j` must update F61 residual traces
+  before any new topology is admitted, so newly created incidences do not inherit fabricated
+  historical independence.
