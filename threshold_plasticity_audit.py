@@ -123,9 +123,6 @@ def existing_relation_frequency(theta,probability,seed,trials=2500):
     rng=random.Random(seed)
     f=NethraField(leakage=.6,convergence_gain=0.0)
     a=f.new(); y=f.new(); r=add_relation(f,a,y,evidence=0.0)
-    # Baseline field effect before any plasticity at this recursive level.
-    es0,q0=integrate(f,{a:1.0,b:1.0})
-    baseline_prediction=max(0.0,flow_between(es0,q0,upper,y))
     updates=0
 
     for _ in range(trials):
@@ -291,6 +288,8 @@ def recursive_relation(theta,seed,trials=3200):
     a=f.new(); b=f.new(); y=f.new()
     lower=add_relation(f,a,b,evidence=30.0)
     upper=add_relation(f,lower,y,evidence=0.0)
+    es0,q0=integrate(f,{a:1.0,b:1.0})
+    baseline_prediction=max(0.0,flow_between(es0,q0,upper,y))
     updates=0
 
     for _ in range(trials):
