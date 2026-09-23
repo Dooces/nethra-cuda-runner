@@ -177,8 +177,14 @@ class NethraField:
         """
         for route, conditions in relation.routes.items():
             projected = self._project(event, route)
-            if projected in conditions and conditions.get(projected, 0) > 0:
+
+            # frozenset() is the storage key for state-independent route evidence. An event that
+            # contains none of this route's members also projects to frozenset(), but that absence
+            # is not an exact state-qualified match. Exact transient-state refinding therefore
+            # requires at least one projected route member.
+            if projected and conditions.get(projected, 0) > 0:
                 return route, projected
+
             if conditions.get(frozenset(), 0) > 0 and route.issubset(self._event_members(event)):
                 return route, frozenset()
         return None
@@ -280,7 +286,9 @@ class NethraField:
                         changed = True
                         break
                     projected = self._project(event, route)
-                    if projected in conditions and conditions.get(projected, 0) > 0:
+                    # Empty projection means this event contains none of the route members. It
+                    # must not alias the frozenset() key used for state-independent evidence.
+                    if projected and conditions.get(projected, 0) > 0:
                         active.add(n)
                         changed = True
                         break
