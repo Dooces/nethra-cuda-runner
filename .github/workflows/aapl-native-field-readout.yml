@@ -1,0 +1,27 @@
+name: AAPL native field readout
+
+on:
+  push:
+    branches:
+      - nethra-aapl-field-readout-current-event
+    paths:
+      - 'aapl_native_field_readout.py'
+      - '.github/workflows/aapl-native-field-readout.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    timeout-minutes: 6
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_FIELD_TRAIN: '10000'
+      NETHRA_FIELD_ONLINE: '10000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test native field readouts
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'FIELD elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 aapl_native_field_readout.py
