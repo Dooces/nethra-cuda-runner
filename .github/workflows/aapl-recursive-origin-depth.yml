@@ -1,0 +1,30 @@
+name: AAPL pure recursive origin depth
+
+on:
+  push:
+    branches:
+      - nethra-aapl-native-recursive-depth
+    paths:
+      - 'aapl_recursive_origin_depth.py'
+      - '.github/workflows/aapl-recursive-origin-depth.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pure recursive origin audit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          /usr/bin/python3 - <<'PY'
+          import numba
+          print("numba", numba.__version__)
+          PY
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 aapl_recursive_origin_depth.py
