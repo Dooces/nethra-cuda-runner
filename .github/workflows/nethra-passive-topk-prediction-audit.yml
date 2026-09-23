@@ -1,0 +1,18 @@
+name: Nethra passive topk prediction audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_passive_topk_prediction_audit.py'
+      - '.github/workflows/nethra-passive-topk-prediction-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 nethra_passive_topk_prediction_audit.py
