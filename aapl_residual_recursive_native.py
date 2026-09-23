@@ -74,7 +74,9 @@ from nethra import NethraField
 SYMBOL="AAPL"
 TRAIN_PRICES=int(os.environ.get("NETHRA_STOCK_PRICES","20000"))
 REPLAYS=int(os.environ.get("NETHRA_STOCK_REPLAYS","50"))
-ABLATION_INTERVALS=int(os.environ.get("NETHRA_STOCK_ABLATION","2000"))
+ABLATION_INTERVALS=int(os.environ.get("NETHRA_STOCK_ABLATION","0"))
+HOLDOUT_INTERVALS=int(os.environ.get("NETHRA_STOCK_HOLDOUT","1000"))
+FAST_SYNC=os.environ.get("NETHRA_FAST_SYNC","0")=="1"
 
 GMAX=1.5
 TAU=100.0
@@ -396,10 +398,15 @@ class NativeReplay:
             # A new persistent route can change closure for any previously cached event.
             self.closure_cache.clear()
 
-        # Any route added to a reused relation may expose a new physical incidence.
-        for r in self.f.nethra:
+        # A newly created relation is the only object whose incidences can be new on this call.
+        # FAST_SYNC avoids rescanning every older relation while preserving the same final sorted
+        # edge order below. Initial compilation and reference mode retain the original whole scan.
+        if FAST_SYNC and new_relation is not None:
+            scan=(new_relation,)
+        else:
+            scan=self.f.nethra
+        for r in scan:
             if not r.routes:continue
-            rid=self.index[r]
             for route in r.routes:
                 for m in route:
                     if m is r:
@@ -604,8 +611,55 @@ def frozen_pass(currents,elapsed,er,em,ee,n,pplus,pminus,time_idx):
     return margins
 
 
+@njit(cache=True)
+def frozen_holdout(initial_state,currents,elapsed,er,em,ee,pplus,pminus,time_idx):
+    """Frozen chronological prediction: score before revealing each next price, then advance state."""
+    state=initial_state.copy()
+    margins=np.zeros(currents.shape[0],np.float64)
+    plus=np.zeros(currents.shape[0],np.float64)
+    minus=np.zeros(currents.shape[0],np.float64)
+    for i in range(currents.shape[0]):
+        ext=np.zeros(state.shape[0],np.float64)
+        ext[time_idx]=1.0
+        integrate(state,ext,er,em,ee,elapsed[i])
+        _po,_pi,pred,_s=preflow(state,er,em,ee)
+        plus[i]=pred[pplus]
+        minus[i]=pred[pminus]
+        margins[i]=plus[i]-minus[i]
+        pre=state.copy()
+        actual,_origin=outcome_origin(pre,currents[i],pplus,pminus,er,em,ee)
+        state[:]=actual
+    return state,margins,plus,minus
+
+
+def expected_return_from_prediction(pplus,pminus):
+    net=float(pplus)-float(pminus)
+    if abs(net)<=1e-30:
+        return 0.0
+    normalized=min(abs(net)/(OBS_DT*PRICE_CURRENT_MAX),.999999)
+    return math.copysign(PRICE_SCALE*math.atanh(normalized),net)
+
+
+def topology_fingerprint(model):
+    """Stable structural fingerprint using only persistent Nethra indices/routes/signatures."""
+    import hashlib
+    rows=[]
+    for r in sorted(model.birth_members,key=model.index.__getitem__):
+        rr=[]
+        for route,bucket in r.routes.items():
+            members=tuple(sorted(model.index[m] for m in route))
+            cond=[]
+            for sig,e in bucket.items():
+                atoms=tuple(sorted((model.index[n],int(change)) for n,change in sig))
+                cond.append((atoms,int(e)))
+            rr.append((members,tuple(sorted(cond))))
+        rows.append((model.index[r],model.depth[r],tuple(sorted(rr))))
+    payload=repr(tuple(rows)).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
 def ablation_audit(model,currents,elapsed,mature):
-    if not mature:
+    if not mature or ABLATION_INTERVALS<=0:
         return []
     by_depth={}
     for r in mature:
@@ -642,10 +696,10 @@ def main():
     print("f61_executor_equivalence_max_error",verify_executor(),flush=True)
 
     points=fetch_aapl()
-    currents,elapsed,kinds,raw=intervals(points)
+    currents_all,elapsed_all,kinds_all,raw_all=intervals(points)
     train_n=TRAIN_PRICES-1
-    currents=currents[:train_n]
-    elapsed=elapsed[:train_n]
+    currents=currents_all[:train_n]
+    elapsed=elapsed_all[:train_n]
 
     print("DATA",json.dumps({
         "total_price_points":len(points),
@@ -656,6 +710,8 @@ def main():
         "replays":REPLAYS,
         "admission_residual":ADMISSION_RESIDUAL,
         "seed_g_ratio":SEED_G_RATIO,
+        "fast_sync":FAST_SYNC,
+        "holdout_intervals":min(HOLDOUT_INTERVALS,len(currents_all)-train_n),
     },sort_keys=True),flush=True)
 
     model=NativeReplay()
@@ -747,6 +803,75 @@ def main():
             "max_evidence_move":max((abs(model.incidence_e[k]-SEED_E) for k in keys),default=0.0),
         })
 
+    # Frozen out-of-sample stream. No learning and no construction occurs here.
+    model.push_evidence_back()
+    h=min(HOLDOUT_INTERVALS,len(currents_all)-train_n)
+    hc=currents_all[train_n:train_n+h]
+    he=elapsed_all[train_n:train_n+h]
+    hr=raw_all[train_n:train_n+h]
+    hk=kinds_all[train_n:train_n+h]
+    er,em,ee=model.compiled_arrays()
+    initial=model.state.copy()
+    _end,margins,pplus,pminus=frozen_holdout(
+        initial,hc,he,er,em,ee,
+        model.index[model.pplus],model.index[model.pminus],model.index[model.time]
+    )
+    resolved=np.abs(margins)>1e-18
+    truth=np.where(hc>=0.0,1,-1)
+    pred=np.where(margins>=0.0,1,-1)
+    accuracy=float(np.mean(pred[resolved]==truth[resolved])) if np.any(resolved) else None
+    tie_count=int(np.sum(~resolved))
+    always_up=float(np.mean(truth==1)) if h else None
+    previous=np.empty(h,np.int8)
+    if h:
+        previous[0]=1 if currents_all[train_n-1]>=0 else -1
+        if h>1:previous[1:]=truth[:-1]
+    persistence=float(np.mean(previous==truth)) if h else None
+
+    expected=np.asarray([expected_return_from_prediction(a,b) for a,b in zip(pplus,pminus)])
+    corr=0.0
+    if h>2 and float(np.std(expected))>0 and float(np.std(hr))>0:
+        corr=float(np.corrcoef(expected,hr)[0,1])
+
+    order=np.argsort(-np.abs(margins))
+    high={}
+    for frac in (.10,.25,.50):
+        k=max(1,int(h*frac))
+        ix=order[:k]
+        high[str(frac)]=float(np.mean(pred[ix]==truth[ix]))
+
+    first_prediction=None
+    if h:
+        start_point=points[TRAIN_PRICES-1]
+        target_point=points[TRAIN_PRICES]
+        first_er=float(expected[0])
+        first_prediction={
+            "from_date":start_point.date,
+            "from_kind":int(start_point.kind),
+            "from_price":float(start_point.price),
+            "target_date":target_point.date,
+            "target_kind":int(target_point.kind),
+            "actual_price":float(target_point.price),
+            "actual_log_return":float(hr[0]),
+            "predicted_direction":"up" if margins[0]>0 else ("down" if margins[0]<0 else "tie"),
+            "prediction_margin":float(margins[0]),
+            "predicted_log_return_proxy":first_er,
+            "predicted_price_proxy":float(start_point.price*math.exp(first_er)),
+        }
+
+    holdout={
+        "n":h,
+        "resolved_accuracy":accuracy,
+        "ties":tie_count,
+        "always_up_accuracy":always_up,
+        "persistence_accuracy":persistence,
+        "expected_return_corr":corr,
+        "top_strength_accuracy":high,
+        "first_prediction":first_prediction,
+        "margin_rms":float(np.sqrt(np.mean(margins*margins))) if h else 0.0,
+        "margin_sha256":__import__("hashlib").sha256(margins.tobytes()).hexdigest(),
+    }
+
     final={
         "constructed_depth":constructed_depth,
         "mature_depth":mature_depth,
@@ -757,6 +882,9 @@ def main():
         "deepest_mature":deepest,
         "ablations":ablations,
         "last_pass":rows[-1],
+        "topology_fingerprint":topology_fingerprint(model),
+        "holdout":holdout,
+        "fast_sync":FAST_SYNC,
         "seconds":time.perf_counter()-started,
     }
     print("FINAL",json.dumps(final,sort_keys=True),flush=True)
