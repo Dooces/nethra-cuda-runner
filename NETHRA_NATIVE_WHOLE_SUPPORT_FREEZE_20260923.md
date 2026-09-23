@@ -27,17 +27,19 @@ This freeze integrates previously settled Nethra learning semantics into the one
    `Delta e_Ri = eta_out * p_Ri * epsilon_i`.
 9. Supplying incidences receive `eta_in * T_R` in proportion to their actual positive incoming
    charge to the relation.
-10. Evidence is continuous and clamped only at zero; native default has `g(0)=0`.
-11. Admission is permissive and grounded only by positive unresolved residual on independently
+10. The same per-Nethra `epsilon_i` updates frozen V61 `rho_i` before any new topology is
+    admitted; newly relevant supplier pairs therefore begin with no fabricated residual history.
+11. Evidence is continuous and clamped only at zero; native default has `g(0)=0`.
+12. Admission is permissive and grounded only by positive unresolved residual on independently
     sourced current support.
-12. A newly admitted hypothesis is an ordinary weak Nethra over the whole recursively closed
+13. A newly admitted hypothesis is an ordinary weak Nethra over the whole recursively closed
     before/current support. No proper-subset candidate generation exists.
-13. Existing structure is checked before minting. Refound structure that already accounts for the
+14. Existing structure is checked before minting. Refound structure that already accounts for the
     event is reused.
-14. If the reused relation appears inside the recursive whole-support description, that
+15. If the reused relation appears inside the recursive whole-support description, that
     self-containing description is tautological: it may account/subtract, but is never registered
     as fresh support for itself.
-15. Unsupported hypotheses are retained; incidence evidence may decay to zero and make them
+16. Unsupported hypotheses are retained; incidence evidence may decay to zero and make them
     field-inert. No deletion/forgetting rule is introduced.
 
 ## Removed from live core
