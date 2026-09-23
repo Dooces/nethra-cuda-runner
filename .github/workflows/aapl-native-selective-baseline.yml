@@ -1,0 +1,52 @@
+name: AAPL selective native baseline
+
+on:
+  push:
+    branches:
+      - nethra-aapl-selective-baseline
+    paths:
+      - 'aapl_native_selective_predictor.py'
+      - '.github/workflows/aapl-native-selective-baseline.yml'
+  workflow_dispatch:
+
+jobs:
+  baseline:
+    runs-on: self-hosted
+    timeout-minutes: 6
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_AAPL_TRAIN: '1200'
+      NETHRA_AAPL_CONF_WARMUP: '100'
+      NETHRA_PRICE_CACHE: '/tmp/nethra_aapl_sensitive_repro_v1.json'
+    steps:
+      - uses: actions/checkout@v4
+      - name: First exact run
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/python3 aapl_native_selective_predictor.py | tee /tmp/nethra_aapl_selective_1.log
+      - name: Second exact run
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/python3 aapl_native_selective_predictor.py | tee /tmp/nethra_aapl_selective_2.log
+      - name: Require exact reproducibility
+        shell: bash
+        run: |
+          set -euxo pipefail
+          /usr/bin/python3 - <<'PY'
+          import json
+
+          def result(path):
+              with open(path) as fh:
+                  for line in fh:
+                      if line.startswith("RESULT "):
+                          return json.loads(line[7:])
+              raise SystemExit("missing RESULT: " + path)
+
+          a = result("/tmp/nethra_aapl_selective_1.log")
+          b = result("/tmp/nethra_aapl_selective_2.log")
+          if a != b:
+              raise SystemExit("reproducibility failure")
+          print("REPRO_PASS", json.dumps(a, sort_keys=True))
+          PY
