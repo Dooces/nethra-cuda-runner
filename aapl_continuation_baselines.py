@@ -91,10 +91,20 @@ def main():
 
         actual_node=model.pplus if currents[i]>=0 else model.pminus
         opposite_node=model.pminus if currents[i]>=0 else model.pplus
-        actual_grounded={model.time,actual_node}
-        opposite_grounded={model.time,opposite_node}
-        actual_closed=set(model.f.closure(frozenset(actual_grounded),model.f.current_event))
-        opposite_closed=set(model.f.closure(frozenset(opposite_grounded),model.f.current_event))
+        actual_grounded=frozenset((model.time,actual_node))
+        opposite_grounded=frozenset((model.time,opposite_node))
+
+        def event_for(explicit):
+            observed=explicit|model.f.previous_explicit
+            return frozenset(
+                (n,int(n in explicit)-int(n in model.f.previous_explicit))
+                for n in observed
+            )
+
+        actual_event=event_for(actual_grounded)
+        opposite_event=event_for(opposite_grounded)
+        actual_closed=set(model.f.closure(actual_grounded,actual_event))
+        opposite_closed=set(model.f.closure(opposite_grounded,opposite_event))
 
         # Price-sensitive continuation target: already-earned relation that newly appears for the
         # actual next manifestation and does NOT appear for the counterfactual opposite sign.
