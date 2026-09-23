@@ -1,0 +1,28 @@
+name: Nethra manufactured depth-30 stable field
+
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_manufactured_depth30_stable.py'
+      - '.github/workflows/nethra-manufactured-depth30-stable.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    env:
+      NETHRA_SYNTH_MAX_CYCLES: '256'
+      NETHRA_SYNTH_MIN_CYCLES: '32'
+      NETHRA_SYNTH_SETTLE_CYCLES: '32'
+      NETHRA_SYNTH_RELATION_SAFETY: '8000'
+      NETHRA_SYNTH_DT: '0.15'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run stable exact-field manufactured benchmark
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 nethra_manufactured_depth30_stable.py
