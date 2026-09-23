@@ -118,6 +118,15 @@ class NethraField:
         self._unqualified_dependents = defaultdict(list)
         self._state_routes_by_token = defaultdict(list)
         self._indexed_route_signatures = set()
+
+        # Incremental physical-incidence compilation. _base_edge_g is the event-independent
+        # conductance floor/route evidence already earned for each incidence. State-qualified
+        # route conductance is overlaid only when its exact transient signature is present.
+        self._base_edge_g = {}
+        self._edge_endpoints = {}
+        self._route_edge_keys = {}
+        self._state_route_g = {}
+
         self._edge_cache = None
         self._edge_cache_event = None
 
@@ -209,6 +218,21 @@ class NethraField:
         bucket[signature] += int(evidence)
         after = bucket.get(signature, 0)
 
+        # Every route compiles to the same symmetric physical incidences. Register those endpoint
+        # identities once; later evidence changes only conductance.
+        route_key = (nethra, route)
+        edge_keys = self._route_edge_keys.get(route_key)
+        if edge_keys is None:
+            keys = []
+            for member in route:
+                edge_key = frozenset((nethra, member))
+                keys.append(edge_key)
+                self._edge_endpoints.setdefault(edge_key, (nethra, member))
+                if self.g_min > self._base_edge_g.get(edge_key, 0.0):
+                    self._base_edge_g[edge_key] = self.g_min
+            edge_keys = tuple(keys)
+            self._route_edge_keys[route_key] = edge_keys
+
         # Register a route in the exact closure index the first time this evidence coordinate
         # becomes positive. This is only a reverse incidence index over the same route.
         index_key = (nethra, route, signature)
@@ -220,6 +244,17 @@ class NethraField:
             else:
                 for member in route:
                     self._unqualified_dependents[member].append((nethra, route))
+
+        g = self.conductance(after)
+        if signature:
+            if after > 0:
+                self._state_route_g[index_key] = g
+        else:
+            # Evidence only increases through this construction path, so the maximum base
+            # conductance of a shared incidence can be updated monotonically.
+            for edge_key in edge_keys:
+                if g > self._base_edge_g.get(edge_key, 0.0):
+                    self._base_edge_g[edge_key] = g
 
         # Route/evidence changes can change conductance immediately.
         self._edge_cache = None
@@ -519,26 +554,44 @@ class NethraField:
         return max(conditions.get(projected, 0), conditions.get(frozenset(), 0))
 
     def _edges(self):
-        """Compile persistent support routes into symmetric Nethra-to-Nethra incidences.
+        """Return currently conductive symmetric incidences from exact compiled route evidence.
 
-        The result is cached while both topology/evidence and current transient event are unchanged.
-        RK4 therefore evaluates the exact same edge set four times without rebuilding it four times.
-        Cache contents are execution representation only and carry no independent state.
+        Event-independent incidence conductance is maintained incrementally by _route(). For the
+        current transient event, only state-qualified routes indexed by tokens actually present in
+        that event are examined. Zero-conductance incidences are omitted because they contribute
+        exactly zero to every field equation.
+
+        This is an execution index over the same persistent routes/evidence; it does not select,
+        construct, approximate, or change a Nethra relation.
         """
         if self._edge_cache is not None and self._edge_cache_event == self.current_event:
             return self._edge_cache
 
-        edges = {}
-        for relation in self.nethra:
-            for route, conditions in relation.routes.items():
-                g = self.conductance(self._route_evidence(route, conditions, self.current_event))
-                for member in route:
-                    key = frozenset((relation, member))
-                    if g > edges.get(key, 0.0):
-                        edges[key] = g
+        # Keep only genuinely conductive base edges. With g_min=0 this means dormant learned
+        # structure has zero RK4 cost until its transient state is actually relevant.
+        edges = {key: g for key, g in self._base_edge_g.items() if g > 0.0}
+
+        checked = set()
+        for token in self.current_event:
+            for relation, route, signature in self._state_routes_by_token.get(token, ()):
+                index_key = (relation, route, signature)
+                if index_key in checked:
+                    continue
+                checked.add(index_key)
+                g = self._state_route_g.get(index_key, 0.0)
+                if g <= 0.0:
+                    continue
+                # Preserve exact route-state semantics: token indexing only proposes the route;
+                # the complete projected signature still has to match exactly.
+                if self._project(self.current_event, route) != signature:
+                    continue
+                for edge_key in self._route_edge_keys.get((relation, route), ()):
+                    if g > edges.get(edge_key, 0.0):
+                        edges[edge_key] = g
+
         out = []
         for key, g in edges.items():
-            a, b = tuple(key)
+            a, b = self._edge_endpoints[key]
             out.append((a, b, g))
         self._edge_cache = tuple(out)
         self._edge_cache_event = self.current_event
