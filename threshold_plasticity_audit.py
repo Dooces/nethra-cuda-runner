@@ -123,6 +123,9 @@ def existing_relation_frequency(theta,probability,seed,trials=2500):
     rng=random.Random(seed)
     f=NethraField(leakage=.6,convergence_gain=0.0)
     a=f.new(); y=f.new(); r=add_relation(f,a,y,evidence=0.0)
+    # Baseline field effect before any plasticity at this recursive level.
+    es0,q0=integrate(f,{a:1.0,b:1.0})
+    baseline_prediction=max(0.0,flow_between(es0,q0,upper,y))
     updates=0
 
     for _ in range(trials):
@@ -305,6 +308,7 @@ def recursive_relation(theta,seed,trials=3200):
     py=max(0.0,flow_between(es,q,upper,y))
     return {
         "upper_evidence":get_route_evidence(upper),
+        "baseline_prediction":baseline_prediction,
         "prediction":py,
         "update_fraction":updates/trials,
         "lower_activation":lower.activation,
@@ -327,7 +331,7 @@ def run_threshold(theta):
         "regime_flexible": regime["low_prediction"] < regime["high_prediction"]*.6,
         "redundant_suppressed": redundant["candidate"] < max(1.0,redundant["base_after"]*.2),
         "support_delineated": support["true_response"] > support["nuisance_max_response"]*1.5,
-        "recursive_learns": recursive["prediction"] > 0.002,
+        "recursive_learns": recursive["prediction"] > recursive["baseline_prediction"]*1.5,
     }
     return {
         "threshold":theta,
