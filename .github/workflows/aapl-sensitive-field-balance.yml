@@ -7,11 +7,11 @@ on:
 jobs:
   test:
     runs-on: self-hosted
-    timeout-minutes: 6
+    timeout-minutes: 8
     env:
       PYTHONHASHSEED: '0'
       NETHRA_BAL_TRAIN: '1200'
-      NETHRA_BAL_ONLINE: '5000'
+      NETHRA_BAL_ONLINE: '10000'
     steps:
       - uses: actions/checkout@v4
       - name: Run balance audit
