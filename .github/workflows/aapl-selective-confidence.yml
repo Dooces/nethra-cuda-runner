@@ -1,0 +1,28 @@
+name: AAPL selective confidence
+
+on:
+  push:
+    branches:
+      - nethra-aapl-selective-confidence
+    paths:
+      - 'aapl_single_target_context.py'
+      - '.github/workflows/aapl-selective-confidence.yml'
+  workflow_dispatch:
+
+jobs:
+  selective:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_MULTI_CACHE: '/tmp/nethra_multisymbol_exact.json'
+      NETHRA_SYMBOLS: 'AAPL,MSFT,NVDA,TSLA,JPM,XOM'
+      NETHRA_SINGLE_TRAIN: '800'
+      NETHRA_SINGLE_ONLINE: '1000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: AAPL selective-confidence audit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'SELECTIVE elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_single_target_context.py
