@@ -1,0 +1,19 @@
+name: AAPL native confidence field audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'aapl_native_confidence_field_audit.py'
+      - '.github/workflows/aapl-native-confidence-field-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 aapl_native_confidence_field_audit.py
