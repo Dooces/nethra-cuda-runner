@@ -770,40 +770,41 @@ class NethraField:
         # compare the same pre-outcome field under the actual external source and under zero source.
         # Internal/refound Nethra may therefore manifest as consequences without being relabelled as
         # independent source facts.
-        a0 = {n: n.activation for n in self.nethra}
+        interval_nodes = tuple(self.nethra)
+        a0 = {n: n.activation for n in interval_nodes}
 
-        for n in self.nethra:
+        for n in interval_nodes:
             n.external = 0.0
         b1 = self._derivative_at(a0)
-        b_a1 = {n: a0[n] + .5 * dt * b1[n] for n in self.nethra}
+        b_a1 = {n: a0[n] + .5 * dt * b1[n] for n in interval_nodes}
         b2 = self._derivative_at(b_a1)
-        b_a2 = {n: a0[n] + .5 * dt * b2[n] for n in self.nethra}
+        b_a2 = {n: a0[n] + .5 * dt * b2[n] for n in interval_nodes}
         b3 = self._derivative_at(b_a2)
-        b_a3 = {n: a0[n] + dt * b3[n] for n in self.nethra}
+        b_a3 = {n: a0[n] + dt * b3[n] for n in interval_nodes}
         b4 = self._derivative_at(b_a3)
         baseline = {
             n: a0[n] + dt * (b1[n] + 2*b2[n] + 2*b3[n] + b4[n]) / 6.0
-            for n in self.nethra
+            for n in interval_nodes
         }
 
-        for n in self.nethra:
+        for n in interval_nodes:
             n.external = 0.0
         for n, current in source_current.items():
             n.external = current
 
         k1 = self._derivative_at(a0)
-        a1 = {n: a0[n] + .5 * dt * k1[n] for n in self.nethra}
+        a1 = {n: a0[n] + .5 * dt * k1[n] for n in interval_nodes}
         k2 = self._derivative_at(a1)
-        a2 = {n: a0[n] + .5 * dt * k2[n] for n in self.nethra}
+        a2 = {n: a0[n] + .5 * dt * k2[n] for n in interval_nodes}
         k3 = self._derivative_at(a2)
-        a3 = {n: a0[n] + dt * k3[n] for n in self.nethra}
+        a3 = {n: a0[n] + dt * k3[n] for n in interval_nodes}
         k4 = self._derivative_at(a3)
 
         delta = {}
         integral = {}
         target = {}
         actual = {}
-        for n in self.nethra:
+        for n in interval_nodes:
             old = a0[n]
             integral[n] = dt * (a0[n] + 2*a1[n] + 2*a2[n] + a3[n]) / 6.0
             actual[n] = old + dt * (k1[n] + 2*k2[n] + 2*k3[n] + k4[n]) / 6.0
@@ -823,7 +824,7 @@ class NethraField:
         self.previous_explicit = explicit
         self.previous_closure = closed
 
-        for n in self.nethra:
+        for n in interval_nodes:
             n.activation = actual[n]
 
         self._complete_interval(source_current, delta, integral)
