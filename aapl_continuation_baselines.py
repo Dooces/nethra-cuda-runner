@@ -51,7 +51,7 @@ def summarize(rows,name):
     valid=[r for r in rows if r["valid"]]
     out={"n":len(valid),"coverage":len(valid)/len(rows)}
     for k in KS:
-        out[f"top{k}"]=statistics.mean(r[f"{name}_hit{k}"] for r in valid)
+        out[f"top{k}"]=statistics.mean(r[f"{name}_hit{k}"] for r in valid) if valid else None
     return out
 
 
@@ -184,8 +184,12 @@ def main():
         model.interval(float(currents[i]),float(elapsed[i]),True,True)
 
     valid=[r for r in rows if r["valid"]]
-    chance={f"top{k}":statistics.mean(r[f"chance{k}"] for r in valid) for k in KS}
+    chance={f"top{k}":statistics.mean(r[f"chance{k}"] for r in valid) if valid else None for k in KS}
     result={
+        "steps_with_any_actual_new":sum(r["actual_new_targets"]>0 for r in rows),
+        "total_actual_new_targets":sum(r["actual_new_targets"] for r in rows),
+        "steps_with_sensitive_new":sum(r["counterfactual_sensitive_targets"]>0 for r in rows),
+        "total_sensitive_new_targets":sum(r["counterfactual_sensitive_targets"] for r in rows),
         "train_intervals":TRAIN-1,
         "online_intervals":ONLINE,
         "relations_final":len(model.birth_members),
