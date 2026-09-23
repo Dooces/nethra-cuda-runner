@@ -218,12 +218,39 @@ def indexed_closure(index,explicit):
     return frozenset(active)
 
 
+def shadow_direct_closure(f,explicit):
+    """Old S72 direct-route closure semantics, adapted to one-file objects.
+
+    This intentionally ignores the one-file empty-signature collision. It is the structural rule
+    being tested: an existing relation refinds when one of its direct routes is already active.
+    """
+    active=set(explicit)
+    changed=True
+    while changed:
+        changed=False
+        for relation in f.nethra:
+            if relation in active or not relation.routes:
+                continue
+            for route,conditions in relation.routes.items():
+                if conditions.get(frozenset(),0)>0 and route.issubset(active):
+                    active.add(relation)
+                    changed=True
+                    break
+    return frozenset(active)
+
+
 def closure_efficiency():
     f,a,b,chain=make_recursive_closure_fixture()
     explicit=frozenset((a,b))
 
+    # Current one-file closure is measured diagnostically because the empty-signature collision
+    # discovered by this audit makes it over-refind dormant routes.
     t0=time.perf_counter()
-    baseline=f.closure(explicit,event=frozenset())
+    current=f.closure(explicit,event=frozenset())
+    current_s=time.perf_counter()-t0
+
+    t0=time.perf_counter()
+    baseline=shadow_direct_closure(f,explicit)
     baseline_s=time.perf_counter()-t0
 
     t0=time.perf_counter()
@@ -234,32 +261,43 @@ def closure_efficiency():
     indexed=indexed_closure(index,explicit)
     indexed_s=time.perf_counter()-t0
 
-    if baseline!=indexed:
-        pos={n:i for i,n in enumerate(f.nethra)}
-        only_base=sorted(pos[n] for n in baseline-indexed)
-        only_index=sorted(pos[n] for n in indexed-baseline)
-        print("closure_mismatch","baseline",len(baseline),"indexed",len(indexed),
-              "only_baseline",only_base[:30],"only_indexed",only_index[:30],
-              "chain_baseline",sum(n in baseline for n in chain),
-              "chain_indexed",sum(n in indexed for n in chain))
     assert baseline==indexed
     assert chain[-1] in indexed
+    assert len(current)>len(baseline)
 
-    # A second unchanged interval can reuse the already-established closure exactly because closure
-    # is deterministic for unchanged explicit support/event state.
+    # Repeated queries make the execution consequence visible without changing semantics.
+    repeats=100
     t0=time.perf_counter()
-    for _ in range(10000):
+    for _ in range(repeats):
+        shadow_direct_closure(f,explicit)
+    baseline_repeat=(time.perf_counter()-t0)/repeats
+
+    t0=time.perf_counter()
+    for _ in range(repeats):
+        indexed_closure(index,explicit)
+    indexed_repeat=(time.perf_counter()-t0)/repeats
+
+    # If external source and transient event are unchanged, deterministic closure itself is
+    # unchanged. Reusing the previous result is exact and does not inspect any leaf or route.
+    t0=time.perf_counter()
+    for _ in range(100000):
         reused=baseline
-    reuse_s=(time.perf_counter()-t0)/10000.0
+    reuse_s=(time.perf_counter()-t0)/100000.0
     assert reused==baseline
 
     return {
         "nethra":len(f.nethra),
         "relations":sum(bool(n.routes) for n in f.nethra),
+        "current_buggy_active":len(current),
+        "direct_active":len(baseline),
+        "current_seconds":current_s,
         "baseline_seconds":baseline_s,
         "index_compile_seconds":compile_s,
         "indexed_seconds":indexed_s,
-        "speedup":baseline_s/indexed_s if indexed_s else math.inf,
+        "single_query_speedup":baseline_s/indexed_s if indexed_s else math.inf,
+        "baseline_repeat_seconds":baseline_repeat,
+        "indexed_repeat_seconds":indexed_repeat,
+        "repeat_speedup":baseline_repeat/indexed_repeat if indexed_repeat else math.inf,
         "unchanged_reuse_seconds":reuse_s,
         "active":len(baseline),
         "depth":len(chain),
