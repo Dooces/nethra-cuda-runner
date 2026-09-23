@@ -101,10 +101,8 @@ def main():
                 for n in observed
             )
 
-        actual_event=event_for(actual_grounded)
-        opposite_event=event_for(opposite_grounded)
-        actual_closed=set(model.f.closure(actual_grounded,actual_event))
-        opposite_closed=set(model.f.closure(opposite_grounded,opposite_event))
+        actual_closed=set(model.recursive_current_closure(actual_grounded)[0])
+        opposite_closed=set(model.recursive_current_closure(opposite_grounded)[0])
 
         # Price-sensitive continuation target: already-earned relation that newly appears for the
         # actual next manifestation and does NOT appear for the counterfactual opposite sign.
