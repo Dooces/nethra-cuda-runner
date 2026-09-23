@@ -662,6 +662,7 @@ def main():
     rows=[]
     structural_frozen=False
     stabilized_replay=None
+    direct_field_report=None
 
     for replay in range(1,REPLAYS+1):
         created_before=model.created
@@ -682,9 +683,16 @@ def main():
             model.reset_transient()
             correct=resolved=ties=0
             surprise_sum=0.0
+            direct_rows=[] if replay==1 else None
             for i in range(train_n):
                 out=model.interval(float(currents[i]),float(elapsed[i]),True,True)
-                margin=out["pred_plus"]-out["pred_minus"]
+                pplus=float(out["pred_plus"])
+                pminus=float(out["pred_minus"])
+                margin=pplus-pminus
+                raw_strength=abs(margin)
+                vector_strength=math.hypot(pplus,pminus)
+                actual_charge=abs(float(currents[i]))*OBS_DT
+                actual_signed_charge=(1.0 if currents[i]>=0 else -1.0)*actual_charge
                 if abs(margin)<=1e-18:
                     ties+=1
                 else:
@@ -693,7 +701,84 @@ def main():
                     truth=1 if currents[i]>=0 else -1
                     correct+=pred==truth
                 surprise_sum+=out["surprise"]
+                if direct_rows is not None:
+                    direct_rows.append({
+                        "up":pplus,
+                        "down":pminus,
+                        "signed":margin,
+                        "strength":raw_strength,
+                        "vector_strength":vector_strength,
+                        "actual_signed_charge":actual_signed_charge,
+                        "actual_log_return":float(raw[i]),
+                        "correct":(abs(margin)>1e-18 and ((margin>0)==(currents[i]>=0))),
+                        "resolved":abs(margin)>1e-18,
+                        "surprise":float(out["surprise"]),
+                    })
                 max_closure=max(max_closure,out["closure_size"])
+
+            if direct_rows is not None:
+                resolved_rows=[x for x in direct_rows if x["resolved"]]
+                ranked=sorted(resolved_rows,key=lambda x:x["strength"],reverse=True)
+
+                top={}
+                for frac in (0.05,0.10,0.25,0.50,1.00):
+                    k=max(1,int(len(ranked)*frac)) if ranked else 0
+                    subset=ranked[:k]
+                    top[str(frac)]={
+                        "n":k,
+                        "accuracy":(sum(x["correct"] for x in subset)/k) if k else None,
+                        "mean_raw_strength":(statistics.mean(x["strength"] for x in subset) if subset else None),
+                        "mean_vector_strength":(statistics.mean(x["vector_strength"] for x in subset) if subset else None),
+                        "mean_surprise":(statistics.mean(x["surprise"] for x in subset) if subset else None),
+                    }
+
+                quintiles=[]
+                if ranked:
+                    for bi in range(5):
+                        lo=bi*len(ranked)//5
+                        hi=(bi+1)*len(ranked)//5
+                        subset=ranked[lo:hi]
+                        if subset:
+                            quintiles.append({
+                                "rank":bi+1,
+                                "n":len(subset),
+                                "accuracy":sum(x["correct"] for x in subset)/len(subset),
+                                "mean_raw_strength":statistics.mean(x["strength"] for x in subset),
+                                "mean_vector_strength":statistics.mean(x["vector_strength"] for x in subset),
+                                "mean_surprise":statistics.mean(x["surprise"] for x in subset),
+                            })
+
+                corr_charge=0.0
+                corr_return=0.0
+                if len(resolved_rows)>2:
+                    xs=[x["signed"] for x in resolved_rows]
+                    yc=[x["actual_signed_charge"] for x in resolved_rows]
+                    yr=[x["actual_log_return"] for x in resolved_rows]
+                    if statistics.pstdev(xs)>0 and statistics.pstdev(yc)>0:
+                        mx=statistics.mean(xs); my=statistics.mean(yc)
+                        cov=sum((a-mx)*(b-my) for a,b in zip(xs,yc))/len(xs)
+                        corr_charge=cov/(statistics.pstdev(xs)*statistics.pstdev(yc))
+                    if statistics.pstdev(xs)>0 and statistics.pstdev(yr)>0:
+                        mx=statistics.mean(xs); my=statistics.mean(yr)
+                        cov=sum((a-mx)*(b-my) for a,b in zip(xs,yr))/len(xs)
+                        corr_return=cov/(statistics.pstdev(xs)*statistics.pstdev(yr))
+
+                correct_s=[x["surprise"] for x in resolved_rows if x["correct"]]
+                wrong_s=[x["surprise"] for x in resolved_rows if not x["correct"]]
+                direct_field_report={
+                    "resolved_n":len(resolved_rows),
+                    "resolved_fraction":len(resolved_rows)/len(direct_rows),
+                    "direction_accuracy":sum(x["correct"] for x in resolved_rows)/len(resolved_rows) if resolved_rows else None,
+                    "signed_priming_vs_actual_charge_corr":corr_charge,
+                    "signed_priming_vs_log_return_corr":corr_return,
+                    "mean_raw_strength":statistics.mean(x["strength"] for x in resolved_rows) if resolved_rows else None,
+                    "mean_vector_strength":statistics.mean(x["vector_strength"] for x in resolved_rows) if resolved_rows else None,
+                    "mean_surprise_correct":statistics.mean(correct_s) if correct_s else None,
+                    "mean_surprise_wrong":statistics.mean(wrong_s) if wrong_s else None,
+                    "top_strength":top,
+                    "strength_quintiles_high_to_low":quintiles,
+                }
+                print("DIRECT_FIELD",json.dumps(direct_field_report,sort_keys=True),flush=True)
 
             if model.created==created_before:
                 structural_frozen=True
@@ -732,8 +817,8 @@ def main():
     constructed_depth=max(model.depth.values(),default=0)
     mature_depth=max((model.depth[r] for r in mature),default=0)
 
-    ablations=ablation_audit(model,currents,elapsed,mature)
-    causal_depth=max((r["depth"] for r in ablations if r["rms_margin_change"]>1e-15),default=0)
+    ablations=[]
+    causal_depth=0
 
     deepest=[]
     for r in sorted(mature,key=lambda x:model.depth[x],reverse=True)[:20]:
@@ -757,6 +842,7 @@ def main():
         "deepest_mature":deepest,
         "ablations":ablations,
         "last_pass":rows[-1],
+        "direct_field":direct_field_report,
         "seconds":time.perf_counter()-started,
     }
     print("FINAL",json.dumps(final,sort_keys=True),flush=True)
