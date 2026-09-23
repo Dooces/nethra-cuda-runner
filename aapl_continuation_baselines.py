@@ -89,10 +89,18 @@ def main():
         prev_rel=[r for r in prev if r in model.birth_members]
         prev_ids=[model.index[r] for r in prev_rel]
 
-        grounded={model.time,model.pplus if currents[i]>=0 else model.pminus}
-        actual_closed=set(model.f.closure(frozenset(grounded),model.f.current_event))
+        actual_node=model.pplus if currents[i]>=0 else model.pminus
+        opposite_node=model.pminus if currents[i]>=0 else model.pplus
+        actual_grounded={model.time,actual_node}
+        opposite_grounded={model.time,opposite_node}
+        actual_closed=set(model.f.closure(frozenset(actual_grounded),model.f.current_event))
+        opposite_closed=set(model.f.closure(frozenset(opposite_grounded),model.f.current_event))
+
+        # Price-sensitive continuation target: already-earned relation that newly appears for the
+        # actual next manifestation and does NOT appear for the counterfactual opposite sign.
         actual_new={r for r in actual_closed if r in model.birth_members and r not in prev}
-        target={model.index[r] for r in actual_new}
+        sensitive_new={r for r in actual_new if r not in opposite_closed}
+        target={model.index[r] for r in sensitive_new}
 
         candidates=[r for r in model.birth_members if r not in prev]
         candidate_ids=[model.index[r] for r in candidates]
@@ -144,6 +152,8 @@ def main():
         row={
             "valid":bool(target and candidates),
             "targets":len(target),
+            "actual_new_targets":len(actual_new),
+            "counterfactual_sensitive_targets":len(sensitive_new),
             "candidates":len(candidates),
         }
         for k in KS:
