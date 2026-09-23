@@ -1,0 +1,35 @@
+name: Nethra subtraction correction regression
+
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra.py'
+      - 'nethra_subtraction_regression.py'
+      - '.github/workflows/nethra-subtraction-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: self-hosted
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Targeted subtraction regression
+        shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_subtraction_regression.py
+      - name: Frozen interval boundary
+        shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 test_interval_boundary_freeze.py
+      - name: Local field perspective
+        shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 relation_local_perspective_probe.py
+      - name: Continuous recursive handles
+        shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 continuous_recursive_handle_probe.py
+      - name: Recursive depth
+        shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 recursive_depth_gate_probe.py
+      - name: Self feed
+        shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_self_feed_probe.py
