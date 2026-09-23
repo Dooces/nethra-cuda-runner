@@ -1,0 +1,19 @@
+name: AAPL signed confidence robustness
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'aapl_signed_confidence_segments.py'
+      - '.github/workflows/aapl-signed-confidence-segments.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 aapl_signed_confidence_segments.py
