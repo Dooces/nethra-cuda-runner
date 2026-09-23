@@ -26,16 +26,17 @@ Audit:
   For each unseen chronological interval:
     1. copy the live established state/evidence;
     2. evolve the copy with TIME only for the actual known elapsed gap;
-    3. read native prospective incoming field support on P+ and P-;
+    3. read the same finite-horizon input-Nethra residual used by the passive top-k audits:
+           score_i = a_i_shadow(T) - a_i_live(0) exp(-lambda T / C)
     4. rank P+/P-, report top-k, raw margin and normalized separation;
     5. discard the shadow;
     6. reveal the real price move to the live model and continue ordinary learning/construction.
 
-No prediction is fed back to the live model.
+No prediction is fed back to the live model. A zero margin is an unresolved/tie prediction and is
+never silently counted as P+.
 """
 from __future__ import annotations
 
-import copy
 import json
 import math
 import os
@@ -49,8 +50,6 @@ from aapl_residual_recursive_native import (
     fetch_aapl,
     intervals,
     integrate,
-    preflow,
-    expected_return_from_prediction,
 )
 
 TRAIN_PRICES=int(os.environ.get("NETHRA_AAPL_ESTABLISH_PRICES","20000"))
@@ -58,6 +57,7 @@ MAX_REPLAYS=int(os.environ.get("NETHRA_AAPL_ESTABLISH_MAX_REPLAYS","12"))
 SETTLE_PASSES=int(os.environ.get("NETHRA_AAPL_SETTLE_PASSES","3"))
 AUDIT_STEPS=int(os.environ.get("NETHRA_AAPL_AUDIT_STEPS","40"))
 PRINT_STEPS=int(os.environ.get("NETHRA_AAPL_PRINT_STEPS","20"))
+RESOLVE_EPS=1e-18
 EPS=1e-30
 
 
@@ -72,17 +72,21 @@ def passive_prediction(model, elapsed):
     if len(model.state)!=len(model.f.nethra):
         model._sync_indices()
 
-    prospect=model.state.copy()
+    start=model.state.copy()
+    prospect=start.copy()
     ext=np.zeros(len(prospect),np.float64)
     ext[model.index[model.time]]=1.0
     integrate(prospect,ext,model.er,model.em,model.ee,float(elapsed))
 
-    _pout,_pin,pred,_supply=preflow(prospect,model.er,model.em,model.ee)
-    plus=float(pred[model.index[model.pplus]])
-    minus=float(pred[model.index[model.pminus]])
+    decay=math.exp(-base.LEAKAGE*float(elapsed)/base.CAPACITANCE)
+    pi=model.index[model.pplus]
+    mi=model.index[model.pminus]
+    plus=float(prospect[pi]-start[pi]*decay)
+    minus=float(prospect[mi]-start[mi]*decay)
     margin=plus-minus
+    resolved=abs(margin)>RESOLVE_EPS
     denom=abs(plus)+abs(minus)+EPS
-    confidence=abs(margin)/denom
+    confidence=abs(margin)/denom if resolved else 0.0
     ranked=[
         ("P+",plus),
         ("P-",minus),
@@ -93,9 +97,9 @@ def passive_prediction(model, elapsed):
         "minus":minus,
         "margin":margin,
         "confidence":confidence,
+        "resolved":resolved,
         "ranked":ranked,
-        "predicted_sign":1 if margin>=0.0 else -1,
-        "expected_log_return_proxy":expected_return_from_prediction(plus,minus),
+        "predicted_sign":(1 if margin>0.0 else -1) if resolved else 0,
     }
 
 
@@ -125,6 +129,7 @@ def main():
         "max_replays":MAX_REPLAYS,
         "settle_passes":SETTLE_PASSES,
         "prediction_auditing_during_establishment":False,
+        "prediction_readout":"finite_horizon_input_nethra_residual",
     },sort_keys=True),flush=True)
 
     model=NativeReplay()
@@ -190,7 +195,7 @@ def main():
 
         actual_sign=1 if currents[i]>=0.0 else -1
         actual_label="P+" if actual_sign>0 else "P-"
-        correct=pred["predicted_sign"]==actual_sign
+        correct=(pred["predicted_sign"]==actual_sign) if pred["resolved"] else None
         from_point=points[i]
         target=points[i+1]
         hours=(target.timestamp-from_point.timestamp)/3600.0
@@ -210,11 +215,11 @@ def main():
                 {"candidate":name,"score":float(score)}
                 for name,score in pred["ranked"]
             ],
-            "predicted":pred["ranked"][0][0],
+            "predicted":pred["ranked"][0][0] if pred["resolved"] else "TIE",
+            "resolved":bool(pred["resolved"]),
             "margin":float(pred["margin"]),
             "confidence":float(pred["confidence"]),
-            "expected_log_return_proxy":float(pred["expected_log_return_proxy"]),
-            "correct":bool(correct),
+            "correct":correct,
             "relations_before_reveal":len(model.birth_members),
             "depth_before_reveal":constructed_depth(model),
         }
@@ -226,34 +231,41 @@ def main():
         # Only now reveal reality to the live model.
         model.interval(float(currents[i]),float(elapsed[i]),True,True)
 
+    resolved_ix=np.asarray([i for i,r in enumerate(rows) if r["resolved"]],np.int64)
     conf=np.asarray([r["confidence"] for r in rows],np.float64)
-    correctness=np.asarray([r["correct"] for r in rows],np.bool_)
-    order=np.argsort(-conf)
+    correctness=np.asarray([
+        bool(r["correct"]) if r["resolved"] else False for r in rows
+    ],np.bool_)
+
     top_summary={}
-    for frac in (.10,.25,.50,1.0):
-        n=max(1,int(math.ceil(len(rows)*frac)))
-        ix=order[:n]
-        top_summary[str(frac)]={
-            "n":int(n),
-            "accuracy":float(np.mean(correctness[ix])),
-            "min_confidence":float(np.min(conf[ix])),
-            "mean_confidence":float(np.mean(conf[ix])),
-        }
+    if len(resolved_ix):
+        order=resolved_ix[np.argsort(-conf[resolved_ix])]
+        for frac in (.10,.25,.50,1.0):
+            n=max(1,int(math.ceil(len(order)*frac)))
+            ix=order[:n]
+            top_summary[str(frac)]={
+                "n":int(n),
+                "accuracy":float(np.mean(correctness[ix])),
+                "min_confidence":float(np.min(conf[ix])),
+                "mean_confidence":float(np.mean(conf[ix])),
+            }
 
     final_mature=model.maturity()
     summary={
         "audit_n":len(rows),
-        "accuracy":float(np.mean(correctness)),
+        "resolved":int(len(resolved_ix)),
+        "coverage":float(len(resolved_ix)/len(rows)),
+        "resolved_accuracy":float(np.mean(correctness[resolved_ix])) if len(resolved_ix) else None,
         "actual_up_fraction":float(np.mean([
             1 if r["actual"]=="P+" else 0 for r in rows
         ])),
-        "prediction_up_fraction":float(np.mean([
-            1 if r["predicted"]=="P+" else 0 for r in rows
-        ])),
-        "mean_confidence":float(np.mean(conf)),
-        "median_confidence":float(np.median(conf)),
-        "min_confidence":float(np.min(conf)),
-        "max_confidence":float(np.max(conf)),
+        "prediction_up_fraction_resolved":float(np.mean([
+            1 if rows[i]["predicted"]=="P+" else 0 for i in resolved_ix
+        ])) if len(resolved_ix) else None,
+        "mean_confidence_resolved":float(np.mean(conf[resolved_ix])) if len(resolved_ix) else None,
+        "median_confidence_resolved":float(np.median(conf[resolved_ix])) if len(resolved_ix) else None,
+        "min_confidence_resolved":float(np.min(conf[resolved_ix])) if len(resolved_ix) else None,
+        "max_confidence_resolved":float(np.max(conf[resolved_ix])) if len(resolved_ix) else None,
         "confidence_ranked_accuracy":top_summary,
         "relations_after_audit":len(model.birth_members),
         "constructed_depth_after_audit":constructed_depth(model),
