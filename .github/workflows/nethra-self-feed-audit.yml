@@ -1,0 +1,25 @@
+name: Nethra self feed audit
+
+on:
+  push:
+    branches:
+      - nethra-self-feed-audit
+    paths:
+      - 'nethra_self_feed_probe.py'
+      - '.github/workflows/nethra-self-feed-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 4
+    env:
+      PYTHONHASHSEED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Natural learned self-feed probe
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'self_feed elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 nethra_self_feed_probe.py
