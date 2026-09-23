@@ -1,0 +1,23 @@
+name: Nethra native core regression
+
+on:
+  push:
+    branches:
+      - nethra-stock-native-core-replay
+    paths:
+      - 'nethra.py'
+      - 'test_interval_boundary_freeze.py'
+      - '.github/workflows/nethra-native-core-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  regression:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Core regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/python3 -m unittest -v test_interval_boundary_freeze.py
