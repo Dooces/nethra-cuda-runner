@@ -19,6 +19,7 @@ T=.6
 STEPS=8
 DT=T/STEPS
 TARGET=.012
+EXPECTED=.9*TARGET
 ETA=2400.0
 GMAX=1.5
 TAU=100.0
@@ -102,8 +103,10 @@ def run(leakage,ratio):
             source=TARGET if k%10!=9 else 0.0
             set_e(r,get_e(r)+ETA*p*(source-p))
         p1=max(0.0,interval(f,roots,(r,y)))
-        learned=(get_e(r)>e0 and p1>p0)
-        rows.append((depth,prev.activation,p0,p1,get_e(r),learned))
+        e1=get_e(r)
+        moved=(e1 != e0)
+        learned=(moved and abs(p1-EXPECTED) < abs(p0-EXPECTED))
+        rows.append((depth,prev.activation,p0,p1,e1,learned))
         if not learned:break
         prev=r
 
