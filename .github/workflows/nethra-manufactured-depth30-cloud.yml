@@ -24,3 +24,4 @@ jobs:
           set -euxo pipefail
           PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
             python3 nethra_manufactured_depth30_series.py
+
