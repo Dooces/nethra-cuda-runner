@@ -1,0 +1,16 @@
+name: Nethra natural branching context audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_natural_branching_context_audit.py'
+      - '.github/workflows/nethra-natural-branching-context-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_natural_branching_context_audit.py
