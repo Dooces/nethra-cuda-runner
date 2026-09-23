@@ -1,0 +1,25 @@
+name: AAPL 20k native benchmark
+
+on:
+  push:
+    branches:
+      - nethra-aapl-native-recursive-depth
+    paths:
+      - '.github/workflows/aapl-20k-native-benchmark.yml'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: self-hosted
+    timeout-minutes: 6
+    env:
+      NETHRA_STOCK_PRICES: '20000'
+      NETHRA_STOCK_REPLAYS: '1'
+      NETHRA_STOCK_ABLATION: '500'
+    steps:
+      - uses: actions/checkout@v4
+      - name: One full 20k-price pass
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -v /usr/bin/python3 aapl_residual_recursive_native.py
