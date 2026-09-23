@@ -10,7 +10,7 @@ itself remains bidirectional.
 
 from collections import Counter, defaultdict
 from itertools import combinations
-from math import exp, sqrt
+from math import exp, sqrt, log
 
 
 class Nethra:
@@ -63,9 +63,11 @@ class NethraField:
     ordinary Nethra.
     """
 
-    def __init__(self, *, g_min=.20, g_max=1.50, tau=100.0,
+    def __init__(self, *, g_min=0.0, g_max=1.50, tau=100.0,
                  capacitance=1.0, leakage=1.0, trace_decay=.90,
-                 convergence_gain=1.0):
+                 convergence_gain=1.0, native_plasticity=True,
+                 native_eta_out=1800.0, native_eta_in=2400.0,
+                 admission_threshold=0.0, seed_coupling_ratio=.25):
         """Initialize one field without creating semantic structure.
 
         g_min/g_max/tau map earned route evidence to conductance. capacitance and leakage belong
@@ -83,6 +85,11 @@ class NethraField:
         self.leakage = float(leakage)
         self.trace_decay = float(trace_decay)
         self.convergence_gain = float(convergence_gain)
+        self.native_plasticity = bool(native_plasticity)
+        self.native_eta_out = float(native_eta_out)
+        self.native_eta_in = float(native_eta_in)
+        self.admission_threshold = float(admission_threshold)
+        self.seed_coupling_ratio = float(seed_coupling_ratio)
 
         self.nethra = []
 
@@ -112,6 +119,11 @@ class NethraField:
 
         self.rho = {}
         self.pair_stats = {}
+
+        # Continuous native plasticity lives on relation-member incidences.  Structural routes
+        # remain the sole persistent topology; this mapping is numerical evidence attached to
+        # those existing incidences and cannot create an edge by itself.
+        self.incidence_evidence = {}
 
     def new(self):
         """Create and register one otherwise undifferentiated Nethra.
@@ -418,6 +430,177 @@ class NethraField:
         self.current_event = description_event
         return source_event
 
+
+    def _native_seed_evidence(self):
+        """Return the weak admission seed from the local conductance/leakage coordinate.
+
+        The tested recursive plasticity result was stable across a broad seed range when expressed
+        as g_seed / leakage.  The default ratio is deliberately permissive; later signed local
+        plasticity can drive unsupported incidences continuously back to zero.
+        """
+        span = self.g_max - self.g_min
+        if span <= 0.0:
+            return 0.0
+        target_g = min(
+            self.g_max * (1.0 - 1e-12),
+            max(self.g_min, self.leakage * self.seed_coupling_ratio),
+        )
+        if target_g <= self.g_min:
+            return 0.0
+        fraction = (target_g - self.g_min) / span
+        return -self.tau * log(max(1e-300, 1.0 - fraction))
+
+    def _seed_relation_incidences(self, relation):
+        """Give newly materialized structural incidences one weak conductive foothold."""
+        seed = self._native_seed_evidence()
+        for route in relation.routes:
+            for member in route:
+                self.incidence_evidence.setdefault((relation, member), seed)
+
+    def _native_incidences(self):
+        """Compile oriented relation-member incidences for local prospective plasticity."""
+        out = {}
+        for relation in self.nethra:
+            if not relation.routes:
+                continue
+            for route, conditions in relation.routes.items():
+                route_e = self._route_evidence(route, conditions, self.current_event)
+                for member in route:
+                    key = (relation, member)
+                    evidence = self.incidence_evidence.get(key, route_e)
+                    g = self.conductance(evidence)
+                    if g > out.get(key, 0.0):
+                        out[key] = g
+        return tuple((relation, member, g) for (relation, member), g in out.items())
+
+    def _native_prepare_plasticity(self, source_current, dt):
+        """Measure one pre-observation prospective residual without mutating the field.
+
+        The current activation state is the expectation carried into this interval.  Positive
+        relation->member flow is its prediction of grounded source participation during dt.
+        The source current supplied for this interval is the observed consequence.  Plasticity is
+        applied only after the physical interval completes, so the outcome being learned cannot
+        alter its own prediction.
+        """
+        incidences = self._native_incidences()
+        predicted = defaultdict(float)
+        supply = defaultdict(float)
+        outgoing = []
+        incoming = []
+
+        for relation, member, g in incidences:
+            q = g * (relation.activation - member.activation) * dt
+            if q > 0.0:
+                outgoing.append((relation, member, q))
+                predicted[member] += q
+            elif q < 0.0:
+                z = -q
+                incoming.append((relation, member, z))
+                supply[relation] += z
+
+        target = {
+            n: max(0.0, float(source_current.get(n, 0.0))) * dt
+            for n in self.nethra
+        }
+        error = {n: target[n] - predicted[n] for n in self.nethra}
+        tension = defaultdict(float)
+        for relation, member, p in outgoing:
+            tension[relation] += p * error[member]
+
+        updates = defaultdict(float)
+        for relation, member, p in outgoing:
+            updates[(relation, member)] += self.native_eta_out * p * error[member]
+        for relation, member, p in incoming:
+            total = supply[relation]
+            if total > 0.0:
+                updates[(relation, member)] += (
+                    self.native_eta_in * tension[relation] * (p / total)
+                )
+
+        surprise = sum(
+            max(0.0, error[n])
+            for n, value in source_current.items()
+            if value > 0.0
+        )
+        return updates, surprise
+
+    def _native_apply_plasticity(self, updates):
+        """Apply continuous signed local evidence changes after the observed interval."""
+        for key, delta in updates.items():
+            if key not in self.incidence_evidence:
+                relation, member = key
+                route_e = 0.0
+                for route, conditions in relation.routes.items():
+                    if member in route:
+                        route_e = max(
+                            route_e,
+                            self._route_evidence(route, conditions, self.current_event),
+                        )
+                self.incidence_evidence[key] = route_e
+            self.incidence_evidence[key] = max(
+                0.0,
+                self.incidence_evidence[key] + float(delta),
+            )
+
+    def _native_current_closure(self, explicit):
+        """Refind complete recursive structure against the current source presentation."""
+        explicit = frozenset(explicit)
+        active = set(explicit)
+        while True:
+            observed = active | set(self.previous_closure)
+            event = frozenset(
+                (n, int(n in active) - int(n in self.previous_closure))
+                for n in observed
+            )
+            added = []
+            for relation in self.nethra:
+                if relation in active or not relation.routes:
+                    continue
+                for route, conditions in relation.routes.items():
+                    if conditions.get(frozenset(), 0) > 0 and route.issubset(active):
+                        added.append(relation)
+                        break
+                    projected = self._project(event, route)
+                    if projected and conditions.get(projected, 0) > 0:
+                        added.append(relation)
+                        break
+            if not added:
+                return frozenset(active), event
+            active.update(added)
+
+    def _native_structural_step(self, explicit, surprise):
+        """Perform permissive residual admission after subtraction/refinding of existing structure."""
+        explicit = frozenset(explicit)
+        closed, description_event = self._native_current_closure(explicit)
+        before_description = self.previous_event
+
+        relation = None
+        if (
+            before_description
+            and description_event
+            and surprise > self.admission_threshold
+        ):
+            key = (before_description, description_event)
+            n_before = len(self.nethra)
+            relation = self._mint_history(
+                before_description,
+                description_event,
+                1,
+                history_key=key,
+            )
+            if relation is not None:
+                self._seed_relation_incidences(relation)
+                # _mint_history may have allocated an ordinary Nethra or attached another route
+                # to already-accounting structure.  Either case remains ordinary topology.
+                if len(self.nethra) < n_before:
+                    raise AssertionError("native construction shrank ontology")
+
+        self.previous_explicit = explicit
+        self.previous_closure = closed
+        self.previous_event = description_event
+        self.current_event = description_event
+        return relation
+
     def conductance(self, evidence):
         """Map accumulated route evidence to bounded nonnegative field conductance.
 
@@ -456,8 +639,12 @@ class NethraField:
         edges = {}
         for relation in self.nethra:
             for route, conditions in relation.routes.items():
-                g = self.conductance(self._route_evidence(route, conditions, self.current_event))
+                route_g = self.conductance(
+                    self._route_evidence(route, conditions, self.current_event)
+                )
                 for member in route:
+                    incidence = self.incidence_evidence.get((relation, member))
+                    g = self.conductance(incidence) if incidence is not None else route_g
                     key = frozenset((relation, member))
                     if g > edges.get(key, 0.0):
                         edges[key] = g
@@ -587,16 +774,24 @@ class NethraField:
         and exact sparse Nethra activation delta. That boundary is frozen and has no learning
         authority.
 
-        _consider_completed_interval_provisional() remains available only for explicit historical
-        regression comparison. step() does not invoke it, so the frozen interval boundary itself
-        has no construction authority. External current is consumed after the exact interval
-        record is stored.
+        The frozen interval record itself has no construction authority.  When native plasticity
+        is enabled, pre-observation field flow is compared with the subsequently supplied grounded
+        source current; signed local incidence evidence and residual admission are applied only
+        after the physical interval is complete.  The historical probability/counting learner
+        remains separately callable for regression comparison.
         """
         dt = float(dt)
         if dt <= 0.0:
             raise ValueError("dt must be positive")
         source_current = {n: n.external for n in self.nethra if n.external != 0.0}
         explicit = frozenset(source_current)
+        native_updates = {}
+        native_surprise = 0.0
+        if self.native_plasticity:
+            native_updates, native_surprise = self._native_prepare_plasticity(
+                source_current,
+                dt,
+            )
         a0 = {n: n.activation for n in self.nethra}
         k1 = self._derivative_at(a0)
         a1 = {n: a0[n] + .5 * dt * k1[n] for n in self.nethra}
@@ -614,8 +809,12 @@ class NethraField:
 
         self._complete_interval(source_current, delta)
 
-        # The historical construction path remains manually callable for regression comparison.
-        # It is deliberately not part of live step() because the plasticity law is unresolved.
+        if self.native_plasticity:
+            self._native_apply_plasticity(native_updates)
+            self._native_structural_step(explicit, native_surprise)
+
+        # The historical probability/counting construction path remains manually callable for
+        # regression comparison.  Live learning above is the field-local native plasticity path.
         for n in self.nethra:
             n.external = 0.0
         return delta
