@@ -17,11 +17,17 @@ jobs:
       PYTHONHASHSEED: '0'
       NETHRA_SIGN_TRAIN: '10000'
       NETHRA_SIGN_ONLINE: '10000'
+      NETHRA_PRICE_CACHE: '/tmp/nethra_aapl_sign_cache.json'
     steps:
       - uses: actions/checkout@v4
       - name: Test native sign-specific continuation readout
         shell: bash
         run: |
           set -euxo pipefail
-          PYTHONPATH=. /usr/bin/time -f 'SIGN elapsed=%e maxrss_kb=%M' \
+          rm -f "$NETHRA_PRICE_CACHE"
+          echo "=== RUN1 ==="
+          PYTHONPATH=. /usr/bin/time -f 'SIGN1 elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 aapl_native_sign_readout.py
+          echo "=== RUN2 SAME CACHE ==="
+          PYTHONPATH=. /usr/bin/time -f 'SIGN2 elapsed=%e maxrss_kb=%M' \
             /usr/bin/python3 aapl_native_sign_readout.py
