@@ -6,6 +6,7 @@ on:
       - nethra-threshold-plasticity-audit
     paths:
       - 'threshold_plasticity_audit.py'
+      - 'weak_relation_loading_probe.py'
       - '.github/workflows/nethra-threshold-plasticity-audit.yml'
   workflow_dispatch:
 
@@ -28,3 +29,4 @@ jobs:
         run: |
           set -euxo pipefail
           PYTHONPATH=. /usr/bin/time -v /usr/bin/python3 threshold_plasticity_audit.py
+          PYTHONPATH=. /usr/bin/python3 weak_relation_loading_probe.py
