@@ -38,10 +38,15 @@ def score(rows,key):
     for frac in (.01,.02,.05,.10,.25,.50):
         n=max(1,int(len(ordered)*frac))
         q=ordered[:n]
+        truth_up=statistics.mean(r["truth"]>0 for r in q)
+        pred_up=statistics.mean(r[key]>0 for r in q)
         out[f"top_{int(frac*100)}pct"]={
             "n":n,
             "accuracy":statistics.mean((r[key]>0)==(r["truth"]>0) for r in q),
             "mean_abs":statistics.mean(abs(r[key]) for r in q),
+            "truth_up_fraction":truth_up,
+            "prediction_up_fraction":pred_up,
+            "majority_baseline":max(truth_up,1.0-truth_up),
         }
     return out
 
