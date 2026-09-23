@@ -1,0 +1,25 @@
+name: Nethra native core stock profile
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - nethra-stock-native-core-replay
+    paths:
+      - '.github/workflows/nethra-native-core-stock-profile.yml'
+
+jobs:
+  profile:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Profile exact core
+        shell: bash
+        env:
+          NETHRA_STOCK_POINTS: '2500'
+          NETHRA_STOCK_REPLAYS: '2'
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/python3 -m cProfile -s cumtime stock_native_core_replay.py > /tmp/nethra_profile.txt
+          tail -n 80 /tmp/nethra_profile.txt
