@@ -1,0 +1,26 @@
+name: Nethra closure empty-signature fix
+
+on:
+  push:
+    branches:
+      - nethra-closure-empty-signature-fix
+    paths:
+      - 'nethra.py'
+      - 'test_interval_boundary_freeze.py'
+      - '.github/workflows/nethra-closure-empty-signature-fix.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Closure and interval regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          /usr/bin/python3 --version
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 -m unittest -v test_interval_boundary_freeze.py
+          git hash-object nethra.py
+          sha256sum nethra.py
