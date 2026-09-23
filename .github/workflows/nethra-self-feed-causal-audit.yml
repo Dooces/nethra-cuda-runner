@@ -1,0 +1,16 @@
+name: Nethra self feed causal audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_self_feed_causal_audit.py'
+      - '.github/workflows/nethra-self-feed-causal-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_self_feed_causal_audit.py
