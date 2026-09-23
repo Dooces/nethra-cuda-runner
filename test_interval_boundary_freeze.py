@@ -86,5 +86,77 @@ class IntervalBoundaryFreezeTests(unittest.TestCase):
             f._route(r,(a,r),frozenset(),1)
 
 
+
+class ClosureEmptySignatureFixTests(unittest.TestCase):
+    def test_dormant_unqualified_route_does_not_refind_from_empty_event(self):
+        f=NethraField()
+        a=f.new(); b=f.new(); r=f.new()
+        f._route(r,(a,b),frozenset(),7)
+        self.assertNotIn(r,f.closure(frozenset(),event=frozenset()))
+        self.assertIsNone(f._matching_route(r,frozenset()))
+
+    def test_unqualified_route_still_refinds_from_active_members(self):
+        f=NethraField()
+        a=f.new(); b=f.new(); r=f.new()
+        f._route(r,(a,b),frozenset(),7)
+        self.assertIn(r,f.closure(frozenset((a,b)),event=frozenset()))
+        event=frozenset(((a,1),(b,0)))
+        self.assertEqual(f._matching_route(r,event),(frozenset((a,b)),frozenset()))
+
+    def test_state_qualified_route_requires_actual_projected_members(self):
+        f=NethraField()
+        a=f.new(); b=f.new(); r=f.new()
+        sig=frozenset(((a,1),(b,-1)))
+        f._route(r,(a,b),sig,9)
+        self.assertNotIn(r,f.closure(frozenset(),event=frozenset()))
+        self.assertNotIn(r,f.closure(frozenset(),event=frozenset(((a,-1),(b,1)))))
+        self.assertIn(r,f.closure(frozenset(),event=sig))
+        self.assertEqual(f._matching_route(r,sig),(frozenset((a,b)),sig))
+
+    def test_ambiguity_is_retained(self):
+        f=NethraField()
+        a=f.new(); b=f.new()
+        r1=f.new(); r2=f.new()
+        f._route(r1,(a,b),frozenset(),3)
+        f._route(r2,(a,b),frozenset(),4)
+        closed=f.closure(frozenset((a,b)),event=frozenset())
+        self.assertIn(r1,closed)
+        self.assertIn(r2,closed)
+
+    def test_cycle_needs_anchor_but_remains_legal(self):
+        f=NethraField()
+        a=f.new(); r1=f.new(); r2=f.new()
+        f._route(r1,(a,),frozenset(),1)
+        f._route(r2,(r1,),frozenset(),1)
+        f._route(r1,(r2,),frozenset(),1)
+        anchored=f.closure(frozenset((a,)),event=frozenset())
+        self.assertIn(r1,anchored)
+        self.assertIn(r2,anchored)
+        unsupported=f.closure(frozenset(),event=frozenset())
+        self.assertNotIn(r1,unsupported)
+        self.assertNotIn(r2,unsupported)
+
+    def test_large_dormant_fixture_only_refinds_direct_chain(self):
+        f=NethraField()
+        a=f.new(); b=f.new(); base=f.new()
+        f._route(base,(a,b),frozenset(),1)
+        chain=[base]
+        prev=base
+        for _ in range(250):
+            r=f.new()
+            f._route(r,(prev,),frozenset(),1)
+            chain.append(r)
+            prev=r
+        dormant=[]
+        for _ in range(1000):
+            x=f.new(); y=f.new(); r=f.new()
+            f._route(r,(x,y),frozenset(),1)
+            dormant.append(r)
+        closed=f.closure(frozenset((a,b)),event=frozenset())
+        self.assertTrue(all(r in closed for r in chain))
+        self.assertTrue(all(r not in closed for r in dormant))
+        self.assertEqual(len(closed),2+len(chain))
+
+
 if __name__=="__main__":
     unittest.main()
