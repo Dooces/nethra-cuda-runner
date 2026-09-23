@@ -1,0 +1,19 @@
+name: Nethra wide64 lean plateau
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_wide64_lean_plateau.py'
+      - '.github/workflows/nethra-wide64-lean.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            python3 nethra_wide64_lean_plateau.py
