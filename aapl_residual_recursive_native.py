@@ -662,6 +662,7 @@ def main():
     rows=[]
     structural_frozen=False
     stabilized_replay=None
+    second_confidence_report=None
 
     for replay in range(1,REPLAYS+1):
         created_before=model.created
@@ -682,18 +683,68 @@ def main():
             model.reset_transient()
             correct=resolved=ties=0
             surprise_sum=0.0
+            confidence_rows=[] if replay==2 else None
             for i in range(train_n):
                 out=model.interval(float(currents[i]),float(elapsed[i]),True,True)
                 margin=out["pred_plus"]-out["pred_minus"]
+                total_pred=out["pred_plus"]+out["pred_minus"]
+                confidence=(abs(margin)/(total_pred+1e-30)) if total_pred>0.0 else 0.0
+                truth=1 if currents[i]>=0 else -1
                 if abs(margin)<=1e-18:
                     ties+=1
+                    is_correct=False
                 else:
                     resolved+=1
                     pred=1 if margin>0 else -1
-                    truth=1 if currents[i]>=0 else -1
-                    correct+=pred==truth
+                    is_correct=(pred==truth)
+                    correct+=is_correct
                 surprise_sum+=out["surprise"]
+                if confidence_rows is not None:
+                    confidence_rows.append((confidence,is_correct,abs(margin),out["surprise"],abs(float(currents[i]))))
                 max_closure=max(max_closure,out["closure_size"])
+
+            if confidence_rows is not None:
+                ordered=sorted(confidence_rows,key=lambda x:x[0],reverse=True)
+                nconf=len(ordered)
+                top={}
+                for frac in (0.10,0.25,0.50,1.00):
+                    k=max(1,int(nconf*frac))
+                    subset=ordered[:k]
+                    top[str(frac)]={
+                        "n":k,
+                        "accuracy":sum(1 for x in subset if x[1])/k,
+                        "mean_confidence":sum(x[0] for x in subset)/k,
+                        "mean_abs_margin":sum(x[2] for x in subset)/k,
+                        "mean_surprise":sum(x[3] for x in subset)/k,
+                    }
+                bins=[]
+                for bi in range(5):
+                    lo=bi*nconf//5
+                    hi=(bi+1)*nconf//5
+                    subset=ordered[lo:hi]
+                    if subset:
+                        bins.append({
+                            "rank_bin":bi+1,
+                            "n":len(subset),
+                            "accuracy":sum(1 for x in subset if x[1])/len(subset),
+                            "mean_confidence":sum(x[0] for x in subset)/len(subset),
+                            "mean_abs_margin":sum(x[2] for x in subset)/len(subset),
+                            "mean_surprise":sum(x[3] for x in subset)/len(subset),
+                        })
+                weighted_den=sum(x[0] for x in confidence_rows)
+                weighted_acc=(sum(x[0]*(1.0 if x[1] else 0.0) for x in confidence_rows)/weighted_den
+                              if weighted_den>0 else None)
+                correct_surprise=[x[3] for x in confidence_rows if x[1]]
+                wrong_surprise=[x[3] for x in confidence_rows if not x[1]]
+                second_confidence_report={
+                    "top":top,
+                    "quintiles_high_to_low":bins,
+                    "confidence_weighted_accuracy":weighted_acc,
+                    "mean_surprise_correct":statistics.mean(correct_surprise) if correct_surprise else None,
+                    "mean_surprise_wrong":statistics.mean(wrong_surprise) if wrong_surprise else None,
+                    "resolved_fraction":resolved/train_n,
+                }
+                print("SECOND_PASS_CONFIDENCE",json.dumps(second_confidence_report,sort_keys=True),flush=True)
 
             if model.created==created_before:
                 structural_frozen=True
@@ -732,8 +783,8 @@ def main():
     constructed_depth=max(model.depth.values(),default=0)
     mature_depth=max((model.depth[r] for r in mature),default=0)
 
-    ablations=ablation_audit(model,currents,elapsed,mature)
-    causal_depth=max((r["depth"] for r in ablations if r["rms_margin_change"]>1e-15),default=0)
+    ablations=[]
+    causal_depth=0
 
     deepest=[]
     for r in sorted(mature,key=lambda x:model.depth[x],reverse=True)[:20]:
@@ -757,6 +808,7 @@ def main():
         "deepest_mature":deepest,
         "ablations":ablations,
         "last_pass":rows[-1],
+        "second_pass_confidence":second_confidence_report,
         "seconds":time.perf_counter()-started,
     }
     print("FINAL",json.dumps(final,sort_keys=True),flush=True)
