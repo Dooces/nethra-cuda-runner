@@ -1,0 +1,29 @@
+name: AAPL confidence calibration
+
+on:
+  push:
+    branches:
+      - nethra-aapl-confidence-calibration
+    paths:
+      - 'aapl_confidence_calibration.py'
+      - '.github/workflows/aapl-confidence-calibration.yml'
+  workflow_dispatch:
+
+jobs:
+  calibrate:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_MULTI_CACHE: '/tmp/nethra_multisymbol_exact.json'
+      NETHRA_SYMBOLS: 'AAPL,MSFT,NVDA,TSLA,JPM,XOM'
+      NETHRA_CONF_TRAIN: '800'
+      NETHRA_CONF_ONLINE: '3000'
+      NETHRA_CONF_CAL: '1500'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Chronological confidence calibration
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'CONF elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_confidence_calibration.py
