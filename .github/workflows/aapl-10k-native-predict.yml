@@ -18,6 +18,8 @@ jobs:
       NETHRA_STOCK_REPLAYS: '1'
       NETHRA_STOCK_ABLATION: '0'
       NETHRA_STOCK_HOLDOUT: '1000'
+      NETHRA_PRICE_CACHE: '/tmp/nethra_aapl_exact.json'
+      PYTHONHASHSEED: '0'
     steps:
       - uses: actions/checkout@v4
       - name: Environment
