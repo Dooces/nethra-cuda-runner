@@ -134,6 +134,44 @@ class IntervalBoundaryFreezeTests(unittest.TestCase):
         self.assertGreater(edges[frozenset((r,a))],edges[frozenset((r,b))])
         self.assertEqual(len(r.routes),1)
 
+
+    def test_per_incidence_lift_matches_legacy_routewide_edges(self):
+        import random
+        rng=random.Random(230923)
+
+        for _ in range(50):
+            f=NethraField()
+            leaves=[f.new() for _ in range(7)]
+            relations=[]
+            for _j in range(6):
+                r=f.new()
+                pool=leaves+relations
+                members=tuple(rng.sample(pool,rng.randint(1,min(4,len(pool)))))
+                if rng.random()<.5:
+                    signature=frozenset((m,rng.choice((-1,0,1))) for m in members)
+                else:
+                    signature=frozenset()
+                f._route(r,members,signature,rng.randint(1,20))
+                relations.append(r)
+
+            # Build an arbitrary transient event over persistent identities.
+            represented=rng.sample(f.nethra,rng.randint(0,len(f.nethra)))
+            f.current_event=frozenset((n,rng.choice((-1,0,1))) for n in represented)
+
+            legacy={}
+            for relation in f.nethra:
+                for route,conditions in relation.routes.items():
+                    g=f.conductance(f._route_evidence(route,conditions,f.current_event))
+                    for member in route:
+                        key=frozenset((relation,member))
+                        if g>legacy.get(key,0.0):
+                            legacy[key]=g
+
+            current={frozenset((a,b)):g for a,b,g in f._edges()}
+            self.assertEqual(set(current),set(legacy))
+            for key in legacy:
+                self.assertEqual(current[key],legacy[key])
+
     def test_direct_self_support_still_rejected(self):
         f=NethraField()
         a=f.new(); r=f.new()
