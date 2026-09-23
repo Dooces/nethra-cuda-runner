@@ -1,0 +1,27 @@
+name: AAPL native sign readout
+
+on:
+  push:
+    branches:
+      - nethra-aapl-native-sign-readout
+    paths:
+      - 'aapl_native_sign_readout.py'
+      - '.github/workflows/aapl-native-sign-readout.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    timeout-minutes: 6
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_SIGN_TRAIN: '10000'
+      NETHRA_SIGN_ONLINE: '10000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test native sign-specific continuation readout
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'SIGN elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 aapl_native_sign_readout.py
