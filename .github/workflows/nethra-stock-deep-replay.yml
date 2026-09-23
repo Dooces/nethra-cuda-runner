@@ -6,6 +6,7 @@ on:
       - nethra-stock-deep-replay-audit
     paths:
       - 'stock_deep_replay_probe.py'
+      - 'stock_deep_replay_probe_v2.py'
       - '.github/workflows/nethra-stock-deep-replay.yml'
   workflow_dispatch:
 
@@ -31,4 +32,4 @@ jobs:
           NETHRA_START: '2004-01-01'
         run: |
           set -euxo pipefail
-          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 stock_deep_replay_probe.py
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 stock_deep_replay_probe_v2.py
