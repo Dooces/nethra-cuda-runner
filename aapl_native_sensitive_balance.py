@@ -130,7 +130,7 @@ def expanding_percentile_gate(rows,key,warmup=100):
             majority=max(truth_up,1.0-truth_up)
             persistence=statistics.mean(r["previous_truth"]==r["truth"] for r in xs)
         else:
-            truth_up=pred_up=acc=majority=None
+            truth_up=pred_up=acc=majority=persistence=None
         out[f"prior_top_{int((1-q)*100+0.5)}pct"]={
             "n":len(xs),
             "coverage_all":len(xs)/len(rows) if rows else 0.0,
