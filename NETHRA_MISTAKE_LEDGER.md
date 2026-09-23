@@ -103,3 +103,27 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
   existing relation that already described both sides could have been duplicated.
 - Prevention: native admission must perform both kinds of subtraction before minting: field
   prediction residual and structural accounted/reuse.
+
+## 2026-09-23 — re-derived and nearly re-broke already-fixed self-description handling
+
+- The native whole-support integration reached an `_accounted()` reuse case where the reused
+  relation could already be present in the recursive whole-support description.
+- This had already been solved earlier: self-containing recursive descriptions are tautological and
+  must be skipped; refound self-presence can subtract/account for structure but contributes no fresh
+  support route into itself.
+- The first integration pass nevertheless attempted to reason about adding that route again.
+- Prevention: preserve the established `if relation in description: skip route registration`
+  rule wherever recursive descriptions are promoted or reused.
+
+## 2026-09-23 — reintroduced the already-rejected source-only consequence residual
+
+- The first native whole-support integration set the consequence target from current external source
+  charge alone. That repeats the exact defect isolated by `82c0b1eb...`: an internally manifested
+  recursive Nethra can have zero external source and positive real manifestation, so source-only
+  residual falsely punishes a correct prediction.
+- The prior native replay correction used an identical zero-input counterfactual from the same
+  pre-outcome state: `target = C * (actual - baseline)`, clamped only at zero for positive
+  manifestation. This preserves original-source provenance separately while allowing internally
+  manifested Nethra to count as consequences.
+- Prevention: external source support is a provenance/construction coordinate, never a universal
+  consequence coordinate.
