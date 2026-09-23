@@ -24,9 +24,21 @@ jobs:
       - name: Local field perspective
         shell: bash
         run: PYTHONPATH=. /usr/bin/python3 relation_local_perspective_probe.py
-      - name: Continuous recursive handles
+      - name: Continuous recursive handle plasticity
         shell: bash
-        run: PYTHONPATH=. /usr/bin/python3 continuous_recursive_handle_probe.py
+        run: |
+          PYTHONPATH=. /usr/bin/python3 - <<'PY'
+          from continuous_recursive_handle_probe import learn_chain, direct_member_leaf_audit
+          cold_field,cold=learn_chain(False)
+          live_field,live=learn_chain(True)
+          cold_depth=max((r["depth"] for r in cold if r["learned"]),default=0)
+          live_depth=max((r["depth"] for r in live if r["learned"]),default=0)
+          violations=direct_member_leaf_audit(live,live_field)
+          print("cold_depth",cold_depth,"continuous_depth",live_depth,"leaf_route_violations",violations)
+          assert cold_depth>=1
+          assert live_depth>=cold_depth
+          assert violations==0
+          PY
       - name: Recursive depth
         shell: bash
         run: PYTHONPATH=. /usr/bin/python3 recursive_depth_gate_probe.py
