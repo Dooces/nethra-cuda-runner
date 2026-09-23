@@ -1,4 +1,4 @@
-name: Nethra threshold plasticity audit
+name: Nethra efficient plasticity suite
 
 on:
   push:
@@ -7,15 +7,14 @@ on:
     paths:
       - 'threshold_plasticity_audit.py'
       - 'weak_relation_loading_probe.py'
-      - 'zero_baseline_seed_plasticity_probe.py'
-      - 'admission_threshold_continuous_plasticity_probe.py'
+      - 'recursive_depth_gate_probe.py'
       - '.github/workflows/nethra-threshold-plasticity-audit.yml'
   workflow_dispatch:
 
 jobs:
   audit:
     runs-on: self-hosted
-    timeout-minutes: 30
+    timeout-minutes: 2
     steps:
       - uses: actions/checkout@v4
       - name: Environment
@@ -26,11 +25,13 @@ jobs:
           nproc
           free -h
           /usr/bin/python3 --version
-      - name: Run threshold plasticity sweep
+      - name: Efficient plasticity suite
         shell: bash
         run: |
           set -euxo pipefail
-          PYTHONPATH=. /usr/bin/time -v /usr/bin/python3 threshold_plasticity_audit.py
-          PYTHONPATH=. /usr/bin/python3 weak_relation_loading_probe.py
-          PYTHONPATH=. /usr/bin/python3 zero_baseline_seed_plasticity_probe.py
-          PYTHONPATH=. /usr/bin/python3 admission_threshold_continuous_plasticity_probe.py
+          echo "=== threshold sweep ==="
+          PYTHONPATH=. /usr/bin/time -f 'threshold_elapsed=%e maxrss_kb=%M' /usr/bin/python3 threshold_plasticity_audit.py
+          echo "=== weak-relation loading ==="
+          PYTHONPATH=. /usr/bin/time -f 'loading_elapsed=%e maxrss_kb=%M' /usr/bin/python3 weak_relation_loading_probe.py
+          echo "=== true recursive depth ==="
+          PYTHONPATH=. /usr/bin/time -f 'depth_elapsed=%e maxrss_kb=%M' /usr/bin/python3 recursive_depth_gate_probe.py
