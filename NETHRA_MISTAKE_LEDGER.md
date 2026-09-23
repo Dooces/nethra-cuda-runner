@@ -94,3 +94,12 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - Later summaries incorrectly called representational bootstrap generally unresolved.
 - Prevention: before declaring a core mechanism open, search the frozen contracts and prior reports
   for an explicit pass/fail conclusion.
+
+## 2026-09-23 — first native whole-support integration omitted structural reuse
+
+- The first integration pass correctly subtracted existing prospective field prediction before
+  admission, but admission only checked for an exact already-stored whole-support route.
+- It did not also call the already-settled structural `_accounted(before, after)` check, so a weak
+  existing relation that already described both sides could have been duplicated.
+- Prevention: native admission must perform both kinds of subtraction before minting: field
+  prediction residual and structural accounted/reuse.
