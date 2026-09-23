@@ -544,6 +544,52 @@ class NativeReplay:
 
 
 @njit(cache=True)
+def settled_replay(currents,elapsed,er,em,ee,n,pplus,pminus,time_idx,
+                   relation_mask,stats_tension,stats_flow,stats_abs):
+    """Execute one complete identical experience after topology is proven invariant.
+
+    Every physical interval and every local plasticity update still occurs. Only structural
+    closure/construction is absent because the immediately preceding complete replay added no
+    topology and the source sequence is identical.
+    """
+    state=np.zeros(n,np.float64)
+    correct=0
+    resolved=0
+    ties=0
+    surprise_sum=0.0
+
+    for i in range(currents.shape[0]):
+        ext=np.zeros(n,np.float64)
+        ext[time_idx]=1.0
+        integrate(state,ext,er,em,ee,elapsed[i])
+
+        pout,pin,pred,supply=preflow(state,er,em,ee)
+        margin=pred[pplus]-pred[pminus]
+        if abs(margin)<=1e-18:
+            ties+=1
+        else:
+            resolved+=1
+            ps=1 if margin>0 else -1
+            truth=1 if currents[i]>=0 else -1
+            if ps==truth:
+                correct+=1
+
+        pre=state.copy()
+        actual,target=outcome_origin(pre,currents[i],pplus,pminus,er,em,ee)
+        eps=target-pred
+        surprise_sum+=abs(eps[pplus])+abs(eps[pminus])
+
+        if er.shape[0]>0:
+            plasticity(
+                ee,er,em,pout,pin,pred,supply,target,
+                relation_mask,stats_tension,stats_flow,stats_abs
+            )
+        state[:]=actual
+
+    return state,correct,resolved,ties,surprise_sum
+
+
+@njit(cache=True)
 def frozen_pass(currents,elapsed,er,em,ee,n,pplus,pminus,time_idx):
     state=np.zeros(n,np.float64)
     margins=np.zeros(currents.shape[0],np.float64)
@@ -614,25 +660,44 @@ def main():
 
     model=NativeReplay()
     rows=[]
+    structural_frozen=False
+    stabilized_replay=None
 
     for replay in range(1,REPLAYS+1):
-        model.reset_transient()
-        correct=resolved=ties=0
-        surprise_sum=0.0
+        created_before=model.created
         max_closure=0
 
-        for i in range(train_n):
-            out=model.interval(float(currents[i]),float(elapsed[i]),True,True)
-            margin=out["pred_plus"]-out["pred_minus"]
-            if abs(margin)<=1e-18:
-                ties+=1
-            else:
-                resolved+=1
-                pred=1 if margin>0 else -1
-                truth=1 if currents[i]>=0 else -1
-                correct+=pred==truth
-            surprise_sum+=out["surprise"]
-            max_closure=max(max_closure,out["closure_size"])
+        if structural_frozen:
+            # Topology was unchanged through a complete prior traversal of this identical source
+            # sequence. Execute all intervals/plasticity inside Numba; no structural operation can
+            # discover a new closure history without a topology change.
+            model.reset_transient()
+            state,correct,resolved,ties,surprise_sum=settled_replay(
+                currents,elapsed,model.er,model.em,model.ee,len(model.f.nethra),
+                model.index[model.pplus],model.index[model.pminus],model.index[model.time],
+                model.relmask,model.stats_tension,model.stats_flow,model.stats_abs
+            )
+            model.state=state
+        else:
+            model.reset_transient()
+            correct=resolved=ties=0
+            surprise_sum=0.0
+            for i in range(train_n):
+                out=model.interval(float(currents[i]),float(elapsed[i]),True,True)
+                margin=out["pred_plus"]-out["pred_minus"]
+                if abs(margin)<=1e-18:
+                    ties+=1
+                else:
+                    resolved+=1
+                    pred=1 if margin>0 else -1
+                    truth=1 if currents[i]>=0 else -1
+                    correct+=pred==truth
+                surprise_sum+=out["surprise"]
+                max_closure=max(max_closure,out["closure_size"])
+
+            if model.created==created_before:
+                structural_frozen=True
+                stabilized_replay=replay
 
         mature=model.maturity()
         constructed_depth=max(model.depth.values(),default=0)
@@ -650,8 +715,11 @@ def main():
             "ties":ties,
             "mean_surprise":surprise_sum/train_n,
             "created":model.created,
+            "created_this_replay":model.created-created_before,
             "reused":model.reused,
             "accounted":model.accounted,
+            "structural_frozen":structural_frozen,
+            "stabilized_replay":stabilized_replay,
         }
         rows.append(row)
         print("PASS",json.dumps(row,sort_keys=True),flush=True)
