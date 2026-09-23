@@ -1,3 +1,4 @@
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
 # Nethra agreed-fixes freeze — 2026-09-23
 
 This branch is rebuilt directly from the authoritative clean interval-boundary freeze
@@ -48,4 +49,5 @@ not frozen.  How that residual should supply F61 rho is not frozen.  Continuous 
 precision for construction is not frozen.
 
 Those unresolved pieces must be solved without changing this frozen field/boundary contract unless
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
 a later revision is explicitly discussed and versioned.
