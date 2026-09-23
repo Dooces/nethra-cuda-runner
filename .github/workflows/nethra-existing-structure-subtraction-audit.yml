@@ -1,0 +1,16 @@
+name: Nethra existing structure subtraction audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_existing_structure_subtraction_audit.py'
+      - '.github/workflows/nethra-existing-structure-subtraction-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_existing_structure_subtraction_audit.py
