@@ -337,6 +337,15 @@ class NativeReplay:
         self.reused=0
         self.accounted=0
 
+        # Exact execution accelerators. closure_cache is valid only for one topology version and is
+        # cleared on every persistent topology change. The statistics arrays are persistent shadow
+        # execution storage for the same relation-local quantities previously copied through dicts.
+        self.closure_cache={}
+        self.stats_tension=np.zeros(3,np.float64)
+        self.stats_flow=np.zeros(3,np.float64)
+        self.stats_abs=np.zeros(3,np.float64)
+        self.relmask=np.zeros(3,np.bool_)
+
     def reset_transient(self):
         self.state=np.zeros(len(self.f.nethra),np.float64)
         self.f.previous_explicit=frozenset()
@@ -355,9 +364,19 @@ class NativeReplay:
             self.flow_sum.setdefault(n,0.0)
             self.tension_sum.setdefault(n,0.0)
         if len(self.state)<len(self.f.nethra):
+            new_n=len(self.f.nethra)
             old=self.state
-            self.state=np.zeros(len(self.f.nethra),np.float64)
+            self.state=np.zeros(new_n,np.float64)
             self.state[:len(old)]=old
+
+            def grow(arr,dtype):
+                z=np.zeros(new_n,dtype=dtype)
+                z[:len(arr)]=arr
+                return z
+            self.stats_tension=grow(self.stats_tension,np.float64)
+            self.stats_flow=grow(self.stats_flow,np.float64)
+            self.stats_abs=grow(self.stats_abs,np.float64)
+            self.relmask=grow(self.relmask,np.bool_)
 
     def sync_topology(self,new_relation=None):
         self._sync_indices()
@@ -369,6 +388,9 @@ class NativeReplay:
             self.depth[new_relation]=1+max((self.depth.get(m,0) for m in members),default=0)
             self.birth_e[new_relation]=SEED_E
             self.created+=1
+            self.relmask[self.index[new_relation]]=True
+            # A new persistent route can change closure for any previously cached event.
+            self.closure_cache.clear()
 
         # Any route added to a reused relation may expose a new physical incidence.
         for r in self.f.nethra:
@@ -400,25 +422,13 @@ class NativeReplay:
             if n.routes:mask[self.index[n]]=True
         return mask
 
-    def stats_arrays(self):
-        n=len(self.f.nethra)
-        ts=np.zeros(n,np.float64); fs=np.zeros(n,np.float64); ta=np.zeros(n,np.float64)
-        for x,i in self.index.items():
-            ts[i]=self.tension_sum.get(x,0.0)
-            fs[i]=self.flow_sum.get(x,0.0)
-            ta[i]=self.tension_abs.get(x,0.0)
-        return ts,fs,ta
-
-    def pull_stats(self,ts,fs,ta):
-        for x,i in self.index.items():
-            if x.routes:
-                self.tension_sum[x]=float(ts[i])
-                self.flow_sum[x]=float(fs[i])
-                self.tension_abs[x]=float(ta[i])
-
     def structural_step(self,explicit,residual):
         explicit=frozenset(explicit)
-        closed=self.f.closure(explicit,self.f.current_event)
+        cache_key=(explicit,self.f.current_event)
+        closed=self.closure_cache.get(cache_key)
+        if closed is None:
+            closed=self.f.closure(explicit,self.f.current_event)
+            self.closure_cache[cache_key]=closed
 
         source_observed=explicit|self.f.previous_explicit
         source_event=frozenset(
@@ -433,15 +443,22 @@ class NativeReplay:
         before=self.f.previous_event
 
         relation=None
-        existed=None
         if before and description_event and residual>ADMISSION_RESIDUAL:
-            accounted=self.f._accounted(before,description_event)
-            existed=set(self.f.nethra)
-            relation=self.f._mint_history(before,description_event,1)
-            if accounted is not None:
-                self.accounted+=1
-            elif relation is not None and relation in existed:
+            key=(before,description_event)
+            relation=self.f.history_relation.get(key)
+            if relation is not None:
+                # Exact recurrence already has a persistent structural handle. Re-running
+                # _mint_history would only increment route evidence; numerical field plasticity is
+                # incidence-local below, so no topology/refinding fact changes here.
                 self.reused+=1
+            else:
+                n_before=len(self.f.nethra)
+                relation=self.f._mint_history(before,description_event,1,history_key=key)
+                if len(self.f.nethra)>n_before:
+                    self.sync_topology(relation)
+                elif relation is not None:
+                    # Existing earned topology accounted for this newly encountered history.
+                    self.accounted+=1
 
         self.f.previous_explicit=explicit
         self.f.previous_closure=closed
@@ -450,11 +467,6 @@ class NativeReplay:
         self.f.previous_event=description_event
         self.f.current_event=description_event
 
-        if relation is not None:
-            was_new=relation not in self.birth_members
-            self.sync_topology(relation if was_new else None)
-            # Existing relation may have acquired additional routes/incidences.
-            self.sync_topology()
         return relation,len(closed)
 
     def interval(self,current,elapsed,learn=True,construct=True):
@@ -480,13 +492,10 @@ class NativeReplay:
         surprise=abs(float(eps[self.index[self.pplus]]))+abs(float(eps[self.index[self.pminus]]))
 
         if learn and self.er.shape[0]:
-            ts,fs,ta=self.stats_arrays()
             eps,tension=plasticity(
                 self.ee,self.er,self.em,pout,pin,pred,supply,target,
-                self.relation_mask(),ts,fs,ta
+                self.relmask,self.stats_tension,self.stats_flow,self.stats_abs
             )
-            self.pull_stats(ts,fs,ta)
-            self.push_evidence_back()
 
         self.state=actual
 
@@ -505,11 +514,19 @@ class NativeReplay:
         }
 
     def maturity(self):
+        # Sync the latest numerical evidence only when an external report/audit needs Python maps.
+        self.push_evidence_back()
         mature=[]
         for r in self.birth_members:
+            ri=self.index[r]
             keys=[k for k in self.incidence_e if k[0] is r]
             moved=max((abs(self.incidence_e[k]-SEED_E) for k in keys),default=0.0)
-            if self.flow_sum.get(r,0.0)>1e-12 and self.tension_abs.get(r,0.0)>1e-16 and moved>1e-9:
+            flow=float(self.stats_flow[ri])
+            tension_abs=float(self.stats_abs[ri])
+            self.flow_sum[r]=flow
+            self.tension_abs[r]=tension_abs
+            self.tension_sum[r]=float(self.stats_tension[ri])
+            if flow>1e-12 and tension_abs>1e-16 and moved>1e-9:
                 mature.append(r)
         return mature
 
