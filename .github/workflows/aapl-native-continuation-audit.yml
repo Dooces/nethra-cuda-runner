@@ -16,7 +16,7 @@ jobs:
     env:
       PYTHONHASHSEED: '0'
       NETHRA_NATIVE_TRAIN: '1200'
-      NETHRA_NATIVE_ONLINE: '1500'
+      NETHRA_NATIVE_ONLINE: '5000'
     steps:
       - uses: actions/checkout@v4
       - name: Native Nethra continuation
