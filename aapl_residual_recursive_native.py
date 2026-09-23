@@ -208,7 +208,24 @@ def rk4(state,ext,er,em,ee,h):
 @njit(cache=True)
 def integrate(state,ext,er,em,ee,duration):
     if duration<=0:return
-    pieces=int(math.ceil(duration/MAX_RK_DT))
+
+    # F61 is a passive linear field:
+    #   C da/dt = J - (lambda I + L_g) a
+    # The largest eigenvalue of the weighted graph Laplacian is bounded by twice the maximum
+    # weighted node degree. Classical RK4 is stable on the negative real axis to ~2.785, so choose
+    # a conservative 2.0 bound. This changes only numerical resolution, never field semantics.
+    degree=np.zeros(state.shape[0],np.float64)
+    for k in range(er.shape[0]):
+        gg=g_of_e(ee[k])
+        degree[er[k]]+=gg
+        degree[em[k]]+=gg
+    max_degree=0.0
+    for i in range(degree.shape[0]):
+        if degree[i]>max_degree:max_degree=degree[i]
+    rate=(LEAKAGE+2.0*max_degree)/CAPACITANCE
+    stable_dt=2.0/rate if rate>0.0 else MAX_RK_DT
+    max_dt=min(MAX_RK_DT,stable_dt)
+    pieces=max(1,int(math.ceil(duration/max_dt)))
     h=duration/pieces
     for _ in range(pieces):
         rk4(state,ext,er,em,ee,h)
