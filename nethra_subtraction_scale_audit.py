@@ -25,7 +25,8 @@ def main():
     for n in (8,12):
         rows={}
         for label,cls in (("OLD",OldSubtractionField),("PATCHED",NethraField)):
-            rows[label]=run(cls,n,3000,7000+n)
+            rows[label]=run(cls,n,500,7000+n)
+            print("MODEL",n,label,rows[label],flush=True)
         ratio=rows["PATCHED"]["relations"]/max(1,rows["OLD"]["relations"])
         print("SCALE",n,rows,"relation_ratio",ratio)
         assert rows["PATCHED"]["relations"]<2000
