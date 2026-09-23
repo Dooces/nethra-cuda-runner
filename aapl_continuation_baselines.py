@@ -102,6 +102,7 @@ def main():
         freq=[]
         recent=[]
         markov=[]
+        route_evidence=[]
 
         # Markov scores are assembled only from historical source->target counts.
         mscore=defaultdict(float)
@@ -127,10 +128,18 @@ def main():
             recent.append((last_seen.get(rid,-1),rid))
             markov.append((mscore.get(rid,0.0),rid))
 
+            matched=model.f._matching_route(r,model.f.previous_event)
+            if matched is None:
+                re=0.0
+            else:
+                route,sig=matched
+                re=float(r.routes[route].get(sig,0))
+            route_evidence.append((re,rid))
+
         # Stable deterministic tie break: lower persistent index first.
         def sort_rank(x):
             x.sort(key=lambda z:(z[0],-z[1]),reverse=True)
-        for arr in (gain,scaled,freq,recent,markov):sort_rank(arr)
+        for arr in (gain,scaled,freq,recent,markov,route_evidence):sort_rank(arr)
 
         row={
             "valid":bool(target and candidates),
@@ -141,7 +150,7 @@ def main():
             row[f"chance{k}"]=chance_hit(len(candidates),len(target),k)
             for name,arr in (
                 ("gain",gain),("scaled_gain",scaled),("frequency",freq),
-                ("recency",recent),("markov",markov)
+                ("recency",recent),("markov",markov),("route_evidence",route_evidence)
             ):
                 row[f"{name}_hit{k}"]=hit(arr,target,k)
         rows.append(row)
@@ -178,6 +187,7 @@ def main():
         "frequency":summarize(rows,"frequency"),
         "recency":summarize(rows,"recency"),
         "markov":summarize(rows,"markov"),
+        "route_evidence":summarize(rows,"route_evidence"),
     }
     print("RESULT",json.dumps(result,sort_keys=True),flush=True)
     print("all_assertions_passed",flush=True)
