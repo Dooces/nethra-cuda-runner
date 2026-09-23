@@ -1,0 +1,16 @@
+name: Nethra gmin prediction carrier audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_gmin_prediction_carrier_audit.py'
+      - '.github/workflows/nethra-gmin-prediction-carrier-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_gmin_prediction_carrier_audit.py
