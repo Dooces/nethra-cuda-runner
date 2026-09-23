@@ -1,0 +1,29 @@
+name: Multi-symbol quick iteration
+
+on:
+  push:
+    branches:
+      - nethra-multisymbol-time-priming
+    paths:
+      - '.github/workflows/multisymbol-quick.yml'
+  workflow_dispatch:
+
+jobs:
+  quick:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_MULTI_CACHE: '/tmp/nethra_multisymbol_exact.json'
+      NETHRA_SYMBOLS: 'AAPL,MSFT,NVDA,TSLA,JPM,XOM'
+      NETHRA_MULTI_MODE: 'main'
+      NETHRA_MULTI_TRAIN: '1800'
+      NETHRA_MULTI_ONLINE: '300'
+      NETHRA_FAST_SYNC: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Quick six-symbol run
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'QUICK elapsed=%e maxrss_kb=%M'             /usr/bin/python3 multisymbol_time_priming.py
