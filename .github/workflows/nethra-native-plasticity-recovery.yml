@@ -21,3 +21,6 @@ jobs:
               test_interval_boundary_freeze.py \
               test_subtraction_before_construction.py \
               test_native_plasticity_integration.py
+          echo "=== integrated recursive prediction benchmark ==="
+          PYTHONPATH=. /usr/bin/time -f 'benchmark_elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 native_recovery_benchmark.py
