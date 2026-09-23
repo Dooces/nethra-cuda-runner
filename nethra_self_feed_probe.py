@@ -117,6 +117,7 @@ def evaluate_one(f, cue_index):
     peak_time = {n: 0.0 for n in g.nethra}
     integral = {n: 0.0 for n in g.nethra}
     initial_derivative = g.derivative()
+    rr_flow = defaultdict(float)
 
     expected = (cue_index + 1) % SYMBOLS
     alternatives = [i for i in range(SYMBOLS) if i != cue_index]
@@ -124,6 +125,16 @@ def evaluate_one(f, cue_index):
     dadt_rank, dadt_order = rank_of(expected, alternatives, lambda i: initial_derivative[leaves[i]])
 
     for step in range(1, EVAL_STEPS + 1):
+        # Measure actual conductive current between learned Nethra before advancing this slice.
+        for a, b, conductance in g._edges():
+            if not a.routes or not b.routes:
+                continue
+            q = conductance * (a.activation - b.activation)
+            if q > 0.0:
+                rr_flow[(depth[a], depth[b])] += q * EVAL_DT
+            elif q < 0.0:
+                rr_flow[(depth[b], depth[a])] += (-q) * EVAL_DT
+
         raw_step(g, EVAL_DT)
         t = step * EVAL_DT
         for n in g.nethra:
@@ -179,7 +190,15 @@ def evaluate_one(f, cue_index):
             for d, gain, t, b, p in depth_rows[:32]
         ),
     )
-    return base_rank, dadt_rank, future_rank, integral_rank, depth_rows
+    print(
+        "relation_to_relation_flow",
+        " ".join(
+            f"{src}->{dst}:{charge:.6e}"
+            for (src, dst), charge in sorted(rr_flow.items(), key=lambda kv: kv[1], reverse=True)
+        ),
+        "total", f"{sum(rr_flow.values()):.6e}",
+    )
+    return base_rank, dadt_rank, future_rank, integral_rank, depth_rows, rr_flow
 
 
 def main():
@@ -199,9 +218,10 @@ def main():
     future_ranks = []
     integral_ranks = []
     deepest_positive = 0
+    total_relation_to_relation_flow = 0.0
 
     for cue in range(SYMBOLS):
-        br, dr, fr, ir, rows = evaluate_one(f, cue)
+        br, dr, fr, ir, rows, rr_flow = evaluate_one(f, cue)
         base_ranks.append(br)
         dadt_ranks.append(dr)
         future_ranks.append(fr)
@@ -209,15 +229,18 @@ def main():
         for d, gain, _t, _b, _p in rows:
             if gain > 1e-12:
                 deepest_positive = max(deepest_positive, d)
+        total_relation_to_relation_flow += sum(rr_flow.values())
 
     print("base_ranks", base_ranks, "rank1", sum(r == 1 for r in base_ranks))
     print("dadt_ranks", dadt_ranks, "rank1", sum(r == 1 for r in dadt_ranks))
     print("future_ranks", future_ranks, "rank1", sum(r == 1 for r in future_ranks))
     print("integral_ranks", integral_ranks, "rank1", sum(r == 1 for r in integral_ranks))
     print("deepest_endogenously_rising_depth", deepest_positive)
+    print("total_relation_to_relation_flow", f"{total_relation_to_relation_flow:.9e}")
 
     assert max_depth >= 2, max_depth
     assert deepest_positive >= 2, deepest_positive
+    assert total_relation_to_relation_flow > 0.0, total_relation_to_relation_flow
     print("recursive_self_feed_confirmed", True)
 
 
