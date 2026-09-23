@@ -1,0 +1,26 @@
+name: AAPL pattern recurrence audit
+
+on:
+  push:
+    branches:
+      - nethra-aapl-pattern-recurrence-audit
+    paths:
+      - 'aapl_pattern_recurrence_audit.py'
+      - '.github/workflows/aapl-pattern-recurrence-audit.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 4
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_PATTERN_TRAIN: '2500'
+      NETHRA_PATTERN_ONLINE: '5000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recurring Nethra pattern audit
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'PATTERN elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_pattern_recurrence_audit.py
