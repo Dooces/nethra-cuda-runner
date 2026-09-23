@@ -1,0 +1,63 @@
+name: AAPL 10k native predict
+
+on:
+  push:
+    branches:
+      - nethra-aapl-10k-native-predict
+    paths:
+      - 'aapl_residual_recursive_native.py'
+      - '.github/workflows/aapl-10k-native-predict.yml'
+  workflow_dispatch:
+
+jobs:
+  exact_compare:
+    runs-on: self-hosted
+    timeout-minutes: 6
+    env:
+      NETHRA_STOCK_PRICES: '10000'
+      NETHRA_STOCK_REPLAYS: '1'
+      NETHRA_STOCK_ABLATION: '0'
+      NETHRA_STOCK_HOLDOUT: '1000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi || true
+      - name: Reference native 10k
+        shell: bash
+        run: |
+          set -euxo pipefail
+          NETHRA_FAST_SYNC=0 PYTHONPATH=. /usr/bin/time -f 'REFERENCE elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_residual_recursive_native.py | tee /tmp/nethra_ref.log
+      - name: Optimized native 10k
+        shell: bash
+        run: |
+          set -euxo pipefail
+          NETHRA_FAST_SYNC=1 PYTHONPATH=. /usr/bin/time -f 'FAST elapsed=%e maxrss_kb=%M'             /usr/bin/python3 aapl_residual_recursive_native.py | tee /tmp/nethra_fast.log
+      - name: Require exact structural and prediction equivalence
+        shell: bash
+        run: |
+          set -euxo pipefail
+          /usr/bin/python3 - <<'PY'
+          import json
+          def load(path):
+              with open(path) as f:
+                  for line in f:
+                      if line.startswith("FINAL "):
+                          return json.loads(line[6:])
+              raise SystemExit("missing FINAL in "+path)
+          a=load("/tmp/nethra_ref.log")
+          b=load("/tmp/nethra_fast.log")
+          keys=("constructed_depth","mature_depth","nethra","relations","incidences","topology_fingerprint")
+          diff={k:(a.get(k),b.get(k)) for k in keys if a.get(k)!=b.get(k)}
+          if a["holdout"]["margin_sha256"]!=b["holdout"]["margin_sha256"]:
+              diff["holdout.margin_sha256"]=(a["holdout"]["margin_sha256"],b["holdout"]["margin_sha256"])
+          if diff:
+              raise SystemExit("equivalence failure: "+repr(diff))
+          print("EQUIVALENCE_PASS",json.dumps({k:a[k] for k in keys},sort_keys=True))
+          print("HOLDOUT",json.dumps(a["holdout"],sort_keys=True))
+          PY
