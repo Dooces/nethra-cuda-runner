@@ -737,44 +737,29 @@ def main():
 
     model=NativeReplay()
     rows=[]
-    structural_frozen=False
-    stabilized_replay=None
 
     for replay in range(1,REPLAYS+1):
         created_before=model.created
         max_closure=0
 
-        if structural_frozen:
-            # Topology was unchanged through a complete prior traversal of this identical source
-            # sequence. Execute all intervals/plasticity inside Numba; no structural operation can
-            # discover a new closure history without a topology change.
-            model.reset_transient()
-            state,correct,resolved,ties,surprise_sum=settled_replay(
-                currents,elapsed,model.er,model.em,model.ee,len(model.f.nethra),
-                model.index[model.pplus],model.index[model.pminus],model.index[model.time],
-                model.relmask,model.stats_tension,model.stats_flow,model.stats_abs
-            )
-            model.state=state
-        else:
-            model.reset_transient()
-            correct=resolved=ties=0
-            surprise_sum=0.0
-            for i in range(train_n):
-                out=model.interval(float(currents[i]),float(elapsed[i]),True,True)
-                margin=out["pred_plus"]-out["pred_minus"]
-                if abs(margin)<=1e-18:
-                    ties+=1
-                else:
-                    resolved+=1
-                    pred=1 if margin>0 else -1
-                    truth=1 if currents[i]>=0 else -1
-                    correct+=pred==truth
-                surprise_sum+=out["surprise"]
-                max_closure=max(max_closure,out["closure_size"])
-
-            if model.created==created_before:
-                structural_frozen=True
-                stabilized_replay=replay
+        # Learning and construction remain live on every traversal. Even if a previous pass added
+        # no topology, changed incidence evidence can change later residuals and therefore future
+        # construction pressure.
+        model.reset_transient()
+        correct=resolved=ties=0
+        surprise_sum=0.0
+        for i in range(train_n):
+            out=model.interval(float(currents[i]),float(elapsed[i]),True,True)
+            margin=out["pred_plus"]-out["pred_minus"]
+            if abs(margin)<=1e-18:
+                ties+=1
+            else:
+                resolved+=1
+                pred=1 if margin>0 else -1
+                truth=1 if currents[i]>=0 else -1
+                correct+=pred==truth
+            surprise_sum+=out["surprise"]
+            max_closure=max(max_closure,out["closure_size"])
 
         mature=model.maturity()
         constructed_depth=max(model.depth.values(),default=0)
@@ -795,8 +780,8 @@ def main():
             "created_this_replay":model.created-created_before,
             "reused":model.reused,
             "accounted":model.accounted,
-            "structural_frozen":structural_frozen,
-            "stabilized_replay":stabilized_replay,
+            "learning_live":True,
+            "construction_live":True,
         }
         rows.append(row)
         print("PASS",json.dumps(row,sort_keys=True),flush=True)
@@ -824,19 +809,34 @@ def main():
             "max_evidence_move":max((abs(model.incidence_e[k]-SEED_E) for k in keys),default=0.0),
         })
 
-    # Frozen out-of-sample stream. No learning and no construction occurs here.
-    model.push_evidence_back()
+    # Online one-step stream. Every prediction is scored from the field BEFORE the new price is
+    # revealed. That same newly revealed transition then immediately updates plasticity and may
+    # refind/construct Nethra before the following prediction. Learning is never frozen.
     h=min(HOLDOUT_INTERVALS,len(currents_all)-train_n)
     hc=currents_all[train_n:train_n+h]
     he=elapsed_all[train_n:train_n+h]
     hr=raw_all[train_n:train_n+h]
     hk=kinds_all[train_n:train_n+h]
-    er,em,ee=model.compiled_arrays()
-    initial=model.state.copy()
-    _end,margins,pplus,pminus=frozen_holdout(
-        initial,hc,he,er,em,ee,
-        model.index[model.pplus],model.index[model.pminus],model.index[model.time]
-    )
+
+    margins=np.zeros(h,np.float64)
+    pplus=np.zeros(h,np.float64)
+    pminus=np.zeros(h,np.float64)
+    online_surprise=np.zeros(h,np.float64)
+    online_depth=np.zeros(h,np.int32)
+    online_relations=np.zeros(h,np.int32)
+
+    for i in range(h):
+        # model.interval computes pre-observation field prediction first, then reveals the current
+        # price transition to plasticity/construction. Returned pred_* are therefore the scored
+        # one-step-ahead field state, uncontaminated by the outcome being scored.
+        out=model.interval(float(hc[i]),float(he[i]),True,True)
+        pplus[i]=float(out["pred_plus"])
+        pminus[i]=float(out["pred_minus"])
+        margins[i]=pplus[i]-pminus[i]
+        online_surprise[i]=float(out["surprise"])
+        online_depth[i]=max(model.depth.values(),default=0)
+        online_relations[i]=len(model.birth_members)
+
     resolved=np.abs(margins)>1e-18
     truth=np.where(hc>=0.0,1,-1)
     pred=np.where(margins>=0.0,1,-1)
@@ -854,12 +854,13 @@ def main():
     if h>2 and float(np.std(expected))>0 and float(np.std(hr))>0:
         corr=float(np.corrcoef(expected,hr)[0,1])
 
-    order=np.argsort(-np.abs(margins))
+    resolved_ix=np.flatnonzero(resolved)
+    order=resolved_ix[np.argsort(-np.abs(margins[resolved_ix]))] if resolved_ix.size else resolved_ix
     high={}
     for frac in (.10,.25,.50):
-        k=max(1,int(h*frac))
+        k=max(1,int(len(order)*frac)) if len(order) else 0
         ix=order[:k]
-        high[str(frac)]=float(np.mean(pred[ix]==truth[ix]))
+        high[str(frac)]=float(np.mean(pred[ix]==truth[ix])) if k else None
 
     first_prediction=None
     if h:
@@ -880,9 +881,19 @@ def main():
             "predicted_price_proxy":float(start_point.price*math.exp(first_er)),
         }
 
+    # Synchronize latest numerical evidence for final structural/evidence fingerprinting.
+    model.push_evidence_back()
+    online_mature=model.maturity()
+    online_final_depth=max(model.depth.values(),default=0)
+    online_mature_depth=max((model.depth[r] for r in online_mature),default=0)
+
     holdout={
         "n":h,
+        "mode":"online_predict_then_learn",
+        "learning_live":True,
+        "construction_live":True,
         "resolved_accuracy":accuracy,
+        "resolved":int(np.sum(resolved)),
         "ties":tie_count,
         "always_up_accuracy":always_up,
         "persistence_accuracy":persistence,
@@ -891,11 +902,17 @@ def main():
         "first_prediction":first_prediction,
         "margin_rms":float(np.sqrt(np.mean(margins*margins))) if h else 0.0,
         "margin_sha256":__import__("hashlib").sha256(margins.tobytes()).hexdigest(),
+        "mean_surprise":float(np.mean(online_surprise)) if h else None,
+        "depth_start":constructed_depth,
+        "depth_end":online_final_depth,
+        "mature_depth_end":online_mature_depth,
+        "relations_start":rows[-1]["relations"],
+        "relations_end":len(model.birth_members),
     }
 
     final={
-        "constructed_depth":constructed_depth,
-        "mature_depth":mature_depth,
+        "constructed_depth":online_final_depth,
+        "mature_depth":online_mature_depth,
         "causal_depth":causal_depth,
         "nethra":len(model.f.nethra),
         "relations":len(model.birth_members),
