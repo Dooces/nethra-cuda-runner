@@ -67,28 +67,33 @@ class BatchReplay(MultiReplay):
         candidates=[]
         combined_explicit={self.time}
 
-        # Compute all symbol descriptions BEFORE mutating topology.
+        # Compute all symbol consequences BEFORE mutating topology.
+        #
+        # Context/support is the complete preceding recursive description in 'before'.
+        # Consequence is ONLY the grounded unresolved manifestation for this symbol. The symbol
+        # identity Nethra disambiguates which grounded price channel is being described; unrelated
+        # recursive state changes at this boundary are not copied into the consequence route.
         for s,node,residual in payloads:
             explicit=frozenset((self.time,self.symbol_node[s],node))
             combined_explicit.update(explicit)
-            closed=self.f.closure(explicit,old_current_event)
-            observed=closed|prev_closure
-            desc=frozenset(
-                (n,int(n in closed)-int(n in prev_closure))
-                for n in observed
-            )
-            if before and desc and residual>ADMISSION_RESIDUAL:
-                key=(before,desc)
+
+            consequence=frozenset((
+                (self.symbol_node[s],1),
+                (node,1),
+            ))
+
+            if before and residual>ADMISSION_RESIDUAL:
+                key=(before,consequence)
                 existing=self.f.history_relation.get(key)
-                accounted=None if existing is not None else self.f._accounted(before,desc)
-                candidates.append((s,key,desc,existing,accounted))
+                accounted=None if existing is not None else self.f._accounted(before,consequence)
+                candidates.append((s,key,consequence,existing,accounted))
 
         # Commit pre-decided outcomes. A relation created for one simultaneous symbol cannot alter
         # another symbol's decision at this same timestamp.
-        for s,key,desc,existing,accounted in candidates:
+        for s,key,consequence,existing,accounted in candidates:
             if existing is not None:
                 left=self.f._matching_route(existing,before)
-                right=self.f._matching_route(existing,desc)
+                right=self.f._matching_route(existing,consequence)
                 if left is not None:
                     self.f._route(existing,left[0],left[1],1)
                 if right is not None:
@@ -107,14 +112,14 @@ class BatchReplay(MultiReplay):
                 continue
 
             left_members=self.f._event_members(before)
-            right_members=self.f._event_members(desc)
+            right_members=self.f._event_members(consequence)
             if len(left_members|right_members)<2:
                 continue
             relation=self.f.new()
             if left_members:
                 self.f._route(relation,left_members,self.f._project(before,left_members),1)
             if right_members:
-                self.f._route(relation,right_members,self.f._project(desc,right_members),1)
+                self.f._route(relation,right_members,self.f._project(consequence,right_members),1)
             self.f.history_relation[key]=relation
             self.birth_symbol[relation]=s
             self.birth_after_members[relation]=frozenset(right_members)
