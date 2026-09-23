@@ -1,0 +1,26 @@
+name: AAPL residual recursive native
+
+on:
+  push:
+    branches:
+      - nethra-aapl-native-recursive-depth
+    paths:
+      - 'aapl_residual_recursive_native.py'
+      - '.github/workflows/aapl-residual-recursive-native.yml'
+  workflow_dispatch:
+
+jobs:
+  sanity:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    env:
+      NETHRA_STOCK_PRICES: '2000'
+      NETHRA_STOCK_REPLAYS: '2'
+      NETHRA_STOCK_ABLATION: '500'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Short execution sanity
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 aapl_residual_recursive_native.py
