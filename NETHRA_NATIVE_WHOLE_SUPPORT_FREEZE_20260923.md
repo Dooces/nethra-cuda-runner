@@ -1,3 +1,4 @@
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
 # Nethra native whole-support freeze — 2026-09-23
 
 Base lineage: `nethra-current-baseline` at
@@ -48,6 +49,7 @@ This freeze integrates previously settled Nethra learning semantics into the one
 - history/support/outcome probability counters;
 - probability/conditional/baseline construction authority;
 - `_mint_history()` from the retired learner;
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
 - candidate clouds, subset scanners, winner rules, external consequence selectors.
 
 ## Preserved
