@@ -108,6 +108,12 @@ class PricePoint:
 
 
 def fetch_aapl():
+    cache=os.environ.get("NETHRA_PRICE_CACHE")
+    if cache and os.path.exists(cache):
+        with open(cache) as fh:
+            saved=json.load(fh)
+        return [PricePoint(float(x[0]),float(x[1]),int(x[2]),str(x[3])) for x in saved]
+
     start=dt.datetime(1980,1,1,tzinfo=dt.timezone.utc)
     end=dt.datetime(2026,9,23,tzinfo=dt.timezone.utc)
     params=urllib.parse.urlencode({
@@ -147,6 +153,9 @@ def fetch_aapl():
             dedup.append(p); last=p.timestamp
     if len(dedup)<=TRAIN_PRICES+10:
         raise RuntimeError(f"need >{TRAIN_PRICES} prices, got {len(dedup)}")
+    if cache:
+        with open(cache,"w") as fh:
+            json.dump([[p.timestamp,p.price,p.kind,p.date] for p in dedup],fh,separators=(",",":"))
     return dedup
 
 
