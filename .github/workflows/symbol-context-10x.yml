@@ -1,0 +1,27 @@
+name: Symbol context 10x run
+
+on:
+  push:
+    branches:
+      - nethra-prospective-field-audit
+    paths:
+      - '.github/workflows/symbol-context-10x.yml'
+  workflow_dispatch:
+
+jobs:
+  long:
+    runs-on: self-hosted
+    timeout-minutes: 15
+    env:
+      PYTHONHASHSEED: '0'
+      NETHRA_MULTI_CACHE: '/tmp/nethra_multisymbol_exact.json'
+      NETHRA_SYMBOLS: 'AAPL,MSFT,NVDA,TSLA,JPM,XOM'
+      NETHRA_BATCH_TRAIN: '6000'
+      NETHRA_BATCH_ONLINE: '1000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: 10x simultaneous symbol-context run
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'LONG10X elapsed=%e maxrss_kb=%M'             /usr/bin/python3 symbol_context_batch_probe.py
