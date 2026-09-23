@@ -16,7 +16,7 @@ import json, os, statistics
 import numpy as np
 
 import aapl_residual_recursive_native as base
-from aapl_residual_recursive_native import NativeReplay, fetch_aapl, intervals, integrate
+from aapl_residual_recursive_native import NativeReplay, fetch_aapl, intervals, integrate, preflow
 
 TRAIN=int(os.environ.get("NETHRA_BAL_TRAIN","1200"))
 ONLINE=int(os.environ.get("NETHRA_BAL_ONLINE","5000"))
@@ -43,6 +43,28 @@ def score(rows,key):
             "accuracy":statistics.mean((r[key]>0)==(r["truth"]>0) for r in q),
             "mean_abs":statistics.mean(abs(r[key]) for r in q),
         }
+    return out
+
+
+def score_agreement(rows,a,b):
+    xs=[]
+    for r in rows:
+        x=float(r[a]); y=float(r[b])
+        if abs(x)<=EPS or abs(y)<=EPS or (x>0)!=(y>0):
+            continue
+        xs.append((abs(x)*abs(y), (x>0)==(r["truth"]>0), 1 if x>0 else -1))
+    xs.sort(reverse=True,key=lambda z:z[0])
+    if not xs:
+        return {"n":0,"coverage":0.0,"accuracy":None}
+    out={
+        "n":len(xs),
+        "coverage":len(xs)/len(rows),
+        "accuracy":statistics.mean(z[1] for z in xs),
+        "prediction_up_fraction":statistics.mean(z[2]>0 for z in xs),
+    }
+    for frac in (.01,.02,.05,.10,.25,.50):
+        n=max(1,int(len(xs)*frac)); q=xs[:n]
+        out[f"top_{int(frac*100)}pct"]={"n":n,"accuracy":statistics.mean(z[1] for z in q)}
     return out
 
 
@@ -78,6 +100,9 @@ def main():
         up_only=[r for r in up_closed if r in model.birth_members and r not in prev and r not in dn_closed]
         dn_only=[r for r in dn_closed if r in model.birth_members and r not in prev and r not in up_closed]
 
+        _po,_pi,ground_pred,_supply=preflow(prospect,model.er,model.em,model.ee)
+        ground=float(ground_pred[model.index[model.pplus]]-ground_pred[model.index[model.pminus]])
+
         up_act=sum(float(prospect[model.index[r]]) for r in up_only)
         dn_act=sum(float(prospect[model.index[r]]) for r in dn_only)
         up_gain=sum(float(prospect[model.index[r]]-start[model.index[r]]) for r in up_only)
@@ -100,6 +125,7 @@ def main():
             "kind":int(kinds[i]),
             "n_up":len(up_only),
             "n_down":len(dn_only),
+            "ground":ground,
             "activation_balance":up_act-dn_act,
             "mean_activation_balance":up_mean-dn_mean,
             "gain_balance":up_gain-dn_gain,
@@ -120,7 +146,7 @@ def main():
         "mean_up_candidates":statistics.mean(r["n_up"] for r in rows),
         "mean_down_candidates":statistics.mean(r["n_down"] for r in rows),
     }
-    for key in ("activation_balance","mean_activation_balance","gain_balance","excess_activation_balance"):
+    for key in ("ground","activation_balance","mean_activation_balance","gain_balance","excess_activation_balance"):
         result[key]=score(rows,key)
         for kind,name in ((0,"open"),(1,"close")):
             subset=[r for r in rows if r["kind"]==kind]
