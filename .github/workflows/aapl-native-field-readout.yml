@@ -12,11 +12,11 @@ on:
 jobs:
   test:
     runs-on: self-hosted
-    timeout-minutes: 4
+    timeout-minutes: 6
     env:
       PYTHONHASHSEED: '0'
-      NETHRA_FIELD_TRAIN: '1200'
-      NETHRA_FIELD_ONLINE: '5000'
+      NETHRA_FIELD_TRAIN: '10000'
+      NETHRA_FIELD_ONLINE: '10000'
     steps:
       - uses: actions/checkout@v4
       - name: Test native field readouts
