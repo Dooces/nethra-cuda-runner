@@ -234,6 +234,14 @@ def closure_efficiency():
     indexed=indexed_closure(index,explicit)
     indexed_s=time.perf_counter()-t0
 
+    if baseline!=indexed:
+        pos={n:i for i,n in enumerate(f.nethra)}
+        only_base=sorted(pos[n] for n in baseline-indexed)
+        only_index=sorted(pos[n] for n in indexed-baseline)
+        print("closure_mismatch","baseline",len(baseline),"indexed",len(indexed),
+              "only_baseline",only_base[:30],"only_indexed",only_index[:30],
+              "chain_baseline",sum(n in baseline for n in chain),
+              "chain_indexed",sum(n in indexed for n in chain))
     assert baseline==indexed
     assert chain[-1] in indexed
 
