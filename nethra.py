@@ -113,6 +113,35 @@ class NethraField:
         self.rho = {}
         self.pair_stats = {}
 
+    def reset_episode(self):
+        """Reset only transient field/interval state while retaining learned Nethra structure.
+
+        This is an execution boundary for replaying an independent chronological experience.
+        Persistent Nethra, earned routes/evidence, and recurrence/history counts remain intact.
+        Field activation, externally injected current, interval descriptions, and residual
+        correlation traces are cleared so the end of one replay cannot become artificial evidence
+        for the beginning of the next.
+        """
+        for n in self.nethra:
+            n.activation = 0.0
+            n.external = 0.0
+
+        self.previous_interval_source = {}
+        self.current_interval_source = {}
+        self.previous_interval_delta = {}
+        self.current_interval_delta = {}
+
+        self.previous_explicit = frozenset()
+        self.previous_closure = frozenset()
+        self.previous_source_event = frozenset()
+        self.current_source_event = frozenset()
+        self.previous_event = frozenset()
+        self.current_event = frozenset()
+
+        for n in self.nethra:
+            self.rho[n] = 0.0
+        self.pair_stats = {}
+
     def new(self):
         """Create and register one otherwise undifferentiated Nethra.
 
