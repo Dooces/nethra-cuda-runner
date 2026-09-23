@@ -1,0 +1,27 @@
+name: Nethra long replay stocks
+
+on:
+  push:
+    branches:
+      - nethra-stock-backtest-audit
+    paths:
+      - 'stock_nethra_replay_long.py'
+      - '.github/workflows/nethra-stock-replay-long.yml'
+  workflow_dispatch:
+
+jobs:
+  replay:
+    runs-on: self-hosted
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Long replay stock experiment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi || true
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 stock_nethra_replay_long.py
