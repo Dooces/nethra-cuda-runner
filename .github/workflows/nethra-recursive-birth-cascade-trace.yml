@@ -1,0 +1,16 @@
+name: Nethra recursive birth cascade trace
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_recursive_birth_cascade_trace.py'
+      - '.github/workflows/nethra-recursive-birth-cascade-trace.yml'
+  workflow_dispatch:
+jobs:
+  trace:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_recursive_birth_cascade_trace.py
