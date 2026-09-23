@@ -1,0 +1,29 @@
+name: Nethra wide-library plateau prediction cloud
+
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - '.github/workflows/nethra-wide-library-plateau-cloud.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NETHRA_WIDE_MIN_CYCLES: '16'
+      NETHRA_WIDE_MAX_CYCLES: '48'
+      NETHRA_WIDE_PLATEAU_CYCLES: '12'
+      NETHRA_WIDE_AUDIT_STEPS: '32'
+      NETHRA_WIDE_TOPK: '5'
+      NETHRA_WIDE_RELATION_SAFETY: '12000'
+      NETHRA_WIDE_MACRO_PASSES: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Learn wide fixed stream to plateau, then audit one-step predictions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            python3 nethra_wide_library_plateau_predict.py
