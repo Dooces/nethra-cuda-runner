@@ -41,6 +41,7 @@ class BatchReplay(MultiReplay):
         super().__init__()
         self.birth_symbol={}
         self.birth_after_members={}
+        self.birth_context_members={}
 
     def symbol_queries(self, prospective_state):
         rows={}
@@ -122,6 +123,7 @@ class BatchReplay(MultiReplay):
                 self.f._route(relation,right_members,self.f._project(consequence,right_members),1)
             self.f.history_relation[key]=relation
             self.birth_symbol[relation]=s
+            self.birth_context_members[relation]=frozenset(left_members)
             self.birth_after_members[relation]=frozenset(right_members)
             self.sync_topology(relation)
 
@@ -197,6 +199,22 @@ class BatchReplay(MultiReplay):
         }
 
 
+def inherited_symbol_provenance(model):
+    prov={}
+    for s in SYMBOLS:
+        prov[model.symbol_node[s]]=frozenset((s,))
+        prov[model.pplus[s]]=frozenset((s,))
+        prov[model.pminus[s]]=frozenset((s,))
+    prov[model.time]=frozenset()
+
+    for r in sorted(model.birth_members,key=lambda n:(model.depth[n],model.index[n])):
+        p=set()
+        for m in model.birth_members[r]:
+            p.update(prov.get(m,frozenset()))
+        prov[r]=frozenset(p)
+    return prov
+
+
 def relation_outcome_symbols(model):
     """Which symbol-name/price nodes occurred on each relation's outcome-side birth route."""
     out={}
@@ -223,6 +241,13 @@ def main():
     train_depth=max(model.depth.values(),default=0)
     train_rel=len(model.birth_members)
     outcome_syms=relation_outcome_symbols(model)
+    prov=inherited_symbol_provenance(model)
+    context_spans=[]
+    for r,members in model.birth_context_members.items():
+        syms=set()
+        for m in members:
+            syms.update(prov.get(m,frozenset()))
+        context_spans.append(len(syms))
 
     rows=[]
     for k,i in enumerate(range(TRAIN-1,TRAIN-1+ONLINE)):
@@ -263,6 +288,9 @@ def main():
         "outcome_side_one_symbol_relations":one_symbol,
         "outcome_side_multi_symbol_relations":multi_symbol,
         "mean_outcome_symbol_span":statistics.mean(spans) if spans else 0.0,
+        "mean_context_symbol_span":statistics.mean(context_spans) if context_spans else 0.0,
+        "max_context_symbol_span":max(context_spans,default=0),
+        "multi_symbol_context_relations":sum(x>=2 for x in context_spans),
         "mean_unresolved_outputs":statistics.mean(r["unresolved"] for r in rows),
         "time_only_accuracy":statistics.mean(
             c for row in rows for c in row["time_only_correct"]
