@@ -470,7 +470,12 @@ class NethraField:
             accounted = self._accounted(self.current_event, current_description)
             if accounted is not None:
                 relation = accounted[0]
-                if relation not in route and route not in relation.routes:
+                # Established recursive provenance rule: a description containing the relation
+                # itself is tautological. It can account for the event but may not become fresh
+                # support for itself.
+                if relation in route:
+                    return relation
+                if route not in relation.routes:
                     self._route(relation, route, frozenset(), self.admission_seed)
 
         if relation is None:
@@ -492,25 +497,35 @@ class NethraField:
         )
         return relation
 
-    def _native_learn(self, source_current, dt, current_closed, current_description):
-        """Apply the settled whole-support prospective plasticity to the completed prior interval.
+    def _native_learn(self, source_current, target, current_closed, current_description):
+        """Apply settled whole-support prospective plasticity after the current outcome manifests.
 
-        From the prior interval activation integrals, each physical incidence has exact charge
+        From the PRIOR completed interval activation integrals, each physical incidence has exact
 
             Q_ij = g_ij (A_i - A_j).
 
-        Existing relations first predict current independently sourced Nethra:
+        These prior flows are the prospective prediction:
 
-            P_m = sum_R max(0, Q_Rm)
-            epsilon_m = S_m - P_m
+            P_m = sum_R max(0, Q_Rm).
+
+        The CURRENT consequence target is not external-source charge. It is the already-established
+        source-provenance-safe manifestation coordinate obtained from identical replays of this
+        interval with and without its external source:
+
+            M_m = C * max(0, a_actual(m) - a_zero_input(m)).
+
+        Thus an internally manifested recursive Nethra may be a real consequence even when it had
+        zero external source. Original external source remains separately available only as the
+        provenance/admission coordinate.
+
+            epsilon_m = M_m - P_m
             T_R = sum_m p_Rm epsilon_m.
 
         Outgoing relation-to-member evidence receives eta_out * p_Rm * epsilon_m. Incoming
         member-to-relation incidences share eta_in * T_R in proportion to their actual positive
-        incoming charge. Evidence is clamped only at zero. After those existing predictions have
-        been subtracted, any positive unresolved source remainder may permissively admit one weak
-        ordinary Nethra over the whole recursively closed support. No subset candidate machinery,
-        probability ledger, winner rule, or external consequence selector exists here.
+        incoming charge. Evidence is clamped only at zero. Admission remains grounded: only positive
+        unresolved residual on independently sourced current support can trigger a weak ordinary
+        whole-support Nethra. No subset scanner or probability ledger participates.
         """
         if not self.current_interval_integral:
             return {}
@@ -532,10 +547,6 @@ class NethraField:
             elif q < 0.0:
                 incoming[relation][member] = -q
 
-        target = {
-            n: float(current) * float(dt)
-            for n, current in source_current.items()
-        }
         epsilon = {
             n: float(target.get(n, 0.0)) - float(predicted.get(n, 0.0))
             for n in self.nethra
@@ -737,15 +748,15 @@ class NethraField:
     def step(self, dt=.1):
         """Advance one finite interval with native whole-support learning at its causal boundary.
 
-        The externally supplied source for this interval is known before integration. Existing
-        structure first uses the completed PRIOR interval field flow to predict that source; native
-        per-incidence plasticity and permissive residual admission are therefore applied before the
-        current interval evolves. The outcome cannot alter the prediction that preceded it.
+        Recursive closure of current independent source support is fixed before learning. The same
+        pre-outcome field is then integrated twice: once with zero new external source and once with
+        the actual source. Their difference is the established manifestation target, so internally
+        manifested recursive Nethra are consequences without becoming independent source facts.
 
-        Recursive closure of the current independent source support is then fixed for this
-        interval, the symmetric F61 field advances by RK4, and _complete_interval() stores exact
-        source current, activation delta, and activation integral A_i. External current is consumed
-        after the completed interval is stored.
+        Existing structure's PRIOR completed-interval flow is compared with that manifestation;
+        signed per-incidence plasticity and grounded whole-support admission occur only after the
+        current outcome has physically completed. _complete_interval() then stores the actual source,
+        activation delta, and activation integral A_i. External current is consumed afterward.
         """
         dt = float(dt)
         if dt <= 0.0:
@@ -754,17 +765,32 @@ class NethraField:
         explicit = frozenset(source_current)
 
         source_event, closed, description_event = self._describe_source_support(explicit)
-        if self.native_learning and self.current_interval_integral:
-            self._native_learn(source_current, dt, closed, description_event)
 
-        self.previous_source_event = self.current_source_event
-        self.current_source_event = source_event
-        self.previous_event = self.current_event
-        self.current_event = description_event
-        self.previous_explicit = explicit
-        self.previous_closure = closed
-
+        # Current-outcome manifestation uses the previously established source-provenance split:
+        # compare the same pre-outcome field under the actual external source and under zero source.
+        # Internal/refound Nethra may therefore manifest as consequences without being relabelled as
+        # independent source facts.
         a0 = {n: n.activation for n in self.nethra}
+
+        for n in self.nethra:
+            n.external = 0.0
+        b1 = self._derivative_at(a0)
+        b_a1 = {n: a0[n] + .5 * dt * b1[n] for n in self.nethra}
+        b2 = self._derivative_at(b_a1)
+        b_a2 = {n: a0[n] + .5 * dt * b2[n] for n in self.nethra}
+        b3 = self._derivative_at(b_a2)
+        b_a3 = {n: a0[n] + dt * b3[n] for n in self.nethra}
+        b4 = self._derivative_at(b_a3)
+        baseline = {
+            n: a0[n] + dt * (b1[n] + 2*b2[n] + 2*b3[n] + b4[n]) / 6.0
+            for n in self.nethra
+        }
+
+        for n in self.nethra:
+            n.external = 0.0
+        for n, current in source_current.items():
+            n.external = current
+
         k1 = self._derivative_at(a0)
         a1 = {n: a0[n] + .5 * dt * k1[n] for n in self.nethra}
         k2 = self._derivative_at(a1)
@@ -775,11 +801,30 @@ class NethraField:
 
         delta = {}
         integral = {}
+        target = {}
+        actual = {}
         for n in self.nethra:
             old = a0[n]
             integral[n] = dt * (a0[n] + 2*a1[n] + 2*a2[n] + a3[n]) / 6.0
-            n.activation = old + dt * (k1[n] + 2*k2[n] + 2*k3[n] + k4[n]) / 6.0
-            delta[n] = n.activation - old
+            actual[n] = old + dt * (k1[n] + 2*k2[n] + 2*k3[n] + k4[n]) / 6.0
+            delta[n] = actual[n] - old
+            target[n] = max(0.0, self.capacitance * (actual[n] - baseline[n]))
+
+        # The current outcome is now known; update evidence/construction using predictions carried
+        # by the previous completed interval. Topology/evidence changed here cannot alter the outcome
+        # that produced this target.
+        if self.native_learning and self.current_interval_integral:
+            self._native_learn(source_current, target, closed, description_event)
+
+        self.previous_source_event = self.current_source_event
+        self.current_source_event = source_event
+        self.previous_event = self.current_event
+        self.current_event = description_event
+        self.previous_explicit = explicit
+        self.previous_closure = closed
+
+        for n in self.nethra:
+            n.activation = actual[n]
 
         self._complete_interval(source_current, delta, integral)
 
