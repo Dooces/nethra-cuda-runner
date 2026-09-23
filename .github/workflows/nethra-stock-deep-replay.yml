@@ -1,0 +1,34 @@
+name: Nethra stock deep replay
+
+on:
+  push:
+    branches:
+      - nethra-stock-deep-replay-audit
+    paths:
+      - 'stock_deep_replay_probe.py'
+      - '.github/workflows/nethra-stock-deep-replay.yml'
+  workflow_dispatch:
+
+jobs:
+  stock:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname
+          nproc
+          free -h
+          /usr/bin/python3 --version
+          nvidia-smi || true
+      - name: Deep replay AAPL
+        shell: bash
+        env:
+          NETHRA_TICKER: AAPL
+          NETHRA_START: '2004-01-01'
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 stock_deep_replay_probe.py
