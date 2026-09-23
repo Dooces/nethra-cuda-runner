@@ -8,7 +8,7 @@ persistent state objects, and uses ordered interval history for temporal directi
 itself remains bidirectional.
 """
 
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, deque
 from itertools import combinations
 from math import exp, sqrt
 
@@ -113,6 +113,14 @@ class NethraField:
         self.rho = {}
         self.pair_stats = {}
 
+        # Exact execution indexes/caches rebuilt only from persistent Nethra routes.
+        # They have no learning authority and can be discarded/reconstructed at any time.
+        self._unqualified_dependents = defaultdict(list)
+        self._state_routes_by_token = defaultdict(list)
+        self._indexed_route_signatures = set()
+        self._edge_cache = None
+        self._edge_cache_event = None
+
     def reset_episode(self):
         """Reset only transient field/interval state while retaining learned Nethra structure.
 
@@ -141,6 +149,8 @@ class NethraField:
         for n in self.nethra:
             self.rho[n] = 0.0
         self.pair_stats = {}
+        self._edge_cache = None
+        self._edge_cache_event = None
 
     def new(self):
         """Create and register one otherwise undifferentiated Nethra.
@@ -195,7 +205,25 @@ class NethraField:
             raise ValueError("support route references unknown Nethra")
         signature = frozenset(signature)
         bucket = nethra.routes.setdefault(route, Counter())
+        before = bucket.get(signature, 0)
         bucket[signature] += int(evidence)
+        after = bucket.get(signature, 0)
+
+        # Register a route in the exact closure index the first time this evidence coordinate
+        # becomes positive. This is only a reverse incidence index over the same route.
+        index_key = (nethra, route, signature)
+        if before <= 0 < after and index_key not in self._indexed_route_signatures:
+            self._indexed_route_signatures.add(index_key)
+            if signature:
+                for token in signature:
+                    self._state_routes_by_token[token].append((nethra, route, signature))
+            else:
+                for member in route:
+                    self._unqualified_dependents[member].append((nethra, route))
+
+        # Route/evidence changes can change conductance immediately.
+        self._edge_cache = None
+        self._edge_cache_event = None
 
     def _matching_route(self, relation, event):
         """Find an already-earned route of relation that is supported by this transient event.
@@ -293,34 +321,48 @@ class NethraField:
     def closure(self, explicit, event=None):
         """Compute complete recursive refinding from explicit Nethra and transient state.
 
-        Every earned route is repeatedly considered until no additional Nethra can be refound.
-        This fixed-point closure is what allows relations of relations and cycles without imposing
-        parent/child hierarchy. Multiple compatible handles remain simultaneously active; no
-        selector is permitted to collapse ambiguity merely for convenience.
-
-        State-qualified routes are matched against transient event history. Unqualified routes
-        require their persistent members to be active. Closure never constructs new Nethra.
+        This is the same fixed-point semantics as the original full scan, executed through exact
+        reverse route indexes. State-qualified routes are seeded only by signatures actually present
+        in the transient event; unqualified routes propagate from active direct members. No learned
+        Nethra is expanded to primitive leaves, and the index never constructs structure.
         """
         active = set(explicit)
         event = self.current_event if event is None else frozenset(event)
-        changed = True
-        while changed:
-            changed = False
-            for n in self.nethra:
-                if n in active or not n.routes:
+
+        # Exact state-qualified routes depend only on this transient event. Index by one of their
+        # actual tokens to avoid scanning unrelated routes, then verify the full projection exactly.
+        checked = set()
+        for token in event:
+            for n, route, signature in self._state_routes_by_token.get(token, ()):
+                key = (n, route, signature)
+                if key in checked or n in active:
                     continue
-                for route, conditions in n.routes.items():
-                    if conditions.get(frozenset(), 0) > 0 and route.issubset(active):
-                        active.add(n)
-                        changed = True
-                        break
-                    projected = self._project(event, route)
-                    # Empty projection means this event contains none of the route members. It
-                    # must not alias the frozenset() key used for state-independent evidence.
-                    if projected and conditions.get(projected, 0) > 0:
-                        active.add(n)
-                        changed = True
-                        break
+                checked.add(key)
+                conditions = n.routes.get(route)
+                if conditions is None or conditions.get(signature, 0) <= 0:
+                    continue
+                projected = self._project(event, route)
+                if projected and projected == signature:
+                    active.add(n)
+
+        # Direct-member closure. Each newly active/refound Nethra only wakes routes that name it.
+        q = deque(active)
+        propagated = set()
+        while q:
+            member = q.popleft()
+            if member in propagated:
+                continue
+            propagated.add(member)
+            for n, route in self._unqualified_dependents.get(member, ()):
+                if n in active:
+                    continue
+                conditions = n.routes.get(route)
+                if conditions is None or conditions.get(frozenset(), 0) <= 0:
+                    continue
+                if route.issubset(active):
+                    active.add(n)
+                    q.append(n)
+
         return frozenset(active)
 
     def _complete_interval(self, source_current, delta):
@@ -445,7 +487,12 @@ class NethraField:
         self.previous_source_event = source_event
         self.current_source_event = source_event
         self.previous_event = description_event
-        self.current_event = description_event
+        if self.current_event != description_event:
+            self.current_event = description_event
+            self._edge_cache = None
+            self._edge_cache_event = None
+        else:
+            self.current_event = description_event
         return source_event
 
     def conductance(self, evidence):
@@ -474,15 +521,13 @@ class NethraField:
     def _edges(self):
         """Compile persistent support routes into symmetric Nethra-to-Nethra incidences.
 
-        A relation with N members produces N incidences between that relation Nethra and its
-        participating Nethra; this is not pairwise relation learning. If several earned routes
-        imply the same physical incidence, only the strongest current conductance is needed for
-        the field calculation.
-
-        The compiled edge list is execution representation only. Direction is deliberately absent:
-        prospective temporal direction lives in evidence history, while resonance in the field is
-        bidirectional.
+        The result is cached while both topology/evidence and current transient event are unchanged.
+        RK4 therefore evaluates the exact same edge set four times without rebuilding it four times.
+        Cache contents are execution representation only and carry no independent state.
         """
+        if self._edge_cache is not None and self._edge_cache_event == self.current_event:
+            return self._edge_cache
+
         edges = {}
         for relation in self.nethra:
             for route, conditions in relation.routes.items():
@@ -495,7 +540,9 @@ class NethraField:
         for key, g in edges.items():
             a, b = tuple(key)
             out.append((a, b, g))
-        return tuple(out)
+        self._edge_cache = tuple(out)
+        self._edge_cache_event = self.current_event
+        return self._edge_cache
 
     def _neighbors(self):
         """Index the currently compiled symmetric incidences by Nethra.
