@@ -179,7 +179,11 @@ def main():
         dn_only=[r for r in dn_closed if r in model.birth_members and r not in prev and r not in up_closed]
 
         _po,_pi,ground_pred,_supply=preflow(prospect,model.er,model.em,model.ee)
-        ground=float(ground_pred[model.index[model.pplus]]-ground_pred[model.index[model.pminus]])
+        gp=float(ground_pred[model.index[model.pplus]])
+        gm=float(ground_pred[model.index[model.pminus]])
+        ground=gp-gm
+        ground_total=gp+gm
+        ground_contrast=(ground/ground_total) if ground_total>EPS else 0.0
 
         up_act=sum(float(prospect[model.index[r]]) for r in up_only)
         dn_act=sum(float(prospect[model.index[r]]) for r in dn_only)
@@ -204,6 +208,7 @@ def main():
             "n_up":len(up_only),
             "n_down":len(dn_only),
             "ground":ground,
+            "ground_contrast":ground_contrast,
             "activation_balance":up_act-dn_act,
             "mean_activation_balance":up_mean-dn_mean,
             "gain_balance":up_gain-dn_gain,
@@ -225,7 +230,7 @@ def main():
         "mean_up_candidates":statistics.mean(r["n_up"] for r in rows),
         "mean_down_candidates":statistics.mean(r["n_down"] for r in rows),
     }
-    for key in ("ground","activation_balance","mean_activation_balance","gain_balance","excess_activation_balance"):
+    for key in ("ground","ground_contrast","activation_balance","mean_activation_balance","gain_balance","excess_activation_balance"):
         result[key]=score(rows,key)
         for kind,name in ((0,"open"),(1,"close")):
             subset=[r for r in rows if r["kind"]==kind]
@@ -233,6 +238,7 @@ def main():
 
     result["ground_chronological_thresholds"]=chronological_thresholds(rows,"ground")
     result["ground_expanding_percentile"]=expanding_percentile_gate(rows,"ground")
+    result["ground_contrast_expanding_percentile"]=expanding_percentile_gate(rows,"ground_contrast")
     print("RESULT",json.dumps(result,sort_keys=True),flush=True)
     print("all_assertions_passed",flush=True)
 
