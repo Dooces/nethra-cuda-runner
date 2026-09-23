@@ -1,0 +1,16 @@
+name: Nethra TIME current path trace
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_time_current_path_trace.py'
+      - '.github/workflows/nethra-time-current-path-trace.yml'
+  workflow_dispatch:
+jobs:
+  trace:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_time_current_path_trace.py
