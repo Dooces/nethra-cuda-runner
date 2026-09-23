@@ -148,6 +148,22 @@ class SubtractionBeforeConstructionTests(unittest.TestCase):
         self.assertNotIn(r,closed)
 
 
+
+    def test_provisional_refinding_uses_current_source_event(self):
+        f=NethraField()
+        a=f.new(); r=f.new()
+        sig=frozenset(((a,1),))
+        f._route(r,(a,),sig,5)
+
+        # current_event is deliberately empty/stale.  The provisional comparison path must build
+        # the event for THIS explicit observation before asking closure to refind state-qualified
+        # routes.
+        self.assertEqual(f.current_event,frozenset())
+        f._consider_completed_interval_provisional((a,))
+        members={n for n,_ in f.current_event}
+        self.assertIn(a,members)
+        self.assertIn(r,members)
+
     def test_state_qualified_route_still_refinds_from_transient_event(self):
         f=NethraField()
         a=f.new(); b=f.new(); r=f.new()
