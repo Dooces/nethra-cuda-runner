@@ -1,0 +1,26 @@
+name: Nethra manufactured depth-30 cloud crosscheck
+
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - '.github/workflows/nethra-manufactured-depth30-cloud.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      NETHRA_SYNTH_MAX_CYCLES: '96'
+      NETHRA_SYNTH_MIN_CYCLES: '96'
+      NETHRA_SYNTH_SETTLE_CYCLES: '999'
+      NETHRA_SYNTH_RELATION_SAFETY: '8000'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run 96 fixed supercycles
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            python3 nethra_manufactured_depth30_series.py
