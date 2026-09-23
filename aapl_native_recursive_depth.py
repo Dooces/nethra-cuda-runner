@@ -61,7 +61,7 @@ SYMBOL="AAPL"
 TRAIN_PRICES=20_000
 REPLAYS=50
 
-MAX_DEPTH=512              # safety ceiling only; not a selected test depth
+MAX_DEPTH=2048             # high safety ceiling only; not a selected test depth
 ADMISSION_BLOCK=256        # unique observations required before reconsidering next construction
 ADMISSION_THETA=1e-10      # deliberately permissive local unresolved-tension gate
 FLOW_FLOOR=1e-14
@@ -367,8 +367,10 @@ def forecast_and_learn(state,evidence,depth,elapsed,current,do_learn):
             evidence,depth,pu,pd,tu,td,supply,current
         )
 
+    top_u=pu[depth-1] if depth>0 else 0.0
+    top_d=pd[depth-1] if depth>0 else 0.0
     observe_price(state,evidence,depth,current)
-    return tu,td,surprise,tensions,max_change
+    return tu,td,top_u,top_d,surprise,tensions,max_change
 
 
 def verify_executor():
@@ -471,7 +473,7 @@ def run_training(currents,durations,kinds):
             else:
                 # state view includes only currently constructed Nethra.
                 view=state[:3+depth]
-                up,dn,surprise,tensions,change=forecast_and_learn(
+                up,dn,top_u,top_d,surprise,tensions,change=forecast_and_learn(
                     view,evidence,depth,durations[i],currents[i],True
                 )
                 pred=1 if up>=dn else -1
@@ -483,8 +485,9 @@ def run_training(currents,durations,kinds):
                 sum_priming+=abs(up-dn)
 
                 top=depth-1
-                gate_sum+=max(0.0,float(view[3+top]))*surprise
-                gate_flow+=float(abs(up-dn))
+                # Next recursive depth must be earned by THIS top Nethra, not by lower relations.
+                gate_sum+=max(0.0,float(tensions[top]))
+                gate_flow+=float(top_u+top_d)
                 gate_resid+=surprise
                 gate_count+=1
                 exposures+=1
@@ -564,7 +567,7 @@ def online_test(points,currents,durations,kinds,evidence,state,depth,train_inter
 
         # Score exactly once, before this new price is learned.
         trial=pre.copy()
-        up,dn,surprise,tensions,_=forecast_and_learn(
+        up,dn,top_u,top_d,surprise,tensions,_=forecast_and_learn(
             trial,evidence,depth,elapsed,current,False
         )
         pred=1 if up>=dn else -1
@@ -585,7 +588,7 @@ def online_test(points,currents,durations,kinds,evidence,state,depth,train_inter
         last_change=None
         for rep in range(ONLINE_MAX_REHEARSAL):
             work=pre.copy()
-            _u,_d,_s,_t,change=forecast_and_learn(
+            _u,_d,_tu,_td,_s,_t,change=forecast_and_learn(
                 work,evidence,depth,elapsed,current,True
             )
             reps=rep+1
@@ -596,7 +599,7 @@ def online_test(points,currents,durations,kinds,evidence,state,depth,train_inter
 
         # Commit exactly one physical transition under the newly updated evidence.
         committed=pre.copy()
-        up2,dn2,s2,t2,_=forecast_and_learn(
+        up2,dn2,top_u2,top_d2,s2,t2,_=forecast_and_learn(
             committed,evidence,depth,elapsed,current,False
         )
         state[:3+depth]=committed
@@ -604,8 +607,9 @@ def online_test(points,currents,durations,kinds,evidence,state,depth,train_inter
         # Unique-online observation may eventually justify another recursive level; repeated
         # rehearsals themselves cannot manufacture depth.
         top=depth-1
-        online_gate_score+=max(0.0,float(state[3+top]))*float(surprise)
-        online_gate_flow+=abs(float(up-dn))
+        # As in establishment, only the current top Nethra may justify the next level.
+        online_gate_score+=max(0.0,float(tensions[top]))
+        online_gate_flow+=float(top_u+top_d)
         online_gate_resid+=float(surprise)
         online_gate_count+=1
         online_exposures+=1
@@ -663,6 +667,41 @@ def online_test(points,currents,durations,kinds,evidence,state,depth,train_inter
     }
 
 
+def topology_audit(depth):
+    """Materialize the learned recursive shape in the actual one-file core and prove no leaf expansion."""
+    f=NethraField(g_min=0.0,g_max=GMAX,tau=TAU,leakage=LEAKAGE,convergence_gain=0.0)
+    pplus=f.new(); pminus=f.new(); tnode=f.new()
+    relations=[]
+    for d in range(depth):
+        r=f.new()
+        supplier=tnode if d==0 else relations[d-1]
+        f._route(r,(pplus,pminus,supplier),frozenset(),1)
+        relations.append(r)
+
+    violations=0
+    primitive={pplus,pminus,tnode}
+    for d,r in enumerate(relations):
+        route=next(iter(r.routes))
+        if d>0:
+            # P+/P- are the direct prediction receivers. The recursive support itself must be
+            # exactly the immediately preceding Nethra handle; TIME and older handles cannot recur.
+            recursive_members=set(route)-{pplus,pminus}
+            if recursive_members!={relations[d-1]}:
+                violations+=1
+            if tnode in route:
+                violations+=1
+
+    # Refinding from primitives must be able to traverse the full recursive chain by direct handles.
+    closed=f.closure(frozenset((pplus,pminus,tnode)),event=frozenset())
+    reached=sum(r in closed for r in relations)
+    return {
+        "relations":depth,
+        "leaf_expansion_violations":violations,
+        "closure_reached":reached,
+        "deepest_refound":bool(relations and relations[-1] in closed),
+    }
+
+
 def main():
     t0=time.perf_counter()
     print("cpu_count",os.cpu_count())
@@ -694,6 +733,11 @@ def main():
         durations[:train_intervals],
         kinds[:train_intervals],
     )
+
+    topo=topology_audit(depth)
+    print("TOPOLOGY_AUDIT",json.dumps(topo,sort_keys=True))
+    if topo["leaf_expansion_violations"]!=0 or topo["closure_reached"]!=depth:
+        raise AssertionError(f"recursive topology audit failed: {topo}")
 
     print("TRAIN_SUMMARY",json.dumps({
         "constructed_depth":depth,
