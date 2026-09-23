@@ -1,0 +1,22 @@
+name: Nethra recursive invalidation
+
+on:
+  push:
+    branches:
+      - nethra-recursive-invalidation-audit
+    paths:
+      - 'recursive_invalidation_probe.py'
+      - '.github/workflows/nethra-recursive-invalidation.yml'
+  workflow_dispatch:
+
+jobs:
+  invalidation:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recursive invalidation
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' /usr/bin/python3 recursive_invalidation_probe.py
