@@ -197,9 +197,20 @@ def score(rows,key,consensus_with=None):
         "coverage":len(selected)/len(rows),
         "accuracy":statistics.mean(bool(x[1]) for x in selected) if selected else None,
     }
-    for frac in (.10,.25,.50):
+    for frac in (.01,.02,.05,.10,.20,.50,1.00):
         k=max(1,int(len(selected)*frac)) if selected else 0
-        out[f"top_{int(frac*100)}pct"]=statistics.mean(bool(x[1]) for x in selected[:k]) if k else None
+        subset=selected[:k]
+        if k:
+            cutoff=subset[-1][0]
+            out[f"top_{int(frac*100)}pct"]={
+                "n":k,
+                "coverage":k/len(rows),
+                "accuracy":statistics.mean(bool(x[1]) for x in subset),
+                "confidence_cutoff":cutoff,
+                "mean_confidence":statistics.mean(x[0] for x in subset),
+            }
+        else:
+            out[f"top_{int(frac*100)}pct"]=None
     return out
 
 
