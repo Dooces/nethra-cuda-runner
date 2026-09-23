@@ -69,8 +69,8 @@ class IntervalBoundaryFreezeTests(unittest.TestCase):
         self.assertEqual(f.previous_interval_delta,first_delta)
         self.assertEqual(f.current_interval_source[a],.7)
 
-    def test_step_has_no_automatic_construction_authority(self):
-        f=NethraField()
+    def test_frozen_boundary_can_run_with_learning_disabled(self):
+        f=NethraField(native_plasticity=False)
         a=f.new(); b=f.new()
         initial=len(f.nethra)
         for _ in range(20):
@@ -79,6 +79,19 @@ class IntervalBoundaryFreezeTests(unittest.TestCase):
             b.push(1.0)
             f.step(.05)
         self.assertEqual(len(f.nethra),initial)
+        self.assertEqual(len(f.history_count),0)
+        self.assertEqual(len(f.support_count),0)
+        self.assertEqual(len(f.outcome_count),0)
+
+    def test_live_native_learning_does_not_call_provisional_ledger(self):
+        f=NethraField(leakage=.6,convergence_gain=0.0)
+        a=f.new(); b=f.new()
+        for _ in range(20):
+            a.push(1.0)
+            f.step(.05)
+            b.push(1.0)
+            f.step(.05)
+        self.assertGreater(len(f.nethra),2)
         self.assertEqual(len(f.history_count),0)
         self.assertEqual(len(f.support_count),0)
         self.assertEqual(len(f.outcome_count),0)
