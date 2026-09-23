@@ -1,0 +1,16 @@
+name: Nethra mature support reversal audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_mature_support_reversal_audit.py'
+      - '.github/workflows/nethra-mature-support-reversal-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: PYTHONPATH=. /usr/bin/python3 nethra_mature_support_reversal_audit.py
