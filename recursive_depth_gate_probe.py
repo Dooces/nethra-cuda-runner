@@ -33,14 +33,13 @@ DT = T / STEPS
 TARGET_CURRENT = 0.02
 TARGET_CHARGE = T * TARGET_CURRENT
 ETA = 2400.0
-ADMISSION_THRESHOLD = 1e-12
+ADMISSION_THRESHOLDS = (1e-12, 1e-15, 1e-18, 0.0)
 ADMISSION_SEED = 5.0
 MAX_DEPTH = 128
-MAX_TRIALS_PER_DEPTH = 240
-MIN_TRIALS_PER_DEPTH = 40
-CHECK_EVERY = 20
-STABLE_REL_CHANGE = 2e-4
-OUTCOME_PROB = 0.90
+MAX_TRIALS_PER_DEPTH = 5000
+MIN_TRIALS_PER_DEPTH = 500
+CHECK_EVERY = 250
+STABLE_REL_CHANGE = 1e-4
 
 
 def set_evidence(relation, value):
@@ -181,8 +180,7 @@ def microbenchmark():
     }
 
 
-def learn_depth(seed=42001):
-    rng=random.Random(seed)
+def learn_depth(admission_threshold, phase=0):
     f=NethraField(g_min=0.0, leakage=.6, convergence_gain=0.0)
     a=f.new(); b=f.new()
 
@@ -200,7 +198,7 @@ def learn_depth(seed=42001):
 
         # Permissive admission gate over the preceding live Nethra and the witnessed next source.
         admission_score=upstream_activation*TARGET_CHARGE
-        if admission_score <= ADMISSION_THRESHOLD:
+        if admission_threshold > 0.0 and admission_score <= admission_threshold:
             stop_reason="admission_threshold"
             break
 
@@ -215,7 +213,7 @@ def learn_depth(seed=42001):
         # Continuous signed local plasticity. The admission threshold is deliberately absent here.
         for k in range(1,MAX_TRIALS_PER_DEPTH+1):
             p=max(0.0,integrate(f,roots,(relation,target)))
-            source=TARGET_CHARGE if rng.random()<OUTCOME_PROB else 0.0
+            source=TARGET_CHARGE if ((k+phase)%10)!=0 else 0.0
             tension=p*(source-p)
             set_evidence(relation,evidence(relation)+ETA*tension)
             trials=k
@@ -268,46 +266,51 @@ def main():
     bench=microbenchmark()
     print("microbenchmark",bench)
 
-    # Three seeds make sure depth is not a single random trajectory.
     runs=[]
-    for seed in (42001,42002,42003):
-        t0=time.perf_counter()
-        result=learn_depth(seed)
-        result["seconds"]=time.perf_counter()-t0
-        runs.append(result)
-        print(
-            "run",
-            seed,
-            "depth",result["depth_reached"],
-            "stop",result["stop_reason"],
-            "seconds",round(result["seconds"],4),
-            "nodes",result["nodes"],
-            "edges",result["edges"],
-        )
-        for row in result["rows"]:
-            # Compact trace at powers of two plus the terminal row.
-            d=row["depth"]
-            if (d & (d-1))==0 or d==result["depth_reached"]:
-                print(
-                    "depth_row",
-                    seed,d,
-                    "up",f'{row["upstream_activation"]:.6e}',
-                    "gate",f'{row["admission_score"]:.6e}',
-                    "p0",f'{row["initial_prediction"]:.6e}',
-                    "p1",f'{row["final_prediction"]:.6e}',
-                    "e",f'{row["evidence"]:.6e}',
-                    "trials",row["trials"],
-                )
+    for theta in ADMISSION_THRESHOLDS:
+        for phase in (0,3,7):
+            t0=time.perf_counter()
+            result=learn_depth(theta,phase)
+            result["seconds"]=time.perf_counter()-t0
+            result["threshold"]=theta
+            result["phase"]=phase
+            runs.append(result)
+            print(
+                "run",
+                "theta",theta,
+                "phase",phase,
+                "depth",result["depth_reached"],
+                "stop",result["stop_reason"],
+                "seconds",round(result["seconds"],4),
+                "nodes",result["nodes"],
+                "edges",result["edges"],
+            )
+            for row in result["rows"]:
+                d=row["depth"]
+                if (d & (d-1))==0 or d==result["depth_reached"]:
+                    print(
+                        "depth_row",
+                        theta,phase,d,
+                        "up",f'{row["upstream_activation"]:.6e}',
+                        "gate",f'{row["admission_score"]:.6e}',
+                        "p0",f'{row["initial_prediction"]:.6e}',
+                        "p1",f'{row["final_prediction"]:.6e}',
+                        "e",f'{row["evidence"]:.6e}',
+                        "trials",row["trials"],
+                    )
 
-    depths=[r["depth_reached"] for r in runs]
+    by_threshold={}
+    for theta in ADMISSION_THRESHOLDS:
+        depths=[r["depth_reached"] for r in runs if r["threshold"]==theta]
+        by_threshold[theta]=depths
+        print("threshold_depths",theta,depths,"minimum",min(depths))
+
     total=time.perf_counter()-suite_start
-    print("depths",depths)
-    print("minimum_depth",min(depths))
     print("suite_seconds",total)
 
     # Efficiency is itself part of the test contract.
     assert total < 55.0, total
-    assert min(depths) >= 1
+    assert min(min(v) for v in by_threshold.values()) >= 1
     print("all_assertions_passed")
 
 
