@@ -150,7 +150,8 @@ def main():
     ).encode("utf-8")
     input_sha256=hashlib.sha256(input_payload).hexdigest()
     currents,elapsed,kinds,raw=intervals(points)
-    if TRAIN-1+ONLINE>len(currents):
+    online_n=(len(currents)-(TRAIN-1)) if ONLINE<=0 else ONLINE
+    if TRAIN-1+online_n>len(currents):
         raise RuntimeError("not enough AAPL data")
 
     model=NativeReplay()
@@ -159,7 +160,7 @@ def main():
         model.interval(float(currents[i]),float(elapsed[i]),True,True)
 
     rows=[]
-    for step,i in enumerate(range(TRAIN-1,TRAIN-1+ONLINE)):
+    for step,i in enumerate(range(TRAIN-1,TRAIN-1+online_n)):
         if model.topology_dirty:model.sync_topology()
         if len(model.state)!=len(model.f.nethra):model._sync_indices()
 
@@ -220,7 +221,10 @@ def main():
 
     result={
         "train_intervals":TRAIN-1,
-        "online_intervals":ONLINE,
+        "online_intervals":online_n,
+        "history_start":points[0].date,
+        "training_end":points[TRAIN-1].date,
+        "history_end":points[TRAIN-1+online_n].date,
         "learning_live":True,
         "construction_live":True,
         "input_sha256":input_sha256,
