@@ -6,6 +6,7 @@ on:
       - nethra-aapl-native-recursive-depth
     paths:
       - '.github/workflows/aapl-20k-native-benchmark.yml'
+      - 'aapl_residual_recursive_native.py'
   workflow_dispatch:
 
 jobs:
