@@ -12,7 +12,7 @@ No learned score table, transition model, selector, fitted threshold, or frozen 
 """
 
 from __future__ import annotations
-import json, os, statistics
+import hashlib, json, os, statistics
 import numpy as np
 
 import aapl_residual_recursive_native as base
@@ -144,6 +144,11 @@ def expanding_percentile_gate(rows,key,warmup=100):
 def main():
     base.FAST_SYNC=True
     points=fetch_aapl()
+    input_payload=json.dumps(
+        [[p.timestamp,p.price,p.kind,p.date] for p in points],
+        separators=(",",":"),
+    ).encode("utf-8")
+    input_sha256=hashlib.sha256(input_payload).hexdigest()
     currents,elapsed,kinds,raw=intervals(points)
     if TRAIN-1+ONLINE>len(currents):
         raise RuntimeError("not enough AAPL data")
@@ -213,6 +218,7 @@ def main():
         "online_intervals":ONLINE,
         "learning_live":True,
         "construction_live":True,
+        "input_sha256":input_sha256,
         "relations_final":len(model.birth_members),
         "depth_final":max(model.depth.values(),default=0),
         "always_up_accuracy":statistics.mean(r["truth"]>0 for r in rows),
