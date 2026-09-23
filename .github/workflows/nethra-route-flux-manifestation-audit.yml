@@ -1,0 +1,18 @@
+name: Nethra route flux manifestation audit
+on:
+  push:
+    branches: [nethra-self-feed-audit]
+    paths:
+      - 'nethra_route_flux_manifestation_audit.py'
+      - '.github/workflows/nethra-route-flux-manifestation-audit.yml'
+  workflow_dispatch:
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 nethra_route_flux_manifestation_audit.py
