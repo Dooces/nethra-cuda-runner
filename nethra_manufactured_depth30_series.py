@@ -295,12 +295,13 @@ def audit(f,time_node,symbols,stream,target_meta):
     all_n=0
 
     for pos,actual in enumerate(stream):
-        scores,order=passive_predict(f,time_node,symbols)
-        rank=order.index(actual)+1
-        all_n+=1
-        all_correct+=rank==1
-
+        # The expensive disposable shadow is needed only at the 24 deliberately hard outcomes.
+        # All other real observations still advance the untouched live model normally.
         if pos in target_meta:
+            scores,order=passive_predict(f,time_node,symbols)
+            rank=order.index(actual)+1
+            all_n+=1
+            all_correct+=rank==1
             meta=target_meta[pos]
             top1=order[0];top2=order[1]
             rows.append({
@@ -317,7 +318,7 @@ def audit(f,time_node,symbols,stream,target_meta):
                 "correct":rank==1,
             })
 
-        # Reality is revealed only after the disposable prediction.
+        # Reality is revealed only after any disposable prediction.
         feed(f,time_node,symbols[actual])
 
     by_depth={}
@@ -332,8 +333,8 @@ def audit(f,time_node,symbols,stream,target_meta):
         }
 
     print("PREDICTION_SUMMARY",json.dumps({
-        "all_symbols_n":all_n,
-        "all_symbols_top1":all_correct/all_n,
+        "audited_hard_outcomes_n":all_n,
+        "audited_hard_outcomes_top1":all_correct/all_n,
         "designed_outcomes":len(rows),
         "by_designed_context_depth":by_depth,
     },sort_keys=True),flush=True)
