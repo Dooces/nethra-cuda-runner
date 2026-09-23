@@ -468,17 +468,22 @@ class NativeReplay:
 
     def structural_step(self,explicit,residual):
         explicit=frozenset(explicit)
-        cache_key=(explicit,self.f.current_event)
-        closed=self.closure_cache.get(cache_key)
-        if closed is None:
-            closed=self.f.closure(explicit,self.f.current_event)
-            self.closure_cache[cache_key]=closed
 
+        # The transient event used to refind state-qualified routes must describe THIS completed
+        # observation relative to the preceding explicit observation. Using self.f.current_event
+        # here is one interval stale and makes current state distinctions (e.g. AAPL+ vs AAPL-)
+        # invisible to state-qualified closure.
         source_observed=explicit|self.f.previous_explicit
         source_event=frozenset(
             (n,int(n in explicit)-int(n in self.f.previous_explicit))
             for n in source_observed
         )
+
+        cache_key=(explicit,source_event)
+        closed=self.closure_cache.get(cache_key)
+        if closed is None:
+            closed=self.f.closure(explicit,source_event)
+            self.closure_cache[cache_key]=closed
         description_observed=closed|self.f.previous_closure
         description_event=frozenset(
             (n,int(n in closed)-int(n in self.f.previous_closure))
