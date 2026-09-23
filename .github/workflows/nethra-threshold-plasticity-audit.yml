@@ -8,6 +8,7 @@ on:
       - 'threshold_plasticity_audit.py'
       - 'weak_relation_loading_probe.py'
       - 'zero_baseline_seed_plasticity_probe.py'
+      - 'admission_threshold_continuous_plasticity_probe.py'
       - '.github/workflows/nethra-threshold-plasticity-audit.yml'
   workflow_dispatch:
 
@@ -32,3 +33,4 @@ jobs:
           PYTHONPATH=. /usr/bin/time -v /usr/bin/python3 threshold_plasticity_audit.py
           PYTHONPATH=. /usr/bin/python3 weak_relation_loading_probe.py
           PYTHONPATH=. /usr/bin/python3 zero_baseline_seed_plasticity_probe.py
+          PYTHONPATH=. /usr/bin/python3 admission_threshold_continuous_plasticity_probe.py
