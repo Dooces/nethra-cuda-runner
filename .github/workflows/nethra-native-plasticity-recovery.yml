@@ -1,0 +1,23 @@
+name: Nethra native plasticity recovery
+
+on:
+  push:
+    branches:
+      - nethra-native-plasticity-recovery
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recovery regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          PYTHONPATH=. /usr/bin/time -f 'elapsed=%e maxrss_kb=%M' \
+            /usr/bin/python3 -m unittest -v \
+              test_interval_boundary_freeze.py \
+              test_subtraction_before_construction.py \
+              test_native_plasticity_integration.py
