@@ -552,6 +552,11 @@ class NethraField:
             for n in self.nethra
         }
 
+        # Frozen V61 semantics: rho receives each Nethra's own predictive/consequence
+        # residual. Do this before admitting new topology so newly relevant pairs begin without
+        # fabricated historical independence evidence.
+        self.update_residuals(epsilon)
+
         tension = {}
         for relation, row in outgoing.items():
             tension[relation] = sum(
