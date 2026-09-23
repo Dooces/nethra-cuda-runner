@@ -15,7 +15,7 @@ jobs:
     timeout-minutes: 5
     env:
       NETHRA_STOCK_PRICES: '2000'
-      NETHRA_STOCK_REPLAYS: '2'
+      NETHRA_STOCK_REPLAYS: '10'
       NETHRA_STOCK_ABLATION: '500'
     steps:
       - uses: actions/checkout@v4
