@@ -180,7 +180,7 @@ def microbenchmark():
     }
 
 
-def learn_depth(admission_threshold, phase=0):
+def learn_depth(admission_threshold, phase=0, admission_seed=ADMISSION_SEED):
     f=NethraField(g_min=0.0, leakage=.6, convergence_gain=0.0)
     a=f.new(); b=f.new()
 
@@ -203,7 +203,7 @@ def learn_depth(admission_threshold, phase=0):
             break
 
         target=f.new()
-        relation=add_relation(f,prev,target,seed=ADMISSION_SEED)
+        relation=add_relation(f,prev,target,seed=admission_seed)
 
         initial_e=evidence(relation)
         initial_p=max(0.0,integrate(f,roots,(relation,target)))
@@ -252,6 +252,7 @@ def learn_depth(admission_threshold, phase=0):
     return {
         "rows":rows,
         "depth_reached":rows[-1]["depth"] if rows else 0,
+        "learned_depth":max((row["depth"] for row in rows if row["learned"]),default=0),
         "stop_reason":stop_reason,
         "nodes":len(f.nethra),
         "edges":len(f._edges()),
@@ -279,7 +280,8 @@ def main():
                 "run",
                 "theta",theta,
                 "phase",phase,
-                "depth",result["depth_reached"],
+                "attempted_depth",result["depth_reached"],
+                "learned_depth",result["learned_depth"],
                 "stop",result["stop_reason"],
                 "seconds",round(result["seconds"],4),
                 "nodes",result["nodes"],
@@ -301,9 +303,23 @@ def main():
 
     by_threshold={}
     for theta in ADMISSION_THRESHOLDS:
-        depths=[r["depth_reached"] for r in runs if r["threshold"]==theta]
+        depths=[r["learned_depth"] for r in runs if r["threshold"]==theta]
         by_threshold[theta]=depths
-        print("threshold_depths",theta,depths,"minimum",min(depths))
+        print("threshold_learned_depths",theta,depths,"minimum",min(depths))
+
+    seed_rows={}
+    for seed_e in (1.0,5.0,20.0,50.0):
+        t0=time.perf_counter()
+        result=learn_depth(0.0,0,seed_e)
+        seed_rows[seed_e]=result["learned_depth"]
+        print(
+            "seed_depth",
+            seed_e,
+            "learned_depth",result["learned_depth"],
+            "attempted_depth",result["depth_reached"],
+            "stop",result["stop_reason"],
+            "seconds",round(time.perf_counter()-t0,4),
+        )
 
     total=time.perf_counter()-suite_start
     print("suite_seconds",total)
