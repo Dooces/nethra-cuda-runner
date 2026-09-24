@@ -298,3 +298,12 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - The later one-file lineage starting with the minimal rewrite omitted `primitive_leaves`, `canonical_leafset`, and `relations_with_leafset` entirely. Later direct-route/source-pair subtraction did not replace the lost recursive factorization guarantee.
 - This omission reopens the already-solved failure mode in nested/cyclic descriptions: syntactically different recursive closures can be mistaken for new represented support and repeatedly mint relations.
 - Prevention: canonical primitive factorization must remain an explicit reuse coordinate. It is a reuse hint, never universal semantic identity. Same primitive domain with a different independently established source/consequence may remain distinct. Reuse lookup must not flatten stored routes, erase ambiguity, choose a winner, or create a second persistent ontology.
+
+
+## 2026-09-23 — assistant-authored regression tests repeatedly failed to prevent regressions and created false confidence
+
+- The assistant repeatedly added bespoke regression tests and GitHub Actions workflows around Nethra changes, then treated passing results as evidence that settled behavior had been preserved.
+- Those tests did not prevent multiple semantic regressions already recorded in this ledger, including loss of temporal refindability and loss of canonical recursive factorization. In several cases the tests merely proved equivalence to an already-broken baseline or tested the assistant's own narrowed interpretation.
+- The tests also introduced their own failures and distractions, including an impossible depth assertion and a shallow-checkout failure.
+- User directive: remove assistant-authored Nethra regression tests/workflows from the active frozen lineage. Do not rely on assistant-invented test suites as a substitute for reading this ledger, tracing the actual causal semantics step by step, and checking the specific requested behavior directly.
+- Prevention: do not create new persistent regression-test files or test workflows unless the user explicitly asks for them. Any validation requested by the user should be narrow, direct, disposable, and tied to the exact behavior under discussion rather than promoted into a standing harness by default.
