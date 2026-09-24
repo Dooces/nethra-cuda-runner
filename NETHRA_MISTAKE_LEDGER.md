@@ -170,3 +170,30 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - Prevention: native `epsilon_j = manifestation_j - prediction_j` must update F61 residual traces
   before any new topology is admitted, so newly created incidences do not inherit fabricated
   historical independence.
+
+
+## 2026-09-23 — continuous Nethra deltas severed from recursive construction
+
+- Commit `afabb0bd03500126a7a4aac88fb4462d85630c23` replaced the actual transient observation
+  `{Nethra: numeric_delta}` with only the `frozenset` of Nethra whose delta was nonzero.
+  This discarded delta magnitude and sign from relation identity even though those values were
+  transient evidence and did not create another persistent ontology.
+- Commit `98ddeb41d9d47cdaa7cacfa91ba1bd95649cafee` compounded the regression by feeding
+  construction/refinding an `explicit` participation set and manufacturing event values only as
+  `+1/0/-1` for entered/persisted/left. Distinct continuous observations on the same externally
+  sourced Nethra therefore collapsed to the same event.
+- Commit `94ca4dcaf8d4b5173f0e3992d792ed3cb009c4d0` restored exact completed-interval numeric
+  deltas in `current_interval_delta`, but deliberately left them disconnected from recursive
+  refinding/construction. Later whole-support/plasticity work inherited that severed path.
+- The direct AAPL probe exposed the executable consequence: 10,825 chronological observations of
+  UTC time plus adjusted close produced only 3 total Nethra and 1 learned route because changing
+  numeric observations were invisible to construction after the first persistent participation
+  pattern formed.
+- Prevention: transient recursive event identity must preserve the actual finite-interval numeric
+  Nethra deltas produced by the field. Source provenance remains a separate coordinate. Never
+  replace numeric deltas with member presence, source presence, entered/persisted/left flags, bins,
+  labels, or another lossy proxy merely to keep the persistent ontology to one Nethra type.
+- Verification requirement: before freezing a baseline, feed changing continuous values through the
+  same persistent externally bound Nethra and confirm that distinct completed numeric deltas remain
+  visible to recursive refinding/construction and can generate recursive Nethra-of-Nethra structure
+  without a harness overriding core semantics.
