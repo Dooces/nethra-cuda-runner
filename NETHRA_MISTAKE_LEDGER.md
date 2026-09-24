@@ -250,3 +250,19 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - Prevention: any inherited regression file must first be run against the exact pinned frozen
   baseline.  Current work may require direct frozen-vs-candidate equivalence or pass/fail parity;
   never assume an old test file is authoritative from its filename or historical purpose.
+
+
+## 2026-09-23 — cross-module equivalence test initially demanded over-strict floating equality
+
+- The first portable frozen-vs-optimized live-step comparison required agreement to 12 decimal
+  places across two separately instantiated Python object graphs.
+- Ubuntu Python 3.12 accumulated a `4.1788e-11` delta difference by step 83 while Fedora Python
+  3.14 passed.  The compared implementations use sets/frozensets of identity-hashed Nethra, so
+  separate object graphs can accumulate harmless floating-order differences even when the same
+  equations are executed.
+- Treating that tiny cross-object difference as proof of a semantic optimization failure would have
+  been another false repair.
+- Prevention: test cache correctness exactly on the same field object (`cached derivative ==
+  uncached derivative` and cached neighbors equal direct neighbors), and use a small explicit
+  numerical bound for long trajectories across independently instantiated baseline/candidate
+  object graphs.
