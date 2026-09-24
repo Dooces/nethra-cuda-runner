@@ -289,3 +289,12 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - The temporal-route repair workflow added `test_indexed_optimization_equivalence.py`, whose module loads frozen commit `8abeaf358b34aed6b18e10cc0f7fc17de6e7db93` using `git show`.
 - The new workflow initially left `actions/checkout@v4` at its default `fetch-depth: 1`, so Ubuntu failed before executing the tests because that immutable baseline commit was absent locally.
 - Prevention: any workflow that compares against an earlier immutable commit must fetch full history or explicitly fetch that commit before running the comparison.
+
+
+## 2026-09-23 — canonical recursive factorization was dropped during the one-file rewrite
+
+- V67 had already exposed runaway recursive duplicate growth: many relation handles could represent the same underlying primitive support through different nested decompositions.
+- V68/V69 fixed and froze the reuse rule: before constructing, recursively factor proposed members to primitive leaves for REUSE LOOKUP ONLY; if equivalent represented support already exists for the same validated consequence, reuse it. Persistent direct membership remains the original recursive structure and is never flattened.
+- The later one-file lineage starting with the minimal rewrite omitted `primitive_leaves`, `canonical_leafset`, and `relations_with_leafset` entirely. Later direct-route/source-pair subtraction did not replace the lost recursive factorization guarantee.
+- This omission reopens the already-solved failure mode in nested/cyclic descriptions: syntactically different recursive closures can be mistaken for new represented support and repeatedly mint relations.
+- Prevention: canonical primitive factorization must remain an explicit reuse coordinate. It is a reuse hint, never universal semantic identity. Same primitive domain with a different independently established source/consequence may remain distinct. Reuse lookup must not flatten stored routes, erase ambiguity, choose a winner, or create a second persistent ontology.
