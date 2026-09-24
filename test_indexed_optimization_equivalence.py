@@ -32,19 +32,52 @@ def event_fingerprint(field, event):
     return tuple(sorted((idx[n], float(value)) for n, value in event))
 
 
-def route_fingerprint(field):
+def route_topology_fingerprint(field):
     idx = node_indices(field)
     rows = []
     for relation in field.nethra:
         ri = idx[relation]
         for route, conditions in relation.routes.items():
             route_ids = tuple(sorted(idx[m] for m in route))
-            condition_rows = []
+            signatures = tuple(sorted(
+                tuple(sorted((idx[n], float(v)) for n, v in signature))
+                for signature in conditions
+            ))
+            rows.append((ri, route_ids, signatures))
+    return tuple(sorted(rows))
+
+
+def route_evidence_map(field):
+    idx = node_indices(field)
+    out = {}
+    for relation in field.nethra:
+        ri = idx[relation]
+        for route, conditions in relation.routes.items():
+            route_ids = tuple(sorted(idx[m] for m in route))
             for signature, evidence in conditions.items():
                 signature_ids = tuple(sorted((idx[n], float(v)) for n, v in signature))
-                condition_rows.append((signature_ids, float(evidence)))
-            rows.append((ri, route_ids, tuple(sorted(condition_rows))))
-    return tuple(sorted(rows))
+                out[(ri, route_ids, signature_ids)] = float(evidence)
+    return out
+
+
+def incidence_evidence_map(field):
+    idx = node_indices(field)
+    out = {}
+    for (relation, route, member), conditions in field.incidence_evidence.items():
+        key0 = (idx[relation], tuple(sorted(idx[m] for m in route)), idx[member])
+        for signature, evidence in conditions.items():
+            signature_ids = tuple(sorted((idx[n], float(v)) for n, v in signature))
+            out[(key0, signature_ids)] = float(evidence)
+    return out
+
+
+def pair_stats_map(field):
+    idx = node_indices(field)
+    out = {}
+    for key, row in field.pair_stats.items():
+        ids = tuple(sorted(idx[n] for n in key))
+        out[ids] = tuple(row)
+    return out
 
 
 def source_pattern_fingerprint(field):
@@ -80,7 +113,23 @@ class CountingRoutes(dict):
 class IndexedOptimizationTests(unittest.TestCase):
     def assert_fields_equivalent(self, left, right, places=12):
         self.assertEqual(len(left.nethra), len(right.nethra))
-        self.assertEqual(route_fingerprint(left), route_fingerprint(right))
+        self.assertEqual(
+            route_topology_fingerprint(left),
+            route_topology_fingerprint(right),
+        )
+
+        left_route_evidence = route_evidence_map(left)
+        right_route_evidence = route_evidence_map(right)
+        self.assertEqual(set(left_route_evidence), set(right_route_evidence))
+        for key, value in left_route_evidence.items():
+            self.assertAlmostEqual(value, right_route_evidence[key], places=places)
+
+        left_incidence = incidence_evidence_map(left)
+        right_incidence = incidence_evidence_map(right)
+        self.assertEqual(set(left_incidence), set(right_incidence))
+        for key, value in left_incidence.items():
+            self.assertAlmostEqual(value, right_incidence[key], places=places)
+
         self.assertEqual(
             source_pattern_fingerprint(left),
             source_pattern_fingerprint(right),
@@ -97,6 +146,15 @@ class IndexedOptimizationTests(unittest.TestCase):
             rn = right.nethra[i]
             self.assertAlmostEqual(ln.activation, rn.activation, places=places)
             self.assertAlmostEqual(left.rho.get(ln, 0.0), right.rho.get(rn, 0.0), places=places)
+
+        left_pairs = pair_stats_map(left)
+        right_pairs = pair_stats_map(right)
+        self.assertEqual(set(left_pairs), set(right_pairs))
+        for key, left_row in left_pairs.items():
+            right_row = right_pairs[key]
+            self.assertEqual(left_row[3], right_row[3])
+            for lv, rv in zip(left_row[:3], right_row[:3]):
+                self.assertAlmostEqual(float(lv), float(rv), places=places)
 
         for name in (
             "current_interval_source",
