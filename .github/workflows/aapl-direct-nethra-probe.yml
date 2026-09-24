@@ -1,0 +1,13 @@
+name: AAPL direct Nethra probe
+on:
+  push:
+    branches: [aapl-direct-nethra-probe-20260923]
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Direct AAPL probe
+        run: PYTHONPATH=. /usr/bin/python3 aapl_direct_nethra_probe.py
