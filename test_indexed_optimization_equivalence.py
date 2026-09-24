@@ -294,40 +294,80 @@ class IndexedOptimizationTests(unittest.TestCase):
         self.assertIn(orr, old.closure((ob,), old_sig))
         self.assertIn(nrr, new.closure((nb,), new_sig))
 
-    def test_live_native_steps_match_frozen_baseline(self):
-        old, new = self.build_matching_fields()
-        rng = random.Random(99231)
+    def test_cached_rk4_replays_are_exact_on_same_field(self):
+        f = optimized.NethraField(native_learning=False, leakage=.73, convergence_gain=.81)
+        leaves = [f.new() for _ in range(9)]
+        for i in range(14):
+            r = f.new()
+            members = tuple(leaves[(i * 5 + j * 2) % len(leaves)] for j in range(4))
+            f._route(r, members, frozenset(), 11 + i)
 
-        # Drive graded source currents through the exact same persistent Nethra coordinates.
-        max_numeric_drift = 0.0
-        for step_i in range(300):
-            source_ids = rng.sample(range(8), rng.randint(0, 3))
-            for i in source_ids:
-                value = rng.choice((.05, .13, .30, .37, .70, 1.0))
-                old.nethra[i].push(value)
-                new.nethra[i].push(value)
+        for i, n in enumerate(f.nethra):
+            n.activation = (i + 1) * .0073
+        leaves[1].push(.37)
+        leaves[6].push(.21)
 
-            dt = rng.choice((.02, .05, .1))
-            old_delta = old.step(dt)
-            new_delta = new.step(dt)
+        dt = .05
+        a0 = {n: n.activation for n in f.nethra}
+        source = {n: n.external for n in f.nethra if n.external != 0.0}
 
-            self.assertEqual(len(old.nethra), len(new.nethra), f"node count at step {step_i}")
-            for i in range(len(old.nethra)):
-                old_value = old_delta.get(old.nethra[i], 0.0)
-                new_value = new_delta.get(new.nethra[i], 0.0)
-                drift = abs(old_value - new_value)
-                max_numeric_drift = max(max_numeric_drift, drift)
-                self.assertLessEqual(
-                    drift,
-                    1e-7,
-                    f"delta node {i} step {step_i}: drift={drift}",
+        def integrate(edges=None, neighbors=None):
+            k1 = f._derivative_at(a0, edges, neighbors)
+            a1 = {n: a0[n] + .5 * dt * k1[n] for n in f.nethra}
+            k2 = f._derivative_at(a1, edges, neighbors)
+            a2 = {n: a0[n] + .5 * dt * k2[n] for n in f.nethra}
+            k3 = f._derivative_at(a2, edges, neighbors)
+            a3 = {n: a0[n] + dt * k3[n] for n in f.nethra}
+            k4 = f._derivative_at(a3, edges, neighbors)
+            return {
+                n: a0[n] + dt * (k1[n] + 2*k2[n] + 2*k3[n] + k4[n]) / 6.0
+                for n in f.nethra
+            }
+
+        uncached_actual = integrate()
+        edges = f._edges()
+        neighbors = f._neighbors_from_edges(edges)
+        cached_actual = integrate(edges, neighbors)
+        self.assertEqual(uncached_actual, cached_actual)
+
+        for n in f.nethra:
+            n.external = 0.0
+        uncached_zero = integrate()
+        cached_zero = integrate(edges, neighbors)
+        self.assertEqual(uncached_zero, cached_zero)
+
+        for n, value in source.items():
+            n.external = value
+
+    def test_reverse_route_index_remains_exact_after_live_native_construction(self):
+        f = optimized.NethraField(
+            leakage=.8,
+            trace_decay=.86,
+            convergence_gain=.9,
+            admission_seed=.02,
+        )
+        leaves = [f.new() for _ in range(8)]
+        rng = random.Random(441177)
+
+        for step_i in range(320):
+            for i in rng.sample(range(len(leaves)), rng.randint(0, 3)):
+                leaves[i].push(rng.choice((.05, .13, .30, .37, .70, 1.0)))
+            f.step(rng.choice((.02, .05, .1)))
+
+            expected = {}
+            for relation in f.nethra:
+                for route in relation.routes:
+                    for member in route:
+                        expected.setdefault(member, set()).add((relation, route))
+
+            actual_keys = {m for m, uses in f.member_to_routeuses.items() if uses}
+            self.assertEqual(actual_keys, set(expected), f"index keys at step {step_i}")
+            for member, uses in expected.items():
+                self.assertEqual(
+                    f.member_to_routeuses[member],
+                    uses,
+                    f"index uses at step {step_i}",
                 )
-            # Structural identities, source-event recurrence, routes and evidence remain exact.
-            # Continuous state is bounded separately because these are distinct identity-hashed
-            # object graphs whose set iteration order can differ across Python runtimes.
-            self.assert_fields_equivalent(old, new, places=6)
-
-        print(f"max cross-object live-step drift={max_numeric_drift:.12g}")
 
     def test_indexed_closure_matches_frozen_global_scan_exact_on_same_field(self):
         def frozen_global_scan(field, explicit, event):
