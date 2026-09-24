@@ -1,5 +1,7 @@
 """Nethra one-file core.
 
+Nethra is an online self-constructing recursive predictive field whose persistent topology is built from unresolved temporal experience and whose connection strengths continuously adapt according to whether the field's prior expectations actually manifest.
+
 MAINTENANCE INSTRUCTION — READ BEFORE INTERPRETING OR MODIFYING THIS FILE:
 Read NETHRA_MISTAKE_LEDGER.md from this repository first. Append every newly discovered mistake,
 regression, contamination, false claim, or shortcut made since its latest entry before making a
