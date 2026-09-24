@@ -535,45 +535,63 @@ class NethraField:
             ),
         )
 
-    def _existing_whole_support_relation(self, route, source_pair):
-        """Return an existing whole-support Nethra for this canonical source-event pair."""
-        route = frozenset(route)
+    def _existing_temporal_support_relation(self, before_route, after_route, source_pair):
+        """Return an existing Nethra carrying both complete temporal-side support routes."""
+        before_route = frozenset(before_route)
+        after_route = frozenset(after_route)
+        routes = tuple(dict.fromkeys((before_route, after_route)))
+
+        def strength(relation):
+            return sum(
+                max((float(v) for v in relation.routes[route].values()), default=0.0)
+                for route in routes
+            )
+
         exact = [
             n for n in self.nethra
-            if route in n.routes and self._source_pair_matches(n, source_pair)
+            if all(route in n.routes for route in routes)
+            and self._source_pair_matches(n, source_pair)
         ]
-        relation = self._strongest_route_relation(exact, route)
-        if relation is not None:
-            return relation
+        if exact:
+            return max(exact, key=strength)
 
         # Compatibility for topology created before source-pattern indexing existed: claim only the
-        # single strongest unindexed relation for the first canonical source pair that reuses it.
+        # strongest unindexed relation that already has both temporal-side routes.
         legacy = [
             n for n in self.nethra
-            if route in n.routes and not self.relation_source_events.get(n)
+            if all(route in n.routes for route in routes)
+            and not self.relation_source_events.get(n)
         ]
-        relation = self._strongest_route_relation(legacy, route)
-        if relation is not None:
+        if legacy:
+            relation = max(legacy, key=strength)
             self.relation_source_events[relation].add(source_pair)
-        return relation
+            return relation
+        return None
 
     def _admit_whole_support(self, current_closed, current_description, unresolved, current_source_event):
-        """Permissively admit one ordinary weak Nethra from the whole unresolved active support.
+        """Permissively admit one weak ordinary Nethra from complete temporal-side support.
 
         Existing recursive closure has already been refound and the field's prospective prediction
-        has already been subtracted. No proper subsets are enumerated. The route is the union of
-        the previous and current recursive descriptions grounded by independent source support.
+        has already been subtracted. No proper subsets are enumerated. The complete recursively
+        refound previous support and complete recursively refound current support remain distinct
+        routes of the same relation Nethra, preserving temporal refindability instead of collapsing
+        succession into simultaneous membership.
+
         Per-incidence plasticity is responsible for weakening nuisance members afterward.
         """
         if unresolved <= self.admission_threshold or not self.previous_closure:
             return None
 
-        route = frozenset(self.previous_closure | frozenset(current_closed))
-        if len(route) < 2:
+        before_route = frozenset(self.previous_closure)
+        after_route = frozenset(current_closed)
+        participants = before_route | after_route
+        if len(participants) < 2:
             return None
 
         source_pair = (self.current_source_event, current_source_event)
-        relation = self._existing_whole_support_relation(route, source_pair)
+        relation = self._existing_temporal_support_relation(
+            before_route, after_route, source_pair
+        )
 
         # Structural subtraction remains independent of instantaneous field strength. If an
         # existing Nethra already accounts for both completed recursive descriptions, reuse it
@@ -588,35 +606,44 @@ class NethraField:
                     relation = candidate
                 elif self._source_pair_matches(candidate, source_pair):
                     relation = candidate
-            if relation is not None:
-                # Established recursive provenance rule: a description containing the relation
-                # itself is tautological. It can account for the event but may not become fresh
-                # support for itself.
-                if relation in route:
-                    return relation
-                if route not in relation.routes:
-                    self._route(relation, route, frozenset(), self.admission_seed)
 
         if relation is None:
             relation = self.new()
-            self._route(relation, route, frozenset(), self.admission_seed)
-            self.relation_source_events[relation].add(source_pair)
-            return relation
 
-        # A retained but field-inert hypothesis is reused rather than duplicated.
-        for member in route:
-            bucket = self.incidence_evidence.setdefault(
-                (relation, route, member),
-                Counter(),
+        # Each temporal side remains separately refindable. A side that already contains this
+        # relation is tautological and contributes no fresh route into itself; the other side may
+        # still be a legitimate complete support route.
+        added_any = False
+        for route in dict.fromkeys((before_route, after_route)):
+            if not route or relation in route:
+                continue
+            added_any = True
+            if route not in relation.routes:
+                self._route(relation, route, frozenset(), self.admission_seed)
+                continue
+
+            # A retained but field-inert hypothesis is reused rather than duplicated.
+            for member in route:
+                bucket = self.incidence_evidence.setdefault(
+                    (relation, route, member),
+                    Counter(),
+                )
+                if float(bucket.get(frozenset(), 0.0)) <= 0.0:
+                    bucket[frozenset()] = self.admission_seed
+            relation.routes[route][frozenset()] = max(
+                float(
+                    self.incidence_evidence[(relation, route, m)].get(
+                        frozenset(), 0.0
+                    )
+                )
+                for m in route
             )
-            if float(bucket.get(frozenset(), 0.0)) <= 0.0:
-                bucket[frozenset()] = self.admission_seed
-        relation.routes[route][frozenset()] = max(
-            float(self.incidence_evidence[(relation, route, m)].get(frozenset(), 0.0))
-            for m in route
-        )
+
+        # If both descriptions were tautological for an already-refound relation, accounting has
+        # still succeeded and no topology change is warranted. A newly created relation cannot
+        # reach this case because it did not exist in either completed description.
         self.relation_source_events[relation].add(source_pair)
-        return relation
+        return relation if added_any or relation in self.nethra else None
 
     def _native_learn(
         self, source_current, target, current_closed, current_description,
