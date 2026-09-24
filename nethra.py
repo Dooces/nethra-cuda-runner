@@ -75,7 +75,8 @@ class NethraField:
                  capacitance=1.0, leakage=1.0, trace_decay=.90,
                  convergence_gain=1.0, native_learning=True,
                  admission_threshold=1e-12, admission_seed=.01,
-                 eta_out=1200.0, eta_in=2400.0):
+                 eta_out=1200.0, eta_in=2400.0,
+                 source_similarity_threshold=.999):
         """Initialize one field without creating semantic structure.
 
         g_min/g_max/tau map earned incidence evidence to conductance; the native default gives
@@ -99,6 +100,9 @@ class NethraField:
         self.admission_seed = float(admission_seed)
         self.eta_out = float(eta_out)
         self.eta_in = float(eta_in)
+        self.source_similarity_threshold = float(source_similarity_threshold)
+        if not 0.0 < self.source_similarity_threshold <= 1.0:
+            raise ValueError("source_similarity_threshold must be in (0, 1]")
 
         self.nethra = []
 
@@ -119,6 +123,12 @@ class NethraField:
         # coordinate allows members of one arbitrary-size route to carry different earned field
         # strengths without introducing another persistent participant type.
         self.incidence_evidence = {}
+
+        # Graded source-current patterns are evidence/indexing only.  Exact external current stays
+        # physical; source_patterns retains canonical smeared-current exemplars so structural
+        # recurrence can be refound by cosine similarity without exact float or nonzero-set identity.
+        self.source_patterns = []
+        self.relation_source_events = defaultdict(set)
 
         # Transient source/closure coordinates. Independent external source support earns
         # construction; recursive closure is the structural description available to a newly
@@ -418,26 +428,68 @@ class NethraField:
             default=0.0,
         )
 
-    def _describe_source_support(self, explicit):
-        """Refind the complete recursive description grounded in this interval's source support."""
-        explicit = frozenset(explicit)
-        source_observed = explicit | self.previous_explicit
-        source_event = frozenset(
-            (n, int(n in explicit) - int(n in self.previous_explicit))
-            for n in source_observed
-        )
-        closed = self.closure(explicit, source_event)
-        description_observed = closed | self.previous_closure
-        description_event = frozenset(
-            (n, int(n in closed) - int(n in self.previous_closure))
-            for n in description_observed
-        )
-        return source_event, closed, description_event
+    @staticmethod
+    def _source_cosine(left, right):
+        """Cosine similarity of two sparse graded source-current patterns."""
+        if not left or not right:
+            return 1.0 if not left and not right else 0.0
+        a = dict(left)
+        b = dict(right)
+        dot = sum(value * b.get(n, 0.0) for n, value in a.items())
+        aa = sum(value * value for value in a.values())
+        bb = sum(value * value for value in b.values())
+        if aa <= 0.0 or bb <= 0.0:
+            return 0.0
+        return dot / sqrt(aa * bb)
 
-    def _existing_whole_support_relation(self, route):
-        """Return an already-stored ordinary Nethra with this exact whole-support route."""
-        route = frozenset(route)
-        rows = [n for n in self.nethra if route in n.routes]
+    def _canonical_source_event(self, source_current):
+        """Refind or register one structural source event from its graded current vector.
+
+        The physical source currents remain exact and are never replaced.  This function supplies
+        only structural recurrence: a new smeared current pattern refinds the closest existing
+        exemplar when cosine similarity exceeds source_similarity_threshold.  A receptive-field
+        tail crossing exact zero therefore has no special structural authority.
+        """
+        pattern = frozenset(
+            (n, float(value))
+            for n, value in source_current.items()
+            if float(value) != 0.0
+        )
+        if not pattern:
+            return frozenset()
+
+        best = None
+        best_similarity = -1.0
+        for existing in self.source_patterns:
+            similarity = self._source_cosine(pattern, existing)
+            if similarity > self.source_similarity_threshold and similarity > best_similarity:
+                best = existing
+                best_similarity = similarity
+        if best is not None:
+            return best
+
+        self.source_patterns.append(pattern)
+        return pattern
+
+    def _describe_source_support(self, source_current):
+        """Refind the recursive description grounded in the graded structural source event."""
+        source_event = self._canonical_source_event(source_current)
+        explicit = self._event_members(source_event)
+        closed = self.closure(explicit, source_event)
+
+        # Keep exact graded source evidence in the recursive description.  Refound internal Nethra
+        # contribute their ordinary structural presence without manufacturing source provenance.
+        description_event = source_event | frozenset(
+            (n, 1.0) for n in closed if n not in explicit
+        )
+        return source_event, explicit, closed, description_event
+
+    def _source_pair_matches(self, relation, source_pair):
+        """Return whether relation is already indexed by this canonical temporal source pair."""
+        return source_pair in self.relation_source_events.get(relation, ())
+
+    def _strongest_route_relation(self, rows, route):
+        """Choose the strongest already-existing Nethra for one exact whole-support route."""
         if not rows:
             return None
         return max(
@@ -448,7 +500,29 @@ class NethraField:
             ),
         )
 
-    def _admit_whole_support(self, current_closed, current_description, unresolved):
+    def _existing_whole_support_relation(self, route, source_pair):
+        """Return an existing whole-support Nethra for this canonical source-event pair."""
+        route = frozenset(route)
+        exact = [
+            n for n in self.nethra
+            if route in n.routes and self._source_pair_matches(n, source_pair)
+        ]
+        relation = self._strongest_route_relation(exact, route)
+        if relation is not None:
+            return relation
+
+        # Compatibility for topology created before source-pattern indexing existed: claim only the
+        # single strongest unindexed relation for the first canonical source pair that reuses it.
+        legacy = [
+            n for n in self.nethra
+            if route in n.routes and not self.relation_source_events.get(n)
+        ]
+        relation = self._strongest_route_relation(legacy, route)
+        if relation is not None:
+            self.relation_source_events[relation].add(source_pair)
+        return relation
+
+    def _admit_whole_support(self, current_closed, current_description, unresolved, current_source_event):
         """Permissively admit one ordinary weak Nethra from the whole unresolved active support.
 
         Existing recursive closure has already been refound and the field's prospective prediction
@@ -463,7 +537,8 @@ class NethraField:
         if len(route) < 2:
             return None
 
-        relation = self._existing_whole_support_relation(route)
+        source_pair = (self.current_source_event, current_source_event)
+        relation = self._existing_whole_support_relation(route, source_pair)
 
         # Structural subtraction remains independent of instantaneous field strength. If an
         # existing Nethra already accounts for both completed recursive descriptions, reuse it
@@ -471,7 +546,14 @@ class NethraField:
         if relation is None and self.current_event and current_description:
             accounted = self._accounted(self.current_event, current_description)
             if accounted is not None:
-                relation = accounted[0]
+                candidate = accounted[0]
+                indexed = self.relation_source_events.get(candidate)
+                if not indexed:
+                    self.relation_source_events[candidate].add(source_pair)
+                    relation = candidate
+                elif self._source_pair_matches(candidate, source_pair):
+                    relation = candidate
+            if relation is not None:
                 # Established recursive provenance rule: a description containing the relation
                 # itself is tautological. It can account for the event but may not become fresh
                 # support for itself.
@@ -483,6 +565,7 @@ class NethraField:
         if relation is None:
             relation = self.new()
             self._route(relation, route, frozenset(), self.admission_seed)
+            self.relation_source_events[relation].add(source_pair)
             return relation
 
         # A retained but field-inert hypothesis is reused rather than duplicated.
@@ -497,9 +580,10 @@ class NethraField:
             float(self.incidence_evidence[(relation, route, m)].get(frozenset(), 0.0))
             for m in route
         )
+        self.relation_source_events[relation].add(source_pair)
         return relation
 
-    def _native_learn(self, source_current, target, current_closed, current_description):
+    def _native_learn(self, source_current, target, current_closed, current_description, current_source_event):
         """Apply settled whole-support prospective plasticity after the current outcome manifests.
 
         From the PRIOR completed interval activation integrals, each physical incidence has exact
@@ -604,7 +688,9 @@ class NethraField:
             max(0.0, epsilon.get(n, 0.0))
             for n in source_current
         )
-        self._admit_whole_support(current_closed, current_description, unresolved)
+        self._admit_whole_support(
+            current_closed, current_description, unresolved, current_source_event
+        )
         return epsilon
 
     def _edges(self):
@@ -769,9 +855,9 @@ class NethraField:
         if dt <= 0.0:
             raise ValueError("dt must be positive")
         source_current = {n: n.external for n in self.nethra if n.external != 0.0}
-        explicit = frozenset(source_current)
-
-        source_event, closed, description_event = self._describe_source_support(explicit)
+        source_event, explicit, closed, description_event = self._describe_source_support(
+            source_current
+        )
 
         # Current-outcome manifestation uses the previously established source-provenance split:
         # compare the same pre-outcome field under the actual external source and under zero source.
@@ -822,7 +908,9 @@ class NethraField:
         # by the previous completed interval. Topology/evidence changed here cannot alter the outcome
         # that produced this target.
         if self.native_learning and self.current_interval_integral:
-            self._native_learn(source_current, target, closed, description_event)
+            self._native_learn(
+                source_current, target, closed, description_event, source_event
+            )
 
         self.previous_source_event = self.current_source_event
         self.current_source_event = source_event
