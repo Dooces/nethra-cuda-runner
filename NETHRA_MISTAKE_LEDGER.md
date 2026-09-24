@@ -275,3 +275,10 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - The indexed-closure optimization did not introduce this failure; it reproduced the frozen global-scan semantics exactly. The failure predates indexing and is in the admitted route representation.
 - The earlier accepted whole-support rule did not require merging before and after into one simultaneous support set. Whole support means use the complete recursively refound support on each temporal side without subset enumeration. Temporal sides remain distinct routes of the same ordinary Nethra.
 - Prevention: when a relation is earned from an ordered completed transition, preserve the complete before support and complete after support as separately refindable routes on the same Nethra. Never replace temporal succession with a single simultaneous union route. Continue to skip any individual route that would contain the relation itself.
+
+
+## 2026-09-23 — recursive-depth regression test demanded depth 50 from only 32 staged recursive additions
+
+- The first temporal-route repair test created one anchor plus 32 fresh primitive consequences and then asserted recursive depth >=50.
+- Fedora produced depth 33 with 64 learned Nethra, showing the repaired native chain was deepening once per staged level; the assertion simply requested more recursive levels than the test supplied.
+- Prevention: when a depth test is constructed as one new recursive level per fresh staged consequence, provide at least the requested number of stages before interpreting the result as a mechanism failure.
