@@ -197,3 +197,64 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
   same persistent externally bound Nethra and confirm that distinct completed numeric deltas remain
   visible to recursive refinding/construction and can generate recursive Nethra-of-Nethra structure
   without a harness overriding core semantics.
+
+
+## 2026-09-23 — invalid raw-float delta repair violated frozen identity/state semantics
+
+- After the direct AAPL probe exposed the older regression where changing continuous observations had
+  been collapsed to persistent-member presence, the assistant correctly traced the first destructive
+  change to `afabb0bd03500126a7a4aac88fb4462d85630c23` and the later participation-only rewrite
+  to `98ddeb41d9d47cdaa7cacfa91ba1bd95649cafee`.
+- The assistant then made a new semantic mistake instead of recovering the already-settled boundary:
+  commit `4cd62425315966c7a17e4fb5fe6cd53b6f7ffe10` changed recursive event identity to exact
+  transient pairs of the form `(Nethra, float(delta))`, moved recursive description until after the
+  completed interval delta existed, and required exact numeric-delta state signatures for structural
+  subtraction/refinding.
+- That patch implicitly granted Python floating-point values semantic identity. It made exact equality
+  of two externally supplied numeric magnitudes meaningful to Nethra simply because the host language
+  represented them by equal floats. That is forbidden by the frozen Foundation-1 identity/state
+  contract.
+- Foundation 1 had already frozen the following distinction:
+    - persistent Nethra identity is one coordinate;
+    - current descriptive state is transient and may change without changing the persistent handle;
+    - atomic state payloads are opaque;
+    - the core must not compare, normalize, bin, hash, rank, interpret, or attach learned meaning to
+      the supplied value merely because of its representation;
+    - equality or difference between current states carries no learned meaning, applicability,
+      consequence, resonance, or prediction by itself;
+    - structural resonance does not require an exact previously witnessed value combination.
+- The prior `nethra_instantiation_state_report.md` had already demonstrated the actual failure:
+  F61 physically preserves sign and magnitude, while the then-current support/refinding boundary
+  discarded them. Its construction-disabled `Instantiation(nid,value)` shadow showed that transient
+  descriptive state can preserve the needed distinction without creating new persistent Nethra.
+  Crucially, that report explicitly did NOT settle the production state representation. It said the
+  tested `d_i in {-1,+1}` representation was only the primitive observation used in that audit,
+  that the data did not justify changing S72 routes yet, and that construction must remain disabled
+  until current-state propagation/refinding over alternate routes and cycles was audited.
+- The earlier delta/receptive-field audit had likewise identified the correct boundary pressure:
+  graded interval source evidence must not be collapsed to nonzero source IDs. It proposed experiments
+  distinguishing direct graded current, interval source evidence such as integrated source charge,
+  and predictive gain. It did NOT freeze exact float values as structural signatures.
+- Temporal work was also not a license to impose scalar semantics. V50 showed that temporal meaning
+  need not be a special engine branch, but its exact structural-instantiation rule remained
+  experimental. Later temporal-consideration work explicitly marked dynamically created lag-coordinate
+  Nethra as evaluator scaffolding requiring a formal contract. V74 still listed natural temporal-
+  coordinate discovery and source-magnitude handling as outside the frozen result.
+- Therefore the previous ledger entry titled
+  `continuous Nethra deltas severed from recursive construction` correctly records the observed
+  regression, but its prevention wording must NOT be read as authorizing exact raw numeric delta
+  equality as recursive structural identity. The failure is real; the production representation of
+  continuous descriptive state remains unresolved by those frozen results.
+- Corrective action: `nethra.py` was restored byte-for-byte to blob
+  `7838de1b9bedb7147ca04f6aa19c83afa8597e08` in commit
+  `d02427a76639a9d30460e7cbd12956e22420f5bd`, exactly undoing the semantic changes introduced by
+  `4cd62425315966c7a17e4fb5fe6cd53b6f7ffe10`.
+- Current status after the revert: the baseline is back to its prior settled implementation. The
+  observed continuous-delta/support-boundary defect remains an open implementation problem and must
+  not be hidden by another representation shortcut.
+- Prevention: when an observed failure touches a boundary previously marked unresolved, do not turn
+  the host representation of the observation into Nethra semantics. First recover the frozen
+  identity/state contracts and the exact unresolved boundary. Do not use raw float equality,
+  hand-built bins, scalar ordering, host-language numeric comparison, evaluator-provided lag labels,
+  or any other externally supplied numerical semantics as a substitute for Nethra learning those
+  distinctions through its own field and relational experience.
