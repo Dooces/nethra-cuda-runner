@@ -219,21 +219,32 @@ class NethraField:
                 return route, frozenset()
         return None
 
+    def _matching_state_route(self, relation, event):
+        """Find an exact numeric-delta signature already earned by relation.
+
+        Structural subtraction must not let an unqualified membership route erase a new continuous
+        observation. The event is transient evidence made directly from completed Nethra deltas;
+        no binning, entered/persisted/left projection, or semantic label participates here.
+        """
+        for route, conditions in relation.routes.items():
+            projected = self._project(event, route)
+            if projected and conditions.get(projected, 0) > 0:
+                return route, projected
+        return None
+
     def _accounted(self, before, after):
-        """Find existing Nethra structure that already accounts for both sides of a history.
+        """Find existing Nethra structure that already accounts for both numeric-delta states.
 
-        This is subtraction-before-construction at the structural level. If one persistent Nethra
-        already has earned support for the observed before and after manifestations, constructing
-        another handle would merely duplicate an explanation already present in Nethra topology.
-
-        The search uses only routes actually earned by existing Nethra. It does not compare labels,
-        leaf names, evaluator truth, geometric coordinates, or a similarity heuristic.
+        This is subtraction-before-construction at the structural level. An unqualified route may
+        carry field resonance, but it cannot by itself declare two different completed numeric
+        delta observations equivalent. Reuse therefore requires earned state-qualified evidence
+        for both transient manifestations.
         """
         for relation in self.nethra:
             if not relation.routes:
                 continue
-            left = self._matching_route(relation, before)
-            right = self._matching_route(relation, after)
+            left = self._matching_state_route(relation, before)
+            right = self._matching_state_route(relation, after)
             if left is not None and right is not None:
                 return relation, left, right
         return None
@@ -418,20 +429,28 @@ class NethraField:
             default=0.0,
         )
 
-    def _describe_source_support(self, explicit):
-        """Refind the complete recursive description grounded in this interval's source support."""
+    def _describe_source_support(self, explicit, delta):
+        """Refind recursive structure from the actual completed finite-interval Nethra deltas.
+
+        explicit remains the independent-source provenance coordinate. delta is the exact physical
+        activation change from the interval that just completed. The transient event preserves
+        those numeric values directly; it does not replace them with source presence or
+        entered/persisted/left flags.
+
+        Recursive closure may use the complete physical delta event, while source_event is only its
+        projection onto independently sourced Nethra. description_event is the same numeric event
+        projected onto the recursively refound description. None of these transient values becomes
+        another persistent object type.
+        """
         explicit = frozenset(explicit)
-        source_observed = explicit | self.previous_explicit
-        source_event = frozenset(
-            (n, int(n in explicit) - int(n in self.previous_explicit))
-            for n in source_observed
+        delta_event = frozenset(
+            (n, float(change))
+            for n, change in delta.items()
+            if float(change) != 0.0
         )
-        closed = self.closure(explicit, source_event)
-        description_observed = closed | self.previous_closure
-        description_event = frozenset(
-            (n, int(n in closed) - int(n in self.previous_closure))
-            for n in description_observed
-        )
+        source_event = self._project(delta_event, explicit)
+        closed = self.closure(explicit, delta_event)
+        description_event = self._project(delta_event, closed)
         return source_event, closed, description_event
 
     def _existing_whole_support_relation(self, route):
@@ -465,10 +484,11 @@ class NethraField:
 
         relation = self._existing_whole_support_relation(route)
 
-        # Structural subtraction remains independent of instantaneous field strength. If an
-        # existing Nethra already accounts for both completed recursive descriptions, reuse it
-        # rather than minting a second handle merely because its current prediction was weak.
-        if relation is None and self.current_event and current_description:
+        # Structural subtraction remains independent of instantaneous field strength. Reuse
+        # requires the exact completed numeric-delta manifestations to have been earned already;
+        # the unqualified route below is field resonance and is not allowed to collapse distinct
+        # continuous observations into one structural event.
+        if self.current_event and current_description:
             accounted = self._accounted(self.current_event, current_description)
             if accounted is not None:
                 relation = accounted[0]
@@ -477,13 +497,23 @@ class NethraField:
                 # support for itself.
                 if relation in route:
                     return relation
-                if route not in relation.routes:
-                    self._route(relation, route, frozenset(), self.admission_seed)
 
         if relation is None:
             relation = self.new()
+
+        # The whole-support route remains unqualified for ordinary bidirectional field resonance.
+        # Exact before/after numeric deltas are retained as transient state-qualified evidence on
+        # that same route so construction/refinding can distinguish continuous observations.
+        if route not in relation.routes:
             self._route(relation, route, frozenset(), self.admission_seed)
-            return relation
+
+        before_signature = self._project(self.current_event, route)
+        after_signature = self._project(current_description, route)
+        for signature in (before_signature, after_signature):
+            if not signature:
+                continue
+            if float(relation.routes[route].get(signature, 0.0)) <= 0.0:
+                self._route(relation, route, signature, self.admission_seed)
 
         # A retained but field-inert hypothesis is reused rather than duplicated.
         for member in route:
@@ -755,23 +785,22 @@ class NethraField:
     def step(self, dt=.1):
         """Advance one finite interval with native whole-support learning at its causal boundary.
 
-        Recursive closure of current independent source support is fixed before learning. The same
-        pre-outcome field is then integrated twice: once with zero new external source and once with
-        the actual source. Their difference is the established manifestation target, so internally
-        manifested recursive Nethra are consequences without becoming independent source facts.
+        The same pre-outcome field is integrated twice: once with zero new external source and once
+        with the actual source. Their difference is the established manifestation target, so
+        internally manifested recursive Nethra are consequences without becoming independent source
+        facts. After the actual interval completes, its exact numeric Nethra deltas are used as the
+        transient state for recursive refinding and construction.
 
-        Existing structure's PRIOR completed-interval flow is compared with that manifestation;
-        signed per-incidence plasticity and grounded whole-support admission occur only after the
-        current outcome has physically completed. _complete_interval() then stores the actual source,
-        activation delta, and activation integral A_i. External current is consumed afterward.
+        Existing structure's PRIOR completed-interval flow is compared with the current
+        manifestation; signed per-incidence plasticity and grounded whole-support admission occur
+        only after the outcome has physically completed. _complete_interval() then stores the actual
+        source, activation delta, and activation integral A_i. External current is consumed afterward.
         """
         dt = float(dt)
         if dt <= 0.0:
             raise ValueError("dt must be positive")
         source_current = {n: n.external for n in self.nethra if n.external != 0.0}
         explicit = frozenset(source_current)
-
-        source_event, closed, description_event = self._describe_source_support(explicit)
 
         # Current-outcome manifestation uses the previously established source-provenance split:
         # compare the same pre-outcome field under the actual external source and under zero source.
@@ -818,9 +847,11 @@ class NethraField:
             delta[n] = actual[n] - old
             target[n] = max(0.0, self.capacitance * (actual[n] - baseline[n]))
 
-        # The current outcome is now known; update evidence/construction using predictions carried
-        # by the previous completed interval. Topology/evidence changed here cannot alter the outcome
-        # that produced this target.
+        # The current outcome is now known. Preserve its actual numeric finite-interval deltas
+        # as the transient event used by recursive refinding/construction. Topology/evidence changed
+        # after this point cannot alter the outcome that produced those deltas.
+        source_event, closed, description_event = self._describe_source_support(explicit, delta)
+
         if self.native_learning and self.current_interval_integral:
             self._native_learn(source_current, target, closed, description_event)
 
