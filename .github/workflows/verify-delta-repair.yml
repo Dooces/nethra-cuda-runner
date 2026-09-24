@@ -1,0 +1,12 @@
+name: Verify delta repair
+on:
+  push:
+    branches: [delta-repair-verify-20260923]
+jobs:
+  verify:
+    runs-on: self-hosted
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - run: PYTHONPATH=. /usr/bin/python3 verify_delta_repair.py
+      - run: PYTHONPATH=. /usr/bin/python3 verify_aapl_delta_repair.py
