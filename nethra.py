@@ -519,6 +519,60 @@ class NethraField:
         )
         return source_event, explicit, closed, description_event
 
+    def _primitive_leaves(self, nethra, memo=None, stack=frozenset()):
+        """Factor one Nethra to grounded primitive leaves for reuse lookup only.
+
+        A primitive leaf is an ordinary Nethra with no learned support route. Learned Nethra are
+        recursively expanded through every earned route, so alternative parenthesizations of the
+        same grounded support can be recognized before construction. Persistent routes themselves
+        are never flattened or rewritten.
+
+        Longer cycles are legal. A back-edge contributes no duplicate leaves while other grounded
+        branches continue to factor normally. A completely ungrounded cycle falls back to its own
+        handle so factorization cannot falsely collapse unrelated unsupported cycles.
+        """
+        if memo is None:
+            memo = {}
+        if nethra in memo:
+            return memo[nethra]
+        if not nethra.routes:
+            out = frozenset((nethra,))
+            memo[nethra] = out
+            return out
+        if nethra in stack:
+            return frozenset()
+
+        leaves = set()
+        next_stack = stack | frozenset((nethra,))
+        for route in nethra.routes:
+            for member in route:
+                leaves.update(self._primitive_leaves(member, memo, next_stack))
+
+        out = frozenset(leaves) if leaves else frozenset((nethra,))
+        memo[nethra] = out
+        return out
+
+    def _canonical_leafset(self, members):
+        """Return recursive primitive support for duplicate/reuse lookup only.
+
+        Equality here is never a semantic identity verdict. It may suppress reconstructing the same
+        already-accounted support under another recursive parenthesization; a different independently
+        established source/consequence remains free to earn a distinct persistent Nethra.
+        """
+        memo = {}
+        leaves = set()
+        for member in members:
+            leaves.update(self._primitive_leaves(member, memo))
+        return frozenset(leaves)
+
+    def _factorized_route_match(self, relation, proposed_route):
+        """Return an earned route of relation with the same canonical primitive support, if any."""
+        proposed_domain = self._canonical_leafset(proposed_route)
+        for route in relation.routes:
+            if self._canonical_leafset(route) == proposed_domain:
+                return route
+        return None
+
     def _source_pair_matches(self, relation, source_pair):
         """Return whether relation is already indexed by this canonical temporal source pair."""
         return source_pair in self.relation_source_events.get(relation, ())
@@ -536,12 +590,17 @@ class NethraField:
         )
 
     def _existing_temporal_support_relation(self, before_route, after_route, source_pair):
-        """Return an existing Nethra carrying both complete temporal-side support routes."""
+        """Refind existing temporal support, including recursive factor-equivalent descriptions.
+
+        Exact route reuse is preferred. If direct recursive members differ, canonical primitive
+        factorization is used only as a duplicate/reuse hint and only among relations already earned
+        for the same canonical source transition. Stored direct routes are never flattened.
+        """
         before_route = frozenset(before_route)
         after_route = frozenset(after_route)
         routes = tuple(dict.fromkeys((before_route, after_route)))
 
-        def strength(relation):
+        def exact_strength(relation):
             return sum(
                 max((float(v) for v in relation.routes[route].values()), default=0.0)
                 for route in routes
@@ -553,17 +612,50 @@ class NethraField:
             and self._source_pair_matches(n, source_pair)
         ]
         if exact:
-            return max(exact, key=strength)
+            return max(exact, key=exact_strength)
+
+        before_domain = self._canonical_leafset(before_route)
+        after_domain = self._canonical_leafset(after_route)
+
+        factorized = []
+        for relation in self.nethra:
+            if not self._source_pair_matches(relation, source_pair):
+                continue
+            route_domains = {
+                route: self._canonical_leafset(route)
+                for route in relation.routes
+            }
+            before_matches = [
+                route for route, domain in route_domains.items()
+                if domain == before_domain
+            ]
+            after_matches = [
+                route for route, domain in route_domains.items()
+                if domain == after_domain
+            ]
+            if not before_matches or not after_matches:
+                continue
+            strength = max(
+                (
+                    max((float(v) for v in relation.routes[route].values()), default=0.0)
+                    for route in set(before_matches + after_matches)
+                ),
+                default=0.0,
+            )
+            factorized.append((strength, relation))
+
+        if factorized:
+            return max(factorized, key=lambda row: row[0])[1]
 
         # Compatibility for topology created before source-pattern indexing existed: claim only the
-        # strongest unindexed relation that already has both temporal-side routes.
+        # strongest unindexed relation that already has both exact temporal-side routes.
         legacy = [
             n for n in self.nethra
             if all(route in n.routes for route in routes)
             and not self.relation_source_events.get(n)
         ]
         if legacy:
-            relation = max(legacy, key=strength)
+            relation = max(legacy, key=exact_strength)
             self.relation_source_events[relation].add(source_pair)
             return relation
         return None
@@ -619,6 +711,11 @@ class NethraField:
                 continue
             added_any = True
             if route not in relation.routes:
+                # V69/S71 factorization rule: a recursively different parenthesization of already
+                # represented primitive support is a reuse hit, not fresh topology. Preserve the
+                # original earned route exactly. Cross-domain support remains eligible below.
+                if self._factorized_route_match(relation, route) is not None:
+                    continue
                 self._route(relation, route, frozenset(), self.admission_seed)
                 continue
 
