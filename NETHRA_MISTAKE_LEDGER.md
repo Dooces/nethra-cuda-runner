@@ -307,3 +307,23 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - The tests also introduced their own failures and distractions, including an impossible depth assertion and a shallow-checkout failure.
 - User directive: remove assistant-authored Nethra regression tests/workflows from the active frozen lineage. Do not rely on assistant-invented test suites as a substitute for reading this ledger, tracing the actual causal semantics step by step, and checking the specific requested behavior directly.
 - Prevention: do not create new persistent regression-test files or test workflows unless the user explicitly asks for them. Any validation requested by the user should be narrow, direct, disposable, and tied to the exact behavior under discussion rather than promoted into a standing harness by default.
+
+
+## 2026-09-24 — rebuilt checkpoint claimed exact continuation while pair statistics and execution order remained identity-hash dependent
+
+- The rebuilt one-file checkpoint could serialize and reload an apparently identical state, but continuing the original and restored fields under identical inputs diverged numerically.
+- F61 pair statistics were keyed by an unordered `frozenset({a,b})` while storing ordered `xx` and `yy` accumulators. Tuple-unpacking the frozenset could reverse which Nethra owned those accumulators after reload, and checkpoint serialization could sort node ids without correspondingly swapping `xx`/`yy`.
+- Edge, route and supplier iteration also still inherited Python object/set order, so recreating the same Nethra graph could change floating summation order.
+- Prevention: any persisted or execution-time quantity with ordered per-Nethra components must use the field's stable Nethra order as its canonical orientation. Derived edge/neighbour iteration must likewise be deterministic from that stable order if exact continuation is claimed.
+
+## 2026-09-24 — RK4 stability safeguard was knowingly restricted to convergence_gain==0 and left a demonstrated explosive path live
+
+- The rebuilt file restored subdivision only for `convergence_gain == 0`, even though the passive conductance/leakage part remains present when convergence is enabled.
+- A valid high-degree field with convergence enabled therefore bypassed subdivision and a single large RK4 step produced catastrophic numerical growth even though the underlying conductive field is dissipative.
+- Prevention: the passive weighted-degree stiffness bound is a lower-bound requirement on numerical subdivision regardless of whether the additive F61 convergence term is enabled. Enabling convergence must never disable protection required by the still-present passive operator.
+
+## 2026-09-24 — semantic repairs were bolted onto the slow Python runtime instead of restoring the already-solved compiled/local execution path
+
+- Native recursive depth still reached the expected structure, but runtime grew sharply even at only hundreds of Nethra because recursive provenance/factorization and field execution remained dominated by repeated Python graph traversal.
+- Earlier C1/C3 work had already established derived reverse indexes, compiled numeric topology and a faster passive execution path. The rebuild restored only fragments and then presented the file as substantially repaired.
+- Prevention: do not call a rebuild complete while knowingly leaving an already-solved execution layer replaced by repeated global Python traversal. Execution indexes/caches may be derived and non-semantic; restoring them is not architectural contamination.
