@@ -241,7 +241,8 @@ class IndexedOptimizationTests(unittest.TestCase):
         rng = random.Random(99231)
 
         # Drive graded source currents through the exact same persistent Nethra coordinates.
-        for step_i in range(90):
+        max_numeric_drift = 0.0
+        for step_i in range(300):
             source_ids = rng.sample(range(8), rng.randint(0, 3))
             for i in source_ids:
                 value = rng.choice((.05, .13, .30, .37, .70, 1.0))
@@ -254,13 +255,106 @@ class IndexedOptimizationTests(unittest.TestCase):
 
             self.assertEqual(len(old.nethra), len(new.nethra), f"node count at step {step_i}")
             for i in range(len(old.nethra)):
-                self.assertAlmostEqual(
-                    old_delta.get(old.nethra[i], 0.0),
-                    new_delta.get(new.nethra[i], 0.0),
-                    places=9,
-                    msg=f"delta node {i} step {step_i}",
+                old_value = old_delta.get(old.nethra[i], 0.0)
+                new_value = new_delta.get(new.nethra[i], 0.0)
+                drift = abs(old_value - new_value)
+                max_numeric_drift = max(max_numeric_drift, drift)
+                self.assertLessEqual(
+                    drift,
+                    1e-7,
+                    f"delta node {i} step {step_i}: drift={drift}",
                 )
-            self.assert_fields_equivalent(old, new, places=9)
+            # Structural identities, source-event recurrence, routes and evidence remain exact.
+            # Continuous state is bounded separately because these are distinct identity-hashed
+            # object graphs whose set iteration order can differ across Python runtimes.
+            self.assert_fields_equivalent(old, new, places=6)
+
+        print(f"max cross-object live-step drift={max_numeric_drift:.12g}")
+
+    def test_indexed_closure_matches_frozen_global_scan_exact_on_same_field(self):
+        def frozen_global_scan(field, explicit, event):
+            active = set(explicit)
+            event = field.current_event if event is None else frozenset(event)
+            changed = True
+            while changed:
+                changed = False
+                for n in field.nethra:
+                    if n in active or not n.routes:
+                        continue
+                    for route, conditions in n.routes.items():
+                        if conditions.get(frozenset(), 0) > 0 and route.issubset(active):
+                            active.add(n)
+                            changed = True
+                            break
+                        projected = field._project(event, route)
+                        if projected and conditions.get(projected, 0) > 0:
+                            active.add(n)
+                            changed = True
+                            break
+            return frozenset(active)
+
+        rng = random.Random(94711)
+        for world in range(200):
+            f = optimized.NethraField(native_learning=False)
+            leaves = [f.new() for _ in range(10)]
+            nodes = list(leaves)
+            signatures = []
+            for _ in range(35):
+                r = f.new()
+                member_ids = rng.sample(range(len(nodes)), rng.randint(1, min(4, len(nodes))))
+                members = tuple(nodes[i] for i in member_ids)
+                if rng.random() < .45:
+                    selected = rng.sample(member_ids, rng.randint(1, len(member_ids)))
+                    signature = frozenset(
+                        (nodes[i], rng.choice((-.7, -.2, .2, .7, 1.0)))
+                        for i in selected
+                    )
+                    signatures.append(signature)
+                else:
+                    signature = frozenset()
+                f._route(r, members, signature, rng.randint(1, 9))
+                nodes.append(r)
+
+            explicit = rng.sample(leaves, rng.randint(0, 7))
+            if signatures and rng.random() < .7:
+                event = rng.choice(signatures)
+            else:
+                represented = rng.sample(nodes, rng.randint(0, min(10, len(nodes))))
+                event = frozenset(
+                    (n, rng.choice((-.7, -.2, .2, .7, 1.0)))
+                    for n in represented
+                )
+
+            expected = frozen_global_scan(f, explicit, event)
+            got = f.closure(explicit, event)
+            self.assertEqual(got, expected, f"same-object closure mismatch in world {world}")
+
+    def test_cached_residual_neighbors_are_exact_on_same_field(self):
+        f = optimized.NethraField(native_learning=False)
+        leaves = [f.new() for _ in range(6)]
+        relations = []
+        for i in range(5):
+            r = f.new()
+            f._route(r, (leaves[i], leaves[(i + 1) % 6], leaves[(i + 3) % 6]), frozenset(), 12 + i)
+            relations.append(r)
+
+        for i, n in enumerate(f.nethra):
+            f.rho[n] = (i - 3) * .017
+        residual = {n: ((i % 4) - 1.5) * .031 for i, n in enumerate(f.nethra)}
+        edges = f._edges()
+        neighbors = f._neighbors_from_edges(edges)
+
+        initial_rho = dict(f.rho)
+        initial_stats = dict(f.pair_stats)
+        f.update_residuals(residual, neighbors=neighbors)
+        cached_rho = dict(f.rho)
+        cached_stats = dict(f.pair_stats)
+
+        f.rho = initial_rho
+        f.pair_stats = initial_stats
+        f.update_residuals(residual)
+        self.assertEqual(f.rho, cached_rho)
+        self.assertEqual(f.pair_stats, cached_stats)
 
     def test_cached_derivative_and_neighbors_are_exact_on_same_field(self):
         f = optimized.NethraField(native_learning=False, convergence_gain=.8)
