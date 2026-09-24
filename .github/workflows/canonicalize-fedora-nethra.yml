@@ -1,0 +1,29 @@
+name: Canonicalize Fedora nethra.py
+on:
+  workflow_dispatch:
+  push:
+    branches: [nethra-current-baseline]
+jobs:
+  canonicalize:
+    runs-on: self-hosted
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fecb3713564cf3d03491280b7318763e181107d4
+          fetch-depth: 1
+      - name: Install single canonical nethra.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          CANON="$HOME/Projects/20260918/nethra.py"
+          install -m 0644 nethra.py "$CANON"
+          echo "canonical=$CANON"
+          echo "git_blob=$(git hash-object "$CANON")"
+          test "$(git hash-object "$CANON")" = "7838de1b9bedb7147ca04f6aa19c83afa8597e08"
+          find "$HOME/Projects/20260918" -type f -name 'nethra.py' ! -path "$CANON" -print -delete
+          echo "remaining:"
+          find "$HOME/Projects/20260918" -type f -name 'nethra.py' -print
+          count=$(find "$HOME/Projects/20260918" -type f -name 'nethra.py' | wc -l)
+          test "$count" -eq 1
+          /usr/bin/python3 -m py_compile "$CANON"
