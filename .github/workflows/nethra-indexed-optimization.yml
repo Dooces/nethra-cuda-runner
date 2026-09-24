@@ -22,8 +22,7 @@ jobs:
           python3 --version
           PYTHONPATH=. python3 -m unittest -v \
             test_indexed_optimization_equivalence.py \
-            test_interval_boundary_freeze.py \
-            test_subtraction_before_construction.py
+            test_historical_regression_parity.py
       - name: Optimization benchmark
         shell: bash
         run: |
@@ -44,8 +43,7 @@ jobs:
           /usr/bin/python3 --version
           PYTHONPATH=. /usr/bin/python3 -m unittest -v \
             test_indexed_optimization_equivalence.py \
-            test_interval_boundary_freeze.py \
-            test_subtraction_before_construction.py
+            test_historical_regression_parity.py
       - name: Optimization benchmark
         shell: bash
         run: |
