@@ -1,0 +1,11 @@
+name: Short delta smoke
+on:
+  push:
+    branches: [delta-repair-short-smoke-20260923]
+jobs:
+  smoke:
+    runs-on: self-hosted
+    timeout-minutes: 1
+    steps:
+      - uses: actions/checkout@v4
+      - run: PYTHONPATH=. /usr/bin/python3 short_delta_smoke.py
