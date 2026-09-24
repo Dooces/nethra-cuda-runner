@@ -282,3 +282,10 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - The first temporal-route repair test created one anchor plus 32 fresh primitive consequences and then asserted recursive depth >=50.
 - Fedora produced depth 33 with 64 learned Nethra, showing the repaired native chain was deepening once per staged level; the assertion simply requested more recursive levels than the test supplied.
 - Prevention: when a depth test is constructed as one new recursive level per fresh staged consequence, provide at least the requested number of stages before interpreting the result as a mechanism failure.
+
+
+## 2026-09-23 — repair workflow invoked a frozen-commit comparison from a shallow checkout
+
+- The temporal-route repair workflow added `test_indexed_optimization_equivalence.py`, whose module loads frozen commit `8abeaf358b34aed6b18e10cc0f7fc17de6e7db93` using `git show`.
+- The new workflow initially left `actions/checkout@v4` at its default `fetch-depth: 1`, so Ubuntu failed before executing the tests because that immutable baseline commit was absent locally.
+- Prevention: any workflow that compares against an earlier immutable commit must fetch full history or explicitly fetch that commit before running the comparison.
