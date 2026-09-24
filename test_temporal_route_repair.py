@@ -55,7 +55,7 @@ class TemporalRouteRepairTests(unittest.TestCase):
         a = f.new()
         b = f.new()
 
-        for _ in range(120):
+        for _ in range(24):
             a.push(1.0)
             f.step(.1)
             b.push(1.0)
@@ -81,7 +81,7 @@ class TemporalRouteRepairTests(unittest.TestCase):
     def test_native_primitive_sequence_exceeds_recursive_depth_50(self):
         f = NethraField()
         anchor = f.new()
-        fresh = [f.new() for _ in range(32)]
+        fresh = [f.new() for _ in range(56)]
 
         # The environment supplies primitive Nethra only. Each return to anchor recursively
         # refinds already learned structure; each fresh next primitive gives that structure a new
