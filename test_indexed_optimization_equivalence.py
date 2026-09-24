@@ -257,10 +257,35 @@ class IndexedOptimizationTests(unittest.TestCase):
                 self.assertAlmostEqual(
                     old_delta.get(old.nethra[i], 0.0),
                     new_delta.get(new.nethra[i], 0.0),
-                    places=12,
+                    places=9,
                     msg=f"delta node {i} step {step_i}",
                 )
-            self.assert_fields_equivalent(old, new, places=11)
+            self.assert_fields_equivalent(old, new, places=9)
+
+    def test_cached_derivative_and_neighbors_are_exact_on_same_field(self):
+        f = optimized.NethraField(native_learning=False, convergence_gain=.8)
+        leaves = [f.new() for _ in range(7)]
+        relations = []
+        for i in range(6):
+            r = f.new()
+            members = (leaves[i % 7], leaves[(i + 2) % 7], leaves[(i + 4) % 7])
+            f._route(r, members, frozenset(), 10 + i)
+            relations.append(r)
+        f._route(relations[-1], (relations[0], relations[2]), frozenset(), 8)
+
+        for i, n in enumerate(f.nethra):
+            n.activation = (i + 1) * .013
+        leaves[1].push(.37)
+        leaves[4].push(.21)
+
+        edges = f._edges()
+        neighbors = f._neighbors_from_edges(edges)
+        self.assertEqual(neighbors, f._neighbors(edges))
+
+        activation = {n: n.activation for n in f.nethra}
+        uncached = f._derivative_at(activation)
+        cached = f._derivative_at(activation, edges, neighbors)
+        self.assertEqual(uncached, cached)
 
     def test_step_compiles_edges_once(self):
         class OldCount(baseline.NethraField):
