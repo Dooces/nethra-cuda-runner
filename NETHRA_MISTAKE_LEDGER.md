@@ -234,3 +234,19 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - Its prevention text overreached by saying recursive event identity itself must preserve exact numeric Nethra deltas. That wording led directly toward exact raw-float matching.
 - The corrected invariant is: preserve the precise finite-interval delta physically; transduce it into magnitude-preserving overlapping graded source current; preserve that graded current through the learning/refinding boundary; refind structural source events by similarity of the graded source-current pattern.
 - Prevention: never repair a lossy categorical representation by making continuous floating-point values exact structural identities.
+
+
+## 2026-09-23 — optimization workflow initially treated stale historical tests as current gates
+
+- The first indexed-optimization workflow ran `test_interval_boundary_freeze.py` and
+  `test_subtraction_before_construction.py` as if every assertion still described the pinned
+  frozen baseline.
+- Fedora showed eight failures/errors whose assertions reference retired machinery already absent
+  from frozen commit `8abeaf358b34aed6b18e10cc0f7fc17de6e7db93`, including
+  `_consider_completed_interval_provisional`, `_mint_history`, `support_count`, and the old
+  requirement that live `step()` have no construction authority.
+- In that same run, all five direct optimized-vs-frozen equivalence tests passed, so treating the
+  stale suite's raw failure count as an optimization regression would have produced a false repair.
+- Prevention: any inherited regression file must first be run against the exact pinned frozen
+  baseline.  Current work may require direct frozen-vs-candidate equivalence or pass/fail parity;
+  never assume an old test file is authoritative from its filename or historical purpose.
