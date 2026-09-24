@@ -197,3 +197,40 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
   same persistent externally bound Nethra and confirm that distinct completed numeric deltas remain
   visible to recursive refinding/construction and can generate recursive Nethra-of-Nethra structure
   without a harness overriding core semantics.
+
+
+## 2026-09-23 — exact raw-float delta identity was promoted after smearing had already solved tolerance
+
+- Commit `4cd62425315966c7a17e4fb5fe6cd53b6f7ffe10` made completed numeric deltas part of exact transient structural signatures.
+- That required exact float equality for structural refinding and contradicted the already-established input rule: preserve the precise physical delta, transduce it into overlapping graded source current, and let nearby values overlap in Nethra.
+- Commit `d02427a76639a9d30460e7cbd12956e22420f5bd` reverted that patch.
+- Prevention: precise deltas remain precise physical observations. Structural recurrence is judged from the smeared graded source-current pattern. Never make raw floating-point delta equality the recurrence criterion.
+
+## 2026-09-23 — normalized receptive-field smearing erased delta magnitude
+
+- The earlier overlap probe normalized each receptive-field current vector to sum to one.
+- That made small and large changes inject equal total current whenever their receptive-field shape matched, erasing the physical magnitude of the finite-interval delta at the input boundary.
+- The accepted transduction is magnitude-preserving:
+  `J_j(Δx) = |Δx| * max(0, 1 - |Δx-c_j|/w)`.
+- Prevention: preserve the exact delta magnitude in total injected current while allowing overlapping receptive fields to smear its location.
+
+## 2026-09-23 — nonzero source membership created a false structural boundary
+
+- The restored baseline still converted graded source current to `explicit = {n : J_n != 0}` for recursive structural description.
+- Direct boundary testing at `Δ=0.599999, 0.600000, 0.600001` produced source-current cosine similarities above `0.999999999997`, yet the categorical membership sets changed when a tiny receptive-field tail crossed zero.
+- Repeating that three-value sequence for 60 intervals produced 21 learned Nethra in the categorical baseline.
+- Similarity-gated source-pattern refinding reduced the same sequence to one structural source pattern and one learned Nethra across the tested close-to-one thresholds.
+- Prevention: structural source recurrence must compare the graded source-current pattern. A zero crossing of one tiny receptive-field tail is not itself a new structural event.
+
+## 2026-09-23 — fabricated cosine non-transitivity blocker
+
+- After the similarity-gated source-pattern fix passed the observed zero-boundary failure, analysis promoted mathematical non-transitivity of thresholded cosine similarity into a new Nethra design problem.
+- No observed Nethra failure established that as a problem. The argument reopened a working requested fix immediately after the ledger had permanently prohibited exactly that behavior.
+- Prevention: the permanent rule applies literally. Do not turn a mathematical property, hypothetical ordering case, or generic design concern into a Nethra problem until an observed Nethra failure, contradiction, or explicit user request establishes it.
+
+## 2026-09-23 — correction to the earlier continuous-delta ledger entry
+
+- The earlier entry correctly identified the loss caused by collapsing continuous experience to nonzero membership and manufactured `+1/0/-1` flags.
+- Its prevention text overreached by saying recursive event identity itself must preserve exact numeric Nethra deltas. That wording led directly toward exact raw-float matching.
+- The corrected invariant is: preserve the precise finite-interval delta physically; transduce it into magnitude-preserving overlapping graded source current; preserve that graded current through the learning/refinding boundary; refind structural source events by similarity of the graded source-current pattern.
+- Prevention: never repair a lossy categorical representation by making continuous floating-point values exact structural identities.
