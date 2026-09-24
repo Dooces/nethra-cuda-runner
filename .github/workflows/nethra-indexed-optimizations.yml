@@ -1,0 +1,34 @@
+name: Nethra indexed optimization equivalence
+
+on:
+  push:
+    branches:
+      - nethra-indexed-optimizations-test
+  workflow_dispatch:
+
+jobs:
+  portable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Frozen baseline equivalence
+        run: |
+          set -euxo pipefail
+          python3 -m py_compile nethra.py test_indexed_execution_equivalence.py
+          python3 -m unittest -v test_indexed_execution_equivalence.py
+
+  fedora:
+    runs-on: self-hosted
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Frozen baseline equivalence on Fedora runner
+        run: |
+          set -euxo pipefail
+          /usr/bin/python3 -m py_compile nethra.py test_indexed_execution_equivalence.py
+          /usr/bin/python3 -m unittest -v test_indexed_execution_equivalence.py
