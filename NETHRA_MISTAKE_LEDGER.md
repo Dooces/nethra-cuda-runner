@@ -266,3 +266,12 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
   uncached derivative` and cached neighbors equal direct neighbors), and use a small explicit
   numerical bound for long trajectories across independently instantiated baseline/candidate
   object graphs.
+
+
+## 2026-09-23 — native whole-support admission collapsed temporal sides into one simultaneous route
+
+- Commit `d1ac8127c66c019405eaf4abb330e21236b51cb9` replaced the earlier temporal representation in which one ordinary Nethra could be refound from either the completed before-description or the completed after-description with one route equal to `previous_closure | current_closed`.
+- Direct execution on the current frozen core showed the consequence: after `A -> B`, the learned relation owns only route `{A,B}`; later `closure({A})` and `closure({B})` cannot refind it. The field can still conduct through the relation, but recursive structural composition stops because the learned Nethra never re-enters closure from either temporal side.
+- The indexed-closure optimization did not introduce this failure; it reproduced the frozen global-scan semantics exactly. The failure predates indexing and is in the admitted route representation.
+- The earlier accepted whole-support rule did not require merging before and after into one simultaneous support set. Whole support means use the complete recursively refound support on each temporal side without subset enumeration. Temporal sides remain distinct routes of the same ordinary Nethra.
+- Prevention: when a relation is earned from an ordered completed transition, preserve the complete before support and complete after support as separately refindable routes on the same Nethra. Never replace temporal succession with a single simultaneous union route. Continue to skip any individual route that would contain the relation itself.
