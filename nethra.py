@@ -124,6 +124,13 @@ class NethraField:
         # strengths without introducing another persistent participant type.
         self.incidence_evidence = {}
 
+        # Derived execution index only: for each persistent Nethra, record the already-stored
+        # relation routes that mention it.  This is rebuildable from Nethra.routes and carries no
+        # activation, evidence, semantic identity, learning authority, or persistence of its own.
+        # It exists solely so recursive closure can visit topology touched by active/event members
+        # instead of scanning every relation in the field.
+        self.member_to_routeuses = defaultdict(set)
+
         # Graded source-current patterns are evidence/indexing only.  Exact external current stays
         # physical; source_patterns retains canonical smeared-current exemplars so structural
         # recurrence can be refound by cosine similarity without exact float or nonzero-set identity.
@@ -203,6 +210,7 @@ class NethraField:
         # Later experimental plasticity may differentiate these counters independently; the frozen
         # core itself grants no learning authority to do so.
         for member in route:
+            self.member_to_routeuses[member].add((nethra, route))
             ibucket = self.incidence_evidence.setdefault(
                 (nethra, route, member),
                 Counter(),
@@ -249,36 +257,63 @@ class NethraField:
         return None
 
     def closure(self, explicit, event=None):
-        """Compute complete recursive refinding from explicit Nethra and transient state.
+        """Compute complete recursive refinding through the derived reverse route index.
 
-        Every earned route is repeatedly considered until no additional Nethra can be refound.
-        This fixed-point closure is what allows relations of relations and cycles without imposing
-        parent/child hierarchy. Multiple compatible handles remain simultaneously active; no
-        selector is permitted to collapse ambiguity merely for convenience.
+        Semantics are identical to the former fixed-point global scan: an unqualified route refinds
+        its relation when every route member is active, while a state-qualified route refinds its
+        relation when the current transient event exactly matches an earned projected signature.
 
-        State-qualified routes are matched against transient event history. Unqualified routes
-        require their persistent members to be active. Closure never constructs new Nethra.
+        member_to_routeuses is execution-only derived indexing.  Newly active Nethra visit only the
+        stored routes that actually mention them; cycles and relations-of-relations are handled by
+        the activation queue until no newly refound Nethra remain.  Closure never constructs,
+        deletes, ranks, selects, or changes evidence.
         """
         active = set(explicit)
         event = self.current_event if event is None else frozenset(event)
-        changed = True
-        while changed:
-            changed = False
-            for n in self.nethra:
-                if n in active or not n.routes:
+
+        # State-qualified routes depend on the fixed transient event, including event members that
+        # need not already be active.  Only routes incident to an event member can have a non-empty
+        # projection, so visit that indexed frontier once.
+        checked_state_routes = set()
+        queue = list(active)
+        for member in self._event_members(event):
+            for relation, route in self.member_to_routeuses.get(member, ()):
+                key = (relation, route)
+                if key in checked_state_routes:
                     continue
-                for route, conditions in n.routes.items():
-                    if conditions.get(frozenset(), 0) > 0 and route.issubset(active):
-                        active.add(n)
-                        changed = True
-                        break
-                    projected = self._project(event, route)
-                    # Empty projection means none of this route's members are represented in the
-                    # transient event.  It cannot refind an unqualified route by itself.
-                    if projected and projected in conditions and conditions.get(projected, 0) > 0:
-                        active.add(n)
-                        changed = True
-                        break
+                checked_state_routes.add(key)
+                if relation in active:
+                    continue
+                conditions = relation.routes.get(route)
+                if not conditions:
+                    continue
+                projected = self._project(event, route)
+                if projected and conditions.get(projected, 0) > 0:
+                    active.add(relation)
+                    queue.append(relation)
+
+        # Unqualified routes require complete active membership.  Each newly active member touches
+        # only the routes that contain it, so have-counts reach len(route) exactly when the former
+        # route.issubset(active) test would have succeeded.
+        have = defaultdict(int)
+        processed = set()
+        cursor = 0
+        while cursor < len(queue):
+            member = queue[cursor]
+            cursor += 1
+            if member in processed:
+                continue
+            processed.add(member)
+            for relation, route in self.member_to_routeuses.get(member, ()):
+                key = (relation, route)
+                have[key] += 1
+                if relation in active:
+                    continue
+                conditions = relation.routes.get(route)
+                if conditions and conditions.get(frozenset(), 0) > 0 and have[key] == len(route):
+                    active.add(relation)
+                    queue.append(relation)
+
         return frozenset(active)
 
     def _complete_interval(self, source_current, delta, integral):
@@ -583,7 +618,10 @@ class NethraField:
         self.relation_source_events[relation].add(source_pair)
         return relation
 
-    def _native_learn(self, source_current, target, current_closed, current_description, current_source_event):
+    def _native_learn(
+        self, source_current, target, current_closed, current_description,
+        current_source_event, residual_neighbors=None,
+    ):
         """Apply settled whole-support prospective plasticity after the current outcome manifests.
 
         From the PRIOR completed interval activation integrals, each physical incidence has exact
@@ -641,7 +679,7 @@ class NethraField:
         # Frozen V61 semantics: rho receives each Nethra's own predictive/consequence
         # residual. Do this before admitting new topology so newly relevant pairs begin without
         # fabricated historical independence evidence.
-        self.update_residuals(epsilon)
+        self.update_residuals(epsilon, neighbors=residual_neighbors)
 
         tension = {}
         for relation, row in outgoing.items():
@@ -726,20 +764,26 @@ class NethraField:
             out.append((a, b, g))
         return tuple(out)
 
-    def _neighbors(self):
-        """Index the currently compiled symmetric incidences by Nethra.
-
-        This exists only to avoid repeatedly scanning unrelated incidences when computing local
-        residual interactions. It contains no independent semantic state and can always be rebuilt
-        from persistent Nethra routes.
-        """
+    @staticmethod
+    def _neighbors_from_edges(edges):
+        """Build the symmetric neighbor index for one already-compiled edge tuple."""
         out = defaultdict(list)
-        for a, b, g in self._edges():
+        for a, b, g in edges:
             out[a].append((b, g))
             out[b].append((a, g))
         return out
 
-    def update_residuals(self, residual):
+    def _neighbors(self, edges=None):
+        """Index compiled symmetric incidences by Nethra.
+
+        Passing an already-compiled edge tuple is an execution optimization only.  Omitting it
+        preserves the direct/debug behavior of rebuilding from the current persistent structure.
+        """
+        if edges is None:
+            edges = self._edges()
+        return self._neighbors_from_edges(edges)
+
+    def update_residuals(self, residual, neighbors=None):
         """Update F61 residual traces and local supplier-independence statistics.
 
         residual must already be each Nethra's own predictive/consequence residual. Native
@@ -757,7 +801,8 @@ class NethraField:
         for n in self.nethra:
             self.rho[n] = lam * self.rho.get(n, 0.0) + one * float(residual.get(n, 0.0))
 
-        neighbors = self._neighbors()
+        if neighbors is None:
+            neighbors = self._neighbors()
         relevant = set()
         for row in neighbors.values():
             ids = [n for n, _ in row]
@@ -786,7 +831,7 @@ class NethraField:
         resonance = max(-1.0, min(1.0, xy / sqrt(xx * yy)))
         return 1.0 - abs(resonance)
 
-    def _derivative_at(self, activation):
+    def _derivative_at(self, activation, edges=None, neighbors=None):
         """Evaluate the F61 field derivative for one complete activation state.
 
         First apply external current, leakage, and ordinary symmetric conductive flow on every
@@ -794,18 +839,21 @@ class NethraField:
         the same receiver, add the bounded F61 convergence bonus and subtract exactly that bonus
         back from the suppliers in proportion to their contribution.
 
-        The redistribution preserves the interpretation as field current rather than manufacturing
-        activation. No semantic class, prediction target, action selector, or graph direction is
-        consulted.
+        edges/neighbors may be supplied as execution-only caches when topology/evidence/current
+        event are fixed across several derivative evaluations.  Omitting them compiles the same
+        current structures directly.  No semantic class, prediction target, action selector, or
+        graph direction is consulted.
         """
+        if edges is None:
+            edges = self._edges()
+        if neighbors is None:
+            neighbors = self._neighbors_from_edges(edges)
+
         current = {n: n.external - self.leakage * activation[n] for n in self.nethra}
-        neighbors = defaultdict(list)
-        for a, b, g in self._edges():
+        for a, b, g in edges:
             flow = g * (activation[a] - activation[b])
             current[a] -= flow
             current[b] += flow
-            neighbors[a].append((b, g))
-            neighbors[b].append((a, g))
 
         for receiver, row in neighbors.items():
             suppliers = []
@@ -866,15 +914,21 @@ class NethraField:
         interval_nodes = tuple(self.nethra)
         a0 = {n: n.activation for n in interval_nodes}
 
+        # Topology, evidence, and current_event are fixed throughout both RK4 integrations.
+        # Compile the exact same physical edges and neighbor incidence list once for this causal
+        # interval and reuse them through all eight derivative evaluations and residual pairing.
+        step_edges = self._edges()
+        step_neighbors = self._neighbors_from_edges(step_edges)
+
         for n in interval_nodes:
             n.external = 0.0
-        b1 = self._derivative_at(a0)
+        b1 = self._derivative_at(a0, step_edges, step_neighbors)
         b_a1 = {n: a0[n] + .5 * dt * b1[n] for n in interval_nodes}
-        b2 = self._derivative_at(b_a1)
+        b2 = self._derivative_at(b_a1, step_edges, step_neighbors)
         b_a2 = {n: a0[n] + .5 * dt * b2[n] for n in interval_nodes}
-        b3 = self._derivative_at(b_a2)
+        b3 = self._derivative_at(b_a2, step_edges, step_neighbors)
         b_a3 = {n: a0[n] + dt * b3[n] for n in interval_nodes}
-        b4 = self._derivative_at(b_a3)
+        b4 = self._derivative_at(b_a3, step_edges, step_neighbors)
         baseline = {
             n: a0[n] + dt * (b1[n] + 2*b2[n] + 2*b3[n] + b4[n]) / 6.0
             for n in interval_nodes
@@ -885,13 +939,13 @@ class NethraField:
         for n, current in source_current.items():
             n.external = current
 
-        k1 = self._derivative_at(a0)
+        k1 = self._derivative_at(a0, step_edges, step_neighbors)
         a1 = {n: a0[n] + .5 * dt * k1[n] for n in interval_nodes}
-        k2 = self._derivative_at(a1)
+        k2 = self._derivative_at(a1, step_edges, step_neighbors)
         a2 = {n: a0[n] + .5 * dt * k2[n] for n in interval_nodes}
-        k3 = self._derivative_at(a2)
+        k3 = self._derivative_at(a2, step_edges, step_neighbors)
         a3 = {n: a0[n] + dt * k3[n] for n in interval_nodes}
-        k4 = self._derivative_at(a3)
+        k4 = self._derivative_at(a3, step_edges, step_neighbors)
 
         delta = {}
         integral = {}
@@ -909,7 +963,8 @@ class NethraField:
         # that produced this target.
         if self.native_learning and self.current_interval_integral:
             self._native_learn(
-                source_current, target, closed, description_event, source_event
+                source_current, target, closed, description_event, source_event,
+                residual_neighbors=step_neighbors,
             )
 
         self.previous_source_event = self.current_source_event
