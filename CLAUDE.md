@@ -3,6 +3,26 @@
 Read this whole file before doing anything. Then read `nethra/NETHRA_OPERATING_NOTES.md`.
 Every rule here exists because it was broken before.
 
+## 0. Before running anything: predict it from the code
+
+1. **Predict first.** Write down, from `nethra.py`, what construction will build for the stream:
+   - which routes;
+   - how many Nethra;
+   - what closure will refind;
+   - when each is read (§3).
+
+   Key facts:
+   - `_admit_whole_support` joins the complete closure of consecutive intervals.
+   - Every co-present Nethra enters the route. No subsets are enumerated.
+   - Existing structure is reused before anything new is built.
+2. **Run it tiny** (tens of intervals).
+3. **Compare.** If the numbers differ from the prediction, stop and find out why in the code
+   before running anything larger or on the runner.
+
+Every mistake made so far would have been caught here. Example: three cycles always pushed
+together can only build one Nethra per joint state (input Nethra + lcm of the periods). No cycle
+gets structure of its own, because no cycle is ever present alone.
+
 ## 1. What Nethra is not
 
 Nethra is not machine learning, not a neural network, not a model, not a learner, not a predictor.
