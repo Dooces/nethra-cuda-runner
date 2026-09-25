@@ -1,0 +1,329 @@
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
+# Nethra mistake ledger
+
+This file is cumulative. Never rewrite history to make prior work look cleaner.
+
+## Mandatory maintenance rule
+
+Whenever an assistant or developer reads `nethra.py` for interpretation, debugging, modification,
+benchmarking, or explanation, they must also read this ledger first. Before making a semantic change,
+append any newly discovered mistake, regression, contamination, false claim, or shortcut introduced
+since the last ledger entry. Do not repeat a listed mistake under a new name.
+
+## Permanent prohibitions
+
+1. NEVER FABRICATE ANY PROBLEM. Do not invent, manufacture, reopen, or elaborate a problem unless an observed failure, contradiction, or explicit user request establishes that problem. Settled Nethra mechanisms stay settled until concrete evidence falsifies them.
+2. NETHRA IS NOT A LEARNER / ML SYSTEM / NEURAL NETWORK / PLANNER / POLICY / VALUE MODEL OR OTHER CONVENTIONAL MACHINE-LEARNING ARCHITECTURE. Never assume or introduce a separate learner, predictor, evaluator, reward module, policy, planner, selector, or analogous subsystem merely because conventional ML uses one. Start from Nethra's own field, relations, temporal deltas, refinding, construction, and incidence evidence.
+
+## 2026-09-23 — fabricated problems from already-settled Nethra behavior
+
+- Repeated analysis manufactured new design requirements from hypothetical edge cases before any observed Nethra failure established them.
+- This repeatedly reopened settled mechanisms and generated unnecessary candidate systems, evaluators, confidence machinery, exploration machinery, and other invented obligations.
+- Prevention: never fabricate a problem. Require a concrete observed failure, contradiction, or explicit request before opening a new design problem.
+
+## 2026-09-23 — conventional learner / ML assumptions repeatedly imposed on Nethra
+
+- Repeated analysis translated Nethra terms such as learning, prediction, choice, consequence, attention, and motivation into conventional ML architecture and then proposed separate learners, predictors, evaluators, policies, rewards, or planning layers.
+- That changes the object being investigated and contaminates both implementation and explanation.
+- Prevention: treat Nethra as Nethra. Derive behavior from its field, Nethra relations, temporal deltas, recursive refinding, construction, and incidence-local evidence. Do not assume a conventional learner or ML subsystem.
+
+
+## 2026-09-23 — stale branch promoted over the frozen interval boundary
+
+- Native-plasticity investigation work branched from `34e2cf5c...` before the later commits that
+  detached `_consider_completed_interval_provisional()` from live `step()`.
+- The divergent investigation lineage was later promoted to branches named
+  `nethra-current-baseline` / `nethra-closure-fixed-freeze`, despite still calling the retired
+  provisional probability/counting learner from live execution.
+- This silently reversed an explicitly frozen decision.
+- Prevention: semantic baseline changes must be traced to their actual ancestor, never inferred from
+  a branch name.
+
+## 2026-09-23 — benchmarks reattached retired learning machinery
+
+- `StableDepthAuditField.step()` and related harnesses explicitly called
+  `_consider_completed_interval_provisional()`, then results were described as evidence for native
+  Nethra learning.
+- Wide-library/depth results therefore measured the retired history learner plus the field, not the
+  native construction mechanism.
+- Prevention: a harness that replaces `step()`, `_edges()`, construction, or learning semantics
+  is a probe of that harness, never evidence that the core learned autonomously.
+
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
+## 2026-09-23 — provisional learner modified while accidentally live
+
+- `bc81934...` changed subtraction logic inside
+  `_consider_completed_interval_provisional()` while the dirty lineage still invoked it live.
+- This changed actual learning despite the function being described as regression-only machinery.
+- Prevention: retired/provisional semantic machinery must not remain callable from the native live
+  path.
+
+## 2026-09-23 — stale current-event bug in recursive AAPL learner
+
+- The learner asked closure to interpret the current observation using `self.f.current_event` from
+  the preceding interval.
+- Very deep recursive results were reported before this was corrected.
+- `bbc529c2...` later fixed refinding to construct the current source event first.
+- Prevention: observation t may never be interpreted with event state from t-1.
+
+## 2026-09-23 — conceptual state confused with one-file integration state
+
+- Previously settled persistence, recursive bootstrap, subtraction-before-construction, permissive
+  admission, continuous per-incidence plasticity, and g(0)=0 were repeatedly described as open
+  because the stripped one-file core had not integrated them.
+- This caused already-settled questions to be reopened instead of reading prior contracts/reports.
+- Prevention: distinguish “not integrated in this file” from “not settled conceptually.”
+
+## 2026-09-23 — temporary candidate requirement resurrected after permissive admission was settled
+
+- After the user had accepted permissive weak admission plus continuous plasticity, later analysis
+  incorrectly reinstated a separate temporary-candidate species/process as mandatory.
+- That contradicted the accepted route: admit an ordinary weak Nethra from unresolved support, then
+  let incidence evidence determine field relevance while retaining the object.
+- Prevention: do not reintroduce a second semantic object when an ordinary Nethra already serves as
+  the hypothesis.
+
+## 2026-09-23 — whole-support recruitment repeatedly reopened
+
+- The already-developed answer was whole unresolved active support after recursive refinding and
+  subtraction, with no subset enumeration; incidence-local plasticity separates useful members from
+  nuisance members.
+- Later replies again treated initial support-route formation as an unanswered design question.
+- Prevention: use the settled whole-support mechanism unless new evidence falsifies it.
+
+## 2026-09-23 — tests used as reassurance despite failing to guard semantic provenance
+
+- Behavioral regression suites repeatedly passed while the active branch used stale ancestry,
+  reattached provisional learning, and harness-level semantic overrides.
+- Passing those suites was presented as confidence that the architecture remained clean.
+- Prevention: behavioral tests are not evidence of semantic provenance. Read ancestry, live call
+  paths, and exact diffs directly.
+
+## 2026-09-23 — improvised recovery integration substituted a new residual coordinate
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
+
+- A recovery branch attempted to integrate plasticity using raw source current/charge as the generic
+  consequence coordinate and reached only shallow recursive depth.
+- That implementation was not the previously settled whole-support mechanism and was not promoted.
+- Prevention: recover the prior agreed equations and support semantics before writing replacement
+  learning code.
+
+## 2026-09-23 — broad “bootstrap unresolved” claim contradicted earlier frozen work
+
+- Earlier bootstrap audits had already shown higher relations forming only after prerequisite Nethra
+  existed, including irreducible multi-layer cases with zero premature construction.
+- Later summaries incorrectly called representational bootstrap generally unresolved.
+- Prevention: before declaring a core mechanism open, search the frozen contracts and prior reports
+  for an explicit pass/fail conclusion.
+
+## 2026-09-23 — first native whole-support integration omitted structural reuse
+
+- The first integration pass correctly subtracted existing prospective field prediction before
+  admission, but admission only checked for an exact already-stored whole-support route.
+- It did not also call the already-settled structural `_accounted(before, after)` check, so a weak
+  existing relation that already described both sides could have been duplicated.
+- Prevention: native admission must perform both kinds of subtraction before minting: field
+  prediction residual and structural accounted/reuse.
+
+## 2026-09-23 — re-derived and nearly re-broke already-fixed self-description handling
+
+- The native whole-support integration reached an `_accounted()` reuse case where the reused
+  relation could already be present in the recursive whole-support description.
+- This had already been solved earlier: self-containing recursive descriptions are tautological and
+  must be skipped; refound self-presence can subtract/account for structure but contributes no fresh
+  support route into itself.
+- The first integration pass nevertheless attempted to reason about adding that route again.
+- Prevention: preserve the established `if relation in description: skip route registration`
+  rule wherever recursive descriptions are promoted or reused.
+
+## 2026-09-23 — reintroduced the already-rejected source-only consequence residual
+
+- The first native whole-support integration set the consequence target from current external source
+  charge alone. That repeats the exact defect isolated by `82c0b1eb...`: an internally manifested
+  recursive Nethra can have zero external source and positive real manifestation, so source-only
+  residual falsely punishes a correct prediction.
+- The prior native replay correction used an identical zero-input counterfactual from the same
+  pre-outcome state: `target = C * (actual - baseline)`, clamped only at zero for positive
+  manifestation. This preserves original-source provenance separately while allowing internally
+  manifested Nethra to count as consequences.
+- Prevention: external source support is a provenance/construction coordinate, never a universal
+  consequence coordinate.
+
+## 2026-09-23 — post-outcome construction expanded ontology before state commit
+
+<!-- DONT USE THIS FUCKING FILE ITS FUCKING OLD LOOK AT IT FOR REFERENCE ONLY YOU FUCKING CUNT -->
+- After restoring the prior counterfactual manifestation target, the first transplant allowed native
+  learning to mint a new Nethra before the already-computed interval activation state was committed.
+- A later loop iterated the expanded ontology and would try to read an activation value for a Nethra
+  that did not exist during the interval.
+- Prevention: freeze the interval participant tuple before integration; completed-interval state,
+  delta and integral apply only to those participants. Newly admitted Nethra start at their normal
+  zero activation after the causal boundary.
+
+## 2026-09-23 — removing the retired learner also disconnected frozen F61 residual input
+
+- V61 froze `rho_j <- epsilon_j` where epsilon is each Nethra's own predictive/consequence
+  residual, never a common downstream error.
+- Removing the retired provisional learner also removed its old call site to `update_residuals()`.
+  The first native integration therefore left F61 convergence statistics permanently un-fed even
+  though the native learner now computes the correct per-Nethra manifestation residual.
+- Prevention: native `epsilon_j = manifestation_j - prediction_j` must update F61 residual traces
+  before any new topology is admitted, so newly created incidences do not inherit fabricated
+  historical independence.
+
+
+## 2026-09-23 — continuous Nethra deltas severed from recursive construction
+
+- Commit `afabb0bd03500126a7a4aac88fb4462d85630c23` replaced the actual transient observation
+  `{Nethra: numeric_delta}` with only the `frozenset` of Nethra whose delta was nonzero.
+  This discarded delta magnitude and sign from relation identity even though those values were
+  transient evidence and did not create another persistent ontology.
+- Commit `98ddeb41d9d47cdaa7cacfa91ba1bd95649cafee` compounded the regression by feeding
+  construction/refinding an `explicit` participation set and manufacturing event values only as
+  `+1/0/-1` for entered/persisted/left. Distinct continuous observations on the same externally
+  sourced Nethra therefore collapsed to the same event.
+- Commit `94ca4dcaf8d4b5173f0e3992d792ed3cb009c4d0` restored exact completed-interval numeric
+  deltas in `current_interval_delta`, but deliberately left them disconnected from recursive
+  refinding/construction. Later whole-support/plasticity work inherited that severed path.
+- The direct AAPL probe exposed the executable consequence: 10,825 chronological observations of
+  UTC time plus adjusted close produced only 3 total Nethra and 1 learned route because changing
+  numeric observations were invisible to construction after the first persistent participation
+  pattern formed.
+- Prevention: transient recursive event identity must preserve the actual finite-interval numeric
+  Nethra deltas produced by the field. Source provenance remains a separate coordinate. Never
+  replace numeric deltas with member presence, source presence, entered/persisted/left flags, bins,
+  labels, or another lossy proxy merely to keep the persistent ontology to one Nethra type.
+- Verification requirement: before freezing a baseline, feed changing continuous values through the
+  same persistent externally bound Nethra and confirm that distinct completed numeric deltas remain
+  visible to recursive refinding/construction and can generate recursive Nethra-of-Nethra structure
+  without a harness overriding core semantics.
+
+
+## 2026-09-23 — exact raw-float delta identity was promoted after smearing had already solved tolerance
+
+- Commit `4cd62425315966c7a17e4fb5fe6cd53b6f7ffe10` made completed numeric deltas part of exact transient structural signatures.
+- That required exact float equality for structural refinding and contradicted the already-established input rule: preserve the precise physical delta, transduce it into overlapping graded source current, and let nearby values overlap in Nethra.
+- Commit `d02427a76639a9d30460e7cbd12956e22420f5bd` reverted that patch.
+- Prevention: precise deltas remain precise physical observations. Structural recurrence is judged from the smeared graded source-current pattern. Never make raw floating-point delta equality the recurrence criterion.
+
+## 2026-09-23 — normalized receptive-field smearing erased delta magnitude
+
+- The earlier overlap probe normalized each receptive-field current vector to sum to one.
+- That made small and large changes inject equal total current whenever their receptive-field shape matched, erasing the physical magnitude of the finite-interval delta at the input boundary.
+- The accepted transduction is magnitude-preserving:
+  `J_j(Δx) = |Δx| * max(0, 1 - |Δx-c_j|/w)`.
+- Prevention: preserve the exact delta magnitude in total injected current while allowing overlapping receptive fields to smear its location.
+
+## 2026-09-23 — nonzero source membership created a false structural boundary
+
+- The restored baseline still converted graded source current to `explicit = {n : J_n != 0}` for recursive structural description.
+- Direct boundary testing at `Δ=0.599999, 0.600000, 0.600001` produced source-current cosine similarities above `0.999999999997`, yet the categorical membership sets changed when a tiny receptive-field tail crossed zero.
+- Repeating that three-value sequence for 60 intervals produced 21 learned Nethra in the categorical baseline.
+- Similarity-gated source-pattern refinding reduced the same sequence to one structural source pattern and one learned Nethra across the tested close-to-one thresholds.
+- Prevention: structural source recurrence must compare the graded source-current pattern. A zero crossing of one tiny receptive-field tail is not itself a new structural event.
+
+## 2026-09-23 — fabricated cosine non-transitivity blocker
+
+- After the similarity-gated source-pattern fix passed the observed zero-boundary failure, analysis promoted mathematical non-transitivity of thresholded cosine similarity into a new Nethra design problem.
+- No observed Nethra failure established that as a problem. The argument reopened a working requested fix immediately after the ledger had permanently prohibited exactly that behavior.
+- Prevention: the permanent rule applies literally. Do not turn a mathematical property, hypothetical ordering case, or generic design concern into a Nethra problem until an observed Nethra failure, contradiction, or explicit user request establishes it.
+
+## 2026-09-23 — correction to the earlier continuous-delta ledger entry
+
+- The earlier entry correctly identified the loss caused by collapsing continuous experience to nonzero membership and manufactured `+1/0/-1` flags.
+- Its prevention text overreached by saying recursive event identity itself must preserve exact numeric Nethra deltas. That wording led directly toward exact raw-float matching.
+- The corrected invariant is: preserve the precise finite-interval delta physically; transduce it into magnitude-preserving overlapping graded source current; preserve that graded current through the learning/refinding boundary; refind structural source events by similarity of the graded source-current pattern.
+- Prevention: never repair a lossy categorical representation by making continuous floating-point values exact structural identities.
+
+
+## 2026-09-23 — optimization workflow initially treated stale historical tests as current gates
+
+- The first indexed-optimization workflow ran `test_interval_boundary_freeze.py` and
+  `test_subtraction_before_construction.py` as if every assertion still described the pinned
+  frozen baseline.
+- Fedora showed eight failures/errors whose assertions reference retired machinery already absent
+  from frozen commit `8abeaf358b34aed6b18e10cc0f7fc17de6e7db93`, including
+  `_consider_completed_interval_provisional`, `_mint_history`, `support_count`, and the old
+  requirement that live `step()` have no construction authority.
+- In that same run, all five direct optimized-vs-frozen equivalence tests passed, so treating the
+  stale suite's raw failure count as an optimization regression would have produced a false repair.
+- Prevention: any inherited regression file must first be run against the exact pinned frozen
+  baseline.  Current work may require direct frozen-vs-candidate equivalence or pass/fail parity;
+  never assume an old test file is authoritative from its filename or historical purpose.
+
+
+## 2026-09-23 — cross-module equivalence test initially demanded over-strict floating equality
+
+- The first portable frozen-vs-optimized live-step comparison required agreement to 12 decimal
+  places across two separately instantiated Python object graphs.
+- Ubuntu Python 3.12 accumulated a `4.1788e-11` delta difference by step 83 while Fedora Python
+  3.14 passed.  The compared implementations use sets/frozensets of identity-hashed Nethra, so
+  separate object graphs can accumulate harmless floating-order differences even when the same
+  equations are executed.
+- Treating that tiny cross-object difference as proof of a semantic optimization failure would have
+  been another false repair.
+- Prevention: test cache correctness exactly on the same field object (`cached derivative ==
+  uncached derivative` and cached neighbors equal direct neighbors), and use a small explicit
+  numerical bound for long trajectories across independently instantiated baseline/candidate
+  object graphs.
+
+
+## 2026-09-23 — native whole-support admission collapsed temporal sides into one simultaneous route
+
+- Commit `d1ac8127c66c019405eaf4abb330e21236b51cb9` replaced the earlier temporal representation in which one ordinary Nethra could be refound from either the completed before-description or the completed after-description with one route equal to `previous_closure | current_closed`.
+- Direct execution on the current frozen core showed the consequence: after `A -> B`, the learned relation owns only route `{A,B}`; later `closure({A})` and `closure({B})` cannot refind it. The field can still conduct through the relation, but recursive structural composition stops because the learned Nethra never re-enters closure from either temporal side.
+- The indexed-closure optimization did not introduce this failure; it reproduced the frozen global-scan semantics exactly. The failure predates indexing and is in the admitted route representation.
+- The earlier accepted whole-support rule did not require merging before and after into one simultaneous support set. Whole support means use the complete recursively refound support on each temporal side without subset enumeration. Temporal sides remain distinct routes of the same ordinary Nethra.
+- Prevention: when a relation is earned from an ordered completed transition, preserve the complete before support and complete after support as separately refindable routes on the same Nethra. Never replace temporal succession with a single simultaneous union route. Continue to skip any individual route that would contain the relation itself.
+
+
+## 2026-09-23 — recursive-depth regression test demanded depth 50 from only 32 staged recursive additions
+
+- The first temporal-route repair test created one anchor plus 32 fresh primitive consequences and then asserted recursive depth >=50.
+- Fedora produced depth 33 with 64 learned Nethra, showing the repaired native chain was deepening once per staged level; the assertion simply requested more recursive levels than the test supplied.
+- Prevention: when a depth test is constructed as one new recursive level per fresh staged consequence, provide at least the requested number of stages before interpreting the result as a mechanism failure.
+
+
+## 2026-09-23 — repair workflow invoked a frozen-commit comparison from a shallow checkout
+
+- The temporal-route repair workflow added `test_indexed_optimization_equivalence.py`, whose module loads frozen commit `8abeaf358b34aed6b18e10cc0f7fc17de6e7db93` using `git show`.
+- The new workflow initially left `actions/checkout@v4` at its default `fetch-depth: 1`, so Ubuntu failed before executing the tests because that immutable baseline commit was absent locally.
+- Prevention: any workflow that compares against an earlier immutable commit must fetch full history or explicitly fetch that commit before running the comparison.
+
+
+## 2026-09-23 — canonical recursive factorization was dropped during the one-file rewrite
+
+- V67 had already exposed runaway recursive duplicate growth: many relation handles could represent the same underlying primitive support through different nested decompositions.
+- V68/V69 fixed and froze the reuse rule: before constructing, recursively factor proposed members to primitive leaves for REUSE LOOKUP ONLY; if equivalent represented support already exists for the same validated consequence, reuse it. Persistent direct membership remains the original recursive structure and is never flattened.
+- The later one-file lineage starting with the minimal rewrite omitted `primitive_leaves`, `canonical_leafset`, and `relations_with_leafset` entirely. Later direct-route/source-pair subtraction did not replace the lost recursive factorization guarantee.
+- This omission reopens the already-solved failure mode in nested/cyclic descriptions: syntactically different recursive closures can be mistaken for new represented support and repeatedly mint relations.
+- Prevention: canonical primitive factorization must remain an explicit reuse coordinate. It is a reuse hint, never universal semantic identity. Same primitive domain with a different independently established source/consequence may remain distinct. Reuse lookup must not flatten stored routes, erase ambiguity, choose a winner, or create a second persistent ontology.
+
+
+## 2026-09-23 — assistant-authored regression tests repeatedly failed to prevent regressions and created false confidence
+
+- The assistant repeatedly added bespoke regression tests and GitHub Actions workflows around Nethra changes, then treated passing results as evidence that settled behavior had been preserved.
+- Those tests did not prevent multiple semantic regressions already recorded in this ledger, including loss of temporal refindability and loss of canonical recursive factorization. In several cases the tests merely proved equivalence to an already-broken baseline or tested the assistant's own narrowed interpretation.
+- The tests also introduced their own failures and distractions, including an impossible depth assertion and a shallow-checkout failure.
+- User directive: remove assistant-authored Nethra regression tests/workflows from the active frozen lineage. Do not rely on assistant-invented test suites as a substitute for reading this ledger, tracing the actual causal semantics step by step, and checking the specific requested behavior directly.
+- Prevention: do not create new persistent regression-test files or test workflows unless the user explicitly asks for them. Any validation requested by the user should be narrow, direct, disposable, and tied to the exact behavior under discussion rather than promoted into a standing harness by default.
+
+
+## 2026-09-24 — rebuilt checkpoint claimed exact continuation while pair statistics and execution order remained identity-hash dependent
+
+- The rebuilt one-file checkpoint could serialize and reload an apparently identical state, but continuing the original and restored fields under identical inputs diverged numerically.
+- F61 pair statistics were keyed by an unordered `frozenset({a,b})` while storing ordered `xx` and `yy` accumulators. Tuple-unpacking the frozenset could reverse which Nethra owned those accumulators after reload, and checkpoint serialization could sort node ids without correspondingly swapping `xx`/`yy`.
+- Edge, route and supplier iteration also still inherited Python object/set order, so recreating the same Nethra graph could change floating summation order.
+- Prevention: any persisted or execution-time quantity with ordered per-Nethra components must use the field's stable Nethra order as its canonical orientation. Derived edge/neighbour iteration must likewise be deterministic from that stable order if exact continuation is claimed.
+
+## 2026-09-24 — RK4 stability safeguard was knowingly restricted to convergence_gain==0 and left a demonstrated explosive path live
+
+- The rebuilt file restored subdivision only for `convergence_gain == 0`, even though the passive conductance/leakage part remains present when convergence is enabled.
+- A valid high-degree field with convergence enabled therefore bypassed subdivision and a single large RK4 step produced catastrophic numerical growth even though the underlying conductive field is dissipative.
+- Prevention: the passive weighted-degree stiffness bound is a lower-bound requirement on numerical subdivision regardless of whether the additive F61 convergence term is enabled. Enabling convergence must never disable protection required by the still-present passive operator.
+
+## 2026-09-24 — semantic repairs were bolted onto the slow Python runtime instead of restoring the already-solved compiled/local execution path
+
+- Native recursive depth still reached the expected structure, but runtime grew sharply even at only hundreds of Nethra because recursive provenance/factorization and field execution remained dominated by repeated Python graph traversal.
+- Earlier C1/C3 work had already established derived reverse indexes, compiled numeric topology and a faster passive execution path. The rebuild restored only fragments and then presented the file as substantially repaired.
+- Prevention: do not call a rebuild complete while knowingly leaving an already-solved execution layer replaced by repeated global Python traversal. Execution indexes/caches may be derived and non-semantic; restoring them is not architectural contamination.

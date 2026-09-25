@@ -50,8 +50,11 @@ incidences conduct, no gating or multiplier on `g`, `g(0) = 0`, departure is not
   script the notes cite (`capability.py`, `explore*.py`, `scale*.py`, `cue_capacity.py`,
   `human.py`, `strengths.py`, `baselines.py`, `robust.py`, `familiarity.py`, `waiting.py`,
   `frontier_test.py`, `binocular.py`) in one tree: `nethra/` + `nethra/tests/`.
-- **Known break:** `robust.py` imports `nethra_presence as core`; the core file is `nethra.py`.
-  Change to `import nethra as core` (or add a one-line shim). Grep all tests for the same.
+- **Imports:** tests import `nethra_presence` / `nethra_etd`; these are shims in `tests/` that load
+  `../nethra.py`. Not broken. Still missing from the repo: `baselines.py` and the other cited scripts.
+- **Ledger constraint (2026-09-23):** no assistant-authored standing regression suites or test
+  workflows unless the user explicitly asks. 0.2, 0.3 and 0.5 need that explicit go-ahead; until
+  then, validation stays one-off and disposable.
 - **Why:** Work is spread over ~80 branches. A task can't be regression-checked if its scripts live
   on a different branch than the core.
 - **Test:** every script runs to completion from a clean checkout with `PYTHONPATH=nethra`.
