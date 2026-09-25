@@ -311,6 +311,7 @@ class NethraField:
         self.relation_source_events = defaultdict(set)
         # Derived execution indexes over source_patterns (rebuilt when out of step with it).
         self._pattern_index = {}
+        self._route_order = {}                            # route -> members in creation order
         self._pattern_members = defaultdict(list)
 
         # Transient source/closure coordinates. Independent external source support earns
@@ -459,10 +460,9 @@ class NethraField:
         # function itself grants no authority to do so.
         for member in route:
             self.member_to_routeuses[member].add((nethra, route))
-            ibucket = self.incidence_evidence.setdefault(
-                (nethra, route, member),
-                Counter(),
-            )
+            ibucket = self.incidence_evidence.get((nethra, route, member))
+            if ibucket is None:
+                ibucket = self.incidence_evidence[(nethra, route, member)] = Counter()
             ibucket[signature] += float(evidence)
 
     def _matching_routes(self, relation, event):
@@ -690,15 +690,30 @@ class NethraField:
         physical = {}
         if within is not None:
             return self._physical_within(event, within)
+        # Same computation as _incidence_active_key() + conductance(), with the common case (only
+        # unqualified evidence) taken without a call, and each route's member order cached.
+        empty = frozenset()
+        incidence_evidence = self.incidence_evidence
+        route_order = self._route_order
+        g_min, g_span, tau = self.g_min, self.g_max - self.g_min, self.tau
         for relation in self.nethra:
             for route in relation.routes:
-                for member in self._ordered(route):
-                    key = self._incidence_active_key(relation, route, member, event)
-                    evidence = self.incidence_evidence.get(
-                        (relation, route, member),
-                        relation.routes[route],
-                    ).get(key, 0.0)
-                    g = self.conductance(evidence)
+                members = route_order.get(route)
+                if members is None:
+                    members = route_order[route] = tuple(self._ordered(route))
+                for member in members:
+                    conditions = incidence_evidence.get((relation, route, member))
+                    if conditions is None:
+                        key = empty
+                        evidence = relation.routes[route].get(key, 0.0)
+                    else:
+                        if not conditions or (len(conditions) == 1 and empty in conditions):
+                            key = empty
+                        else:
+                            key = self._incidence_active_key(relation, route, member, event)
+                        evidence = conditions.get(key, 0.0)
+                    e = max(0.0, float(evidence))
+                    g = 0.0 if e <= 0.0 else g_min + g_span * (1.0 - exp(-e / tau))
                     edge = (relation, member)
                     row = physical.get(edge)
                     receipt = (route, key)
@@ -717,7 +732,9 @@ class NethraField:
         aggregate is promoted here without an observed failure establishing one.
         """
         value = max(0.0, float(value))
-        bucket = self.incidence_evidence.setdefault((relation, route, member), Counter())
+        bucket = self.incidence_evidence.get((relation, route, member))
+        if bucket is None:
+            bucket = self.incidence_evidence[(relation, route, member)] = Counter()
         bucket[signature] = value
 
         # Unchanged provisional summary rule (strongest member evidence); only the per-member
@@ -1044,10 +1061,9 @@ class NethraField:
 
                 # A retained but presently field-inert route is reused rather than duplicated.
                 for member in route:
-                    bucket = self.incidence_evidence.setdefault(
-                        (relation, route, member),
-                        Counter(),
-                    )
+                    bucket = self.incidence_evidence.get((relation, route, member))
+                    if bucket is None:
+                        bucket = self.incidence_evidence[(relation, route, member)] = Counter()
                     if float(bucket.get(frozenset(), 0.0)) <= 0.0:
                         bucket[frozenset()] = self.admission_seed
                 relation.routes[route][frozenset()] = max(
@@ -1099,7 +1115,9 @@ class NethraField:
             self._route(relation, route, frozenset(), seed)
             return
         for member in route:
-            bucket = self.incidence_evidence.setdefault((relation, route, member), Counter())
+            bucket = self.incidence_evidence.get((relation, route, member))
+            if bucket is None:
+                bucket = self.incidence_evidence[(relation, route, member)] = Counter()
             if float(bucket.get(frozenset(), 0.0)) < seed:
                 bucket[frozenset()] = seed
         relation.routes[route][frozenset()] = max(
@@ -1240,10 +1258,9 @@ class NethraField:
             receipts = physical_row["receipts"]
             share = float(delta) / len(receipts)
             for route, signature in receipts:
-                bucket = self.incidence_evidence.setdefault(
-                    (relation, route, member),
-                    Counter(),
-                )
+                bucket = self.incidence_evidence.get((relation, route, member))
+                if bucket is None:
+                    bucket = self.incidence_evidence[(relation, route, member)] = Counter()
                 old = float(bucket.get(signature, 0.0))
                 bucket[signature] = max(0.0, float(old + share))
                 touched[(relation, route, signature)] = None
@@ -1650,16 +1667,14 @@ class NethraField:
         if physical is None:
             physical = self._physical_incidences(self.current_event)
         edges = {}
+        order = self._order
         for (relation, member), row in physical.items():
             g = row["g"]
-            key = frozenset((relation, member))
+            # the unordered pair, written in creation order
+            key = (relation, member) if order[relation] < order[member] else (member, relation)
             if g > edges.get(key, 0.0):
                 edges[key] = g
-        out = []
-        for key, g in edges.items():
-            a, b = self._ordered(key)
-            out.append((a, b, g))
-        return tuple(out)
+        return tuple((a, b, g) for (a, b), g in edges.items())
 
     @staticmethod
     def _neighbors_from_edges(edges):
