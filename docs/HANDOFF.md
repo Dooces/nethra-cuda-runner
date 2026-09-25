@@ -145,6 +145,48 @@ The GPU halves exact integration for the current core. With top-only conduction 
 compilation, closure, pattern cosine), which a GPU integrator does not touch. Next for speed: array
 storage of incidences (roadmap item 7), bit-identical.
 
+## 0c. Third session, part 3: focus = fine fovea at the gaze, top-only background (first test)
+
+User: top-only for the background, more detail around focus. Understood as: detail comes from what
+is pushed at the gaze (a fine fovea per eye + gaze Nethra over the 3D fixation point), background
+from coarse periphery cells; top-only conduction everywhere. A gaze-dependent switch of which
+incidences conduct would be a gate on g (CLAUDE.md §2.1), so it was not tried.
+
+Script `nethra/tests/focus_fovea.py`. Per eye: periphery 8x8 tent cells over the whole image, fovea
+8x8 tent cells over +-0.2 image units around the image of the fixation point; gaze 6^3 tent cells
+over the box (8 pushed). Pursuit device outside the core: fixation(t) = focused object at t-1, so
+the fovea sees the object's step. Stream: object 0 alone tracked (3 laps of 40), object 1 alone
+tracked (3 laps of 37), then both, gaze on object 0. 0.8, jitter ±10, tolerance 0.01. Reads: P
+toward fovea cells as a centroid = expected next offset of the focused object; P toward the
+periphery cells within 2 spacings of the background object = its expected next image point; both
+against "staying put" (image units; fovea spacing 0.057, periphery 0.286).
+
+| both objects, 160 intervals | ms/interval | frontier (210 constructed) | focused, expected next offset | background, expected next point |
+|---|---|---|---|---|
+| current core | 232 → 627 | 404 → 474 | 0.060-0.071 (staying put 0.036-0.043) | 0.19-0.21 (0.048-0.055) |
+| top-only | 105 → 132 | 376 → 442 | 0.060-0.068 | 0.17-0.20 |
+| top-only, no fovea | 25 → 43 | 180 → 239 (117 constructed) | | |
+| top-only, no gaze | 55 → 78 | 234 → 288 (193 constructed) | | |
+
+Built during both: 17-28 per 40, not settling within 160 intervals.
+
+Measured cause of the frontier (1 lap alone + 40 both, top-only): 65 of 76 constructed Nethra above
+tolerance, 53 of 216 gaze cells (8 pushed per interval), 31 fovea, 32 periphery. With pursuit the
+focused object's fovea pattern is nearly the same every interval (its step), so the same few fovea
+cells are pushed every interval and are members of nearly every Nethra built for that object; its
+whole structure stays lit and conducts hop to hop along the chain, top-only or not.
+
+Both expectation reads are worse than staying put in every variant (as §5.3 found for P as a 3D point).
+
+Human reference: an image held still on the retina fades (adaptation), and much of the retinal
+output signals change (transient cells). In Nethra a constant push is constant presence (like
+holding). Options, not started (input design, CLAUDE.md §4 says input goes in as the notes say; user's call):
+1. Fovea through change-signalling receptive Nethra (pushed with the positive part of the change of
+   a cell's input), beside or instead of sustained ones.
+2. Coarser gaze grid / fewer gaze cells.
+3. First find out why P as an expected next point is worse than staying put (open since §5.3)
+   before building more input channels on it.
+
 ## 1. Goal (the user's words, condensed)
 
 1. Binocular vision input; track objects in a 500 x 500 x 500 space; an internal state that
