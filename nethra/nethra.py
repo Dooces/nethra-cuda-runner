@@ -69,7 +69,7 @@ class Nethra:
     same object, never subclasses. Persistent meaning can therefore reside only in
     ordinary Nethra and their earned support routes.
     """
-    __slots__ = ("routes", "activation", "external")
+    __slots__ = ("routes", "_a", "_t", "_ext", "_field")
 
     def __init__(self):
         """Create one persistent Nethra with no predeclared semantic role.
@@ -78,10 +78,44 @@ class Nethra:
         Nethra. activation is the current field quantity. external is current injected by the
         outside world for the next integration interval. No side state lives here, so a
         persistent Nethra cannot secretly carry task tags or privileged types.
+
+        _a/_t/_field are execution only: a Nethra outside the frontier decays by leakage alone,
+        and that decay is applied when the activation is next read (the same multiplications, in
+        the same order, as applying them every interval).  _ext is external current; setting it
+        nonzero registers the Nethra with its field so a step does not scan the population.
         """
         self.routes = {}
-        self.activation = 0.0
-        self.external = 0.0
+        self._a = 0.0
+        self._t = 0
+        self._ext = 0.0
+        self._field = None
+
+    @property
+    def activation(self):
+        field = self._field
+        if field is not None and self._t < field._interval:
+            a = self._a
+            for factor in field._decay_history[self._t:field._interval]:
+                a *= factor
+            self._a = a
+            self._t = field._interval
+        return self._a
+
+    @activation.setter
+    def activation(self, value):
+        self._a = value
+        field = self._field
+        self._t = field._interval if field is not None else 0
+
+    @property
+    def external(self):
+        return self._ext
+
+    @external.setter
+    def external(self, value):
+        self._ext = value
+        if value != 0.0 and self._field is not None:
+            self._field._pushed.add(self)
 
     def push(self, current):
         """Add external current to this Nethra for the next field interval.
@@ -289,7 +323,18 @@ class NethraField:
         self.previous_event = frozenset()
         self.current_event = frozenset()
 
-        self.rho = {}
+        # rho: decaying signed residual trace per Nethra (F61).  A Nethra with zero residual only
+        # decays; that decay is applied when its trace is next read (same arithmetic, same order).
+        self._rho = {}
+        self._rho_t = {}
+        self._rho_count = 0
+        # Execution only: completed intervals, per-interval decay factor applied outside the
+        # frontier, Nethra with external current, and the frontier core carried between intervals.
+        self._interval = 0
+        self._decay_history = []
+        self._pushed = set()
+        self._hot = None
+        self._hot_complete_above = 0.0
         # F61 pair statistics, stored as arrays keyed by an oriented pair code
         #   code = earlier_index * 2**32 + later_index   (creation indices, sorted codes)
         # rows (xy, xx, yy) with xx belonging to the earlier-created Nethra, plus counts of intervals.
@@ -309,9 +354,12 @@ class NethraField:
         same function, constructed/internal structure does not become a second ontology.
         """
         n = Nethra()
+        n._field = self
+        n._t = self._interval
         self._order[n] = len(self.nethra)
         self.nethra.append(n)
-        self.rho[n] = 0.0
+        self._rho[n] = 0.0
+        self._rho_t[n] = self._rho_count
         return n
 
     def _ordered(self, nodes):
@@ -390,7 +438,7 @@ class NethraField:
         route = frozenset(members)
         if not route or nethra in route:
             raise ValueError("support route must contain existing Nethra other than the Nethra it supports")
-        if any(m not in self.nethra for m in route):
+        if any(m not in self._order for m in route):
             raise ValueError("support route references unknown Nethra")
         signature = frozenset(signature)
         was_primitive = not nethra.routes
@@ -555,11 +603,11 @@ class NethraField:
             for n, value in integral.items()
             if float(value) != 0.0
         }
-        if any(n not in self.nethra for n in source):
+        if any(n not in self._order for n in source):
             raise ValueError("completed interval source references unknown Nethra")
-        if any(n not in self.nethra for n in change):
+        if any(n not in self._order for n in change):
             raise ValueError("completed interval delta references unknown Nethra")
-        if any(n not in self.nethra for n in area):
+        if any(n not in self._order for n in area):
             raise ValueError("completed interval integral references unknown Nethra")
 
         self.previous_interval_source = self.current_interval_source
@@ -770,14 +818,18 @@ class NethraField:
         """_physical_incidences restricted to incidences whose two ends are both inside `within`."""
         saved = self.nethra
         try:
-            self.nethra = [n for n in saved if n in within and n.routes]
+            self.nethra = [n for n in self._ordered(within) if n.routes]
             full = self._physical_incidences(event)
         finally:
             self.nethra = saved
         return {k: v for k, v in full.items() if k[1] in within}
 
     def _frontier(self, source_current, tol):
-        core = {n for n in self.nethra if abs(n.activation) >= tol} | set(source_current)
+        if self._hot is None or tol < self._hot_complete_above:
+            candidates = self.nethra
+        else:
+            candidates = self._hot
+        core = {n for n in candidates if abs(n.activation) >= tol} | set(source_current)
         halo = set(core)
         for n in core:
             for relation, _route in self.member_to_routeuses.get(n, ()):
@@ -1143,9 +1195,13 @@ class NethraField:
             elif q < 0.0:
                 incoming[relation][member] = -q
 
+        # Every Nethra outside the interval has manifestation 0 and prior flow 0; its residual is
+        # 0, which update_residuals treats as absent.
+        keys = list(manifestation)
+        keys += [n for n in prior_flow if n not in manifestation]
         manifest_minus_prior = {
             n: float(manifestation.get(n, 0.0)) - float(prior_flow.get(n, 0.0))
-            for n in self.nethra
+            for n in keys
         }
 
         # Frozen V61 semantics: rho receives each Nethra's own manifestation residual
@@ -1352,8 +1408,9 @@ class NethraField:
         pair_stats.sort()
 
         rho = []
+        traces = self.rho
         for n in self.nethra:
-            value = float(self.rho.get(n, 0.0))
+            value = float(traces.get(n, 0.0))
             if not isfinite(value):
                 raise ValueError("rho contains non-finite value")
             rho.append(value)
@@ -1664,6 +1721,32 @@ class NethraField:
         pos = np.minimum(pos, table.size - 1)
         return pos, table[pos] == codes
 
+    def _rho_of(self, n):
+        """Return n's residual trace, first applying the zero-residual updates it has not had."""
+        count = self._rho_count
+        t = self._rho_t.get(n, count)
+        r = self._rho.get(n, 0.0)
+        if t < count:
+            lam = self.trace_decay
+            one = 1.0 - lam
+            for _ in range(count - t):
+                r = lam * r + one * 0.0
+            self._rho[n] = r
+        self._rho_t[n] = count
+        return r
+
+    @property
+    def rho(self):
+        """Residual trace of every Nethra, as {Nethra: value}."""
+        for n in list(self._rho):
+            self._rho_of(n)
+        return self._rho
+
+    @rho.setter
+    def rho(self, mapping):
+        self._rho = dict(mapping)
+        self._rho_t = {}
+
     def update_residuals(self, residual, neighbors=None):
         """Update F61 residual traces and local supplier-independence statistics.
 
@@ -1679,8 +1762,13 @@ class NethraField:
         """
         lam = self.trace_decay
         one = 1.0 - lam
-        for n in self.nethra:
-            self.rho[n] = lam * self.rho.get(n, 0.0) + one * float(residual.get(n, 0.0))
+        # Every Nethra's trace moves; one absent from residual has residual 0 and only decays,
+        # which _rho_of applies when that trace is next read.
+        for n in residual:
+            self._rho[n] = lam * self._rho_of(n) + one * float(residual.get(n, 0.0))
+        self._rho_count += 1
+        for n in residual:
+            self._rho_t[n] = self._rho_count
 
         if neighbors is None:
             neighbors = self._neighbors()
@@ -1708,9 +1796,12 @@ class NethraField:
         if found.any():
             old[found] = self._ps_vals[pos[found]]
             old_n[found] = self._ps_n[pos[found]]
-        rho = np.fromiter((self.rho[n] for n in self.nethra), dtype=float, count=len(self.nethra))
-        x = rho[relevant // M]
-        y = rho[relevant % M]
+        nodes = self.nethra
+        first, second = relevant // M, relevant % M
+        ids = np.unique(np.concatenate((first, second)))
+        values = np.fromiter((self._rho_of(nodes[i]) for i in ids.tolist()), dtype=float, count=ids.size)
+        x = values[np.searchsorted(ids, first)]
+        y = values[np.searchsorted(ids, second)]
         self._ps_codes = relevant
         self._ps_vals = np.column_stack((old[:, 0] + x * y, old[:, 1] + x * x, old[:, 2] + y * y))
         self._ps_n = old_n + 1
@@ -2014,7 +2105,8 @@ class NethraField:
         dt = float(dt)
         if dt <= 0.0:
             raise ValueError("dt must be positive")
-        source_current = {n: n.external for n in self.nethra if n.external != 0.0}
+        # Only Nethra registered by a nonzero external can carry external current.
+        source_current = {n: n.external for n in self._ordered(self._pushed) if n.external != 0.0}
         source_event, explicit, closed, description_event = self._describe_source_support(
             source_current
         )
@@ -2024,8 +2116,9 @@ class NethraField:
         # Internal/refound Nethra may therefore manifest as consequences without being recast as
         # independent source facts.
         frontier = None
-        if self._tol > 0.0:
-            frontier = self._frontier(source_current, self._tol)
+        tol_this = self._tol
+        if tol_this > 0.0:
+            frontier = self._frontier(source_current, tol_this)
             if len(frontier) >= len(self.nethra):
                 frontier = None
         interval_nodes = tuple(self.nethra) if frontier is None else tuple(self._ordered(frontier))
@@ -2086,16 +2179,24 @@ class NethraField:
         self.previous_explicit = explicit
         self.previous_closure = closed
 
+        # Every Nethra outside the frontier decays by leakage alone this interval; the factor is
+        # recorded and applied when that Nethra's activation is next read.
+        self._decay_history.append(exp(-self.leakage * dt / self.capacitance))
+        self._interval += 1
         for n in interval_nodes:
             n.activation = actual[n]
-        if frontier is not None:
-            decay = exp(-self.leakage * dt / self.capacitance)
-            for n in self.nethra:
-                if n not in frontier:
-                    n.activation *= decay
+        # Frontier core for the next interval: every Nethra outside this interval was below
+        # tol_this and has only decayed, so while the tolerance does not drop below tol_this the
+        # core is found among this interval's Nethra.
+        if tol_this > 0.0:
+            self._hot = interval_nodes
+            self._hot_complete_above = tol_this if frontier is not None else 0.0
+        else:
+            self._hot = None
 
         self._complete_interval(source_current, delta, integral)
 
-        for n in self.nethra:
-            n.external = 0.0
+        for n in self._pushed:
+            n._ext = 0.0
+        self._pushed.clear()
         return delta
