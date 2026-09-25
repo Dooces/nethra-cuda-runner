@@ -1,4 +1,4 @@
-"""PROTOTYPE, NOT PART OF THE CORE.  Variants of direction="split" evidence change (docs/HANDOFF.md 0h).
+"""PROTOTYPE, NOT PART OF THE CORE.  Variants of direction="split" evidence change (docs/HANDOFF_LOG.md 0h).
 env VAR: "+"-joined flags saying which terms of the evidence change also move the OTHER direction:
   on / op : negative / positive outgoing term (relation -> member flow, then member's residual)
             also moves member -> relation evidence;

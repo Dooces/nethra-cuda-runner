@@ -207,7 +207,7 @@ class NethraField:
         #   "top": every covered member earns nothing, primitive or not (previous default).  A
         #          Nethra built later on the same members is then reached only through the earlier
         #          one, and in a continuous stream the before side of every transition is covered
-        #          by the previous transition's Nethra (docs/HANDOFF.md section 0f).
+        #          by the previous transition's Nethra (docs/HANDOFF_LOG.md section 0f).
         #   "all": every member earns evidence (the core before 2026-09-25; old checkpoints load
         #          with "all").
         # Coverage is decided once, when the route is registered, from the routes the other
