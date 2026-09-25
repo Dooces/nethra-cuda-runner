@@ -1,12 +1,103 @@
-# Handoff: binocular Nethra, focus and consequence (state as of 2026-09-25, third session)
+# Handoff: binocular Nethra, focus and consequence (state as of 2026-09-25, end of third session)
 
-Read in this order before doing anything: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this file,
-then `nethra/nethra.py`. Branch `claude/sharp-thompson-wmszc5` (PR Dooces/nethra-cuda-runner#1 into
-`main`; pushes to the branch update it). Scratchpad files are gone after a session; every script
-below is in `nethra/tests/`.
+## START HERE
 
-**`nethra.py` was not changed in this session.** Everything new is harness scripts, one prototype
-subclass file (`nethra/tests/partwise_prototype.py`, not core), and measurements.
+Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0-§0d
+below, then `nethra/nethra.py`. Older sections (§1-§10) are the second session's state and are still
+valid unless a §0 section says otherwise.
+
+**Branch:** `claude/zen-cerf-mqrlxe` (Dooces/nethra-cuda-runner). It contains everything from
+`claude/sharp-thompson-wmszc5` (PR Dooces/nethra-cuda-runner#1) plus this session. No PR opened for
+it. Scratchpad files are gone after a session; every script used is in `nethra/tests/`.
+
+### What changed in the core this session
+
+- `join_on_recurrence=True` (default) in `nethra/nethra.py`: a transition of pushed Nethra seen for
+  the first time is subtracted per part (`_admit_by_parts`); only the unaccounted remainder is
+  joined; a transition that recurs is joined whole (`_admit_whole_support`). `False` = previous
+  core, bit-identical; old checkpoints load with `False`; `witnessed_transitions` is checkpointed.
+  Details and measurements: §0.
+- Nothing else in the core. `_admit_graded` gained a `before_description` argument (refactor only).
+
+### Prototypes and harness added (not core)
+
+| file | what |
+|---|---|
+| `nethra/tests/top_conduction_prototype.py` | `TopField`: routes stay whole for closure; at construction only the top members of a route earn incidence evidence (covered leaves stay at g = 0); frontier halo through conducting incidences. `GpuTopField` = same + GPU integration. §0b |
+| `nethra/tests/gpu_field.py` | `GpuField` / `GpuMixin`: ETD integration on the GPU (cupy); `NETHRA_GPU=0` = numpy, bit-identical to CPU ETD. §0b |
+| `nethra/tests/gpu_bench.py` + `.github/workflows/nethra-gpu-bench.yml` | runner benchmark: CPU vs GPU, core vs top-only. Triggered by a push to this branch touching those files, or manually. §0b |
+| `nethra/tests/focus_fovea.py` | focus test: coarse periphery, fine gaze-centred fovea, gaze Nethra, pursuit device; env options for fovea mode, gaze grid, leakage; reads: P centroid, share of P toward previous/current/next cells, structural next. §0c, §0d |
+| `nethra/tests/binocular_multi.py` | now also `WHOLE=1` (join_on_recurrence False) and `PER2` (second loop period) |
+| `nethra/tests/partwise_prototype.py` | pinned to `join_on_recurrence=False` so its earlier numbers reproduce |
+
+### State of the user's goals (§1)
+
+| goal | state |
+|---|---|
+| several objects without combination growth | solved for construction (§0): 24 built per 120 together instead of 120; eyes and contexts still joined |
+| cost must not keep rising | not solved in the core. Top-only conduction (prototype) makes it flat on the two-object stream (13 → 19 ms over 400 intervals, §0b); with the fovea setup it still rises (§0c, §0d) |
+| one object tracked in detail, rest rough | input design built and tested (§0c); cost and expectation reads not good yet (§0d) |
+| expectation of where things go next | **open, main problem**: neither P nor a structural read gives a next position better than "staying put" (§0d) |
+| CUDA on the Fedora runner | works (RTX 5070, cupy); only useful for the current core's exact integration; with top-only, CPU is faster (§0b). Bottleneck is per-incidence Python bookkeeping |
+
+### Decisions waiting for the user
+
+1. Top-only conduction into the core? (changes which incidences conduct; CLAUDE.md §2.1). Gains:
+   flat cost, sharper context. Losses: consequence reach through shared leaf cells, focus tilt (§0b).
+2. Leakage (drain rate) other than 1? Leakage 4 halves the frontier in the fovea stream (§0d). The
+   user asked about charge vs drain; it is a parameter (notes §4, CLAUDE.md §2.3) and also shifts the
+   admission-seed balance and the M/P scale. Only frontier/cost were measured, not construction
+   quality or the other streams.
+3. Input design for focus (change-signalling cells, grids): no option tried so far helped (§0d).
+
+### Suggested next steps (in order; do not start unasked)
+
+1. **Why the field carries no usable "where next"** (§0d). Measured: P goes ~equally to previous and
+   next cells and 70-80% to cells of other loop positions (the object's whole structure is lit and
+   conduction is symmetric). The direction exists only in before/after routes, but reading after
+   routes of Nethra refound by their before route is also worse than staying put. Look first at what
+   the before routes contain (they are the whole closure of the interval, including refound
+   constructed Nethra), and at which Nethra are refound by their before route at each interval, on a
+   tiny stream (one object, one exact loop, no jitter) where the right answer is known.
+2. Array storage of incidences (roadmap item 7), bit-identical: the remaining cost is per-incidence
+   Python work (evidence change, incidence compilation, closure, pattern cosine), not integration.
+3. **User's idea to consider: encode deltas.** If Nethra received displacement (the change of
+   position between consecutive intervals) as its own graded input, construction could come to
+   carry "how long in a direction": a steady motion pushes the same displacement Nethra interval
+   after interval, and the chain of intervals with the same displacement is what closure refinds.
+   The numbers already exist in every stream (positions at t-1 and t). Notes for whoever picks it up:
+   - Feed it like any graded value (notes §3): receptive Nethra over displacement per axis (or
+     direction × speed), each pushed with its share. Negative displacement is a region of the
+     receptive range, not a negative push (notes §2 rejects signed presence-change events and -1
+     pushes; this is a quantity, not a presence change).
+   - Different from what §0d tried: those change-signalling cells were pushed with the increase of
+     one cell's input, not with displacement.
+   - With lag-one pursuit the fovea offset already is the image displacement of the focused object;
+     §0c/§0d show its pattern is nearly constant, which lit that object's whole structure. So
+     test first how a constantly pushed displacement pattern behaves (holding-like presence,
+     notes §7) and what closure refinds over a run of equal displacements, on a tiny stream.
+   - Input design is the user's call (CLAUDE.md §4); predict first (CLAUDE.md §0).
+4. Only after 1: fovea/gaze design again; multi-scale reach; Δt (§7.4, which is the same kind of
+   graded input).
+
+### How to run things
+
+- Local container: 4 cores, `pip install numpy` if missing. One numeric thread, `timeout` on every
+  run, runs under 2-3 minutes. Examples: `binocular_multi.py 16 0.8 10 3 160 40` (~25 s);
+  `focus_fovea.py top 0.01 2 80 40` (~40 s); `context_partwise.py`, `consequence_reach.py 8 0.95 10 40 10 0`,
+  `focus_symbolic.py` (their numbers are in §0-§0b).
+- To run a prototype field in a script written for the core: replace `core.NethraField` before the
+  script runs (see how `gpu_bench.py` picks classes); capture the base class first to avoid
+  recursion.
+- Fedora runner (`runs-on: self-hosted`, runner name `fedora`, Python 3.14 at `/usr/bin/python3`,
+  numpy, cupy, numba, torch, RTX 5070): add a workflow whose `on: push: paths:` matches the files you
+  push, or `workflow_dispatch`; read results from the job log (GitHub MCP `get_job_logs`) or the
+  uploaded artifact. Pattern: `.github/workflows/nethra-gpu-bench.yml`.
+- Bit-identity check pattern (used for `join_on_recurrence`): keep the old core
+  (`git show <commit>:nethra/nethra.py`), import it from a separate directory, feed identical
+  streams, compare a hash of `checkpoint_dict()` and of all activations; include frontier, rk4 and a
+  checkpoint round trip mid-stream.
+- Known: `source_support="product"` gives a different checkpoint on every run (pre-existing).
 
 ## 0. Third session (2026-09-25): per-part subtraction decided and moved into the core
 
@@ -186,6 +277,39 @@ holding). Options, not started (input design, CLAUDE.md §4 says input goes in a
 2. Coarser gaze grid / fewer gaze cells.
 3. First find out why P as an expected next point is worse than staying put (open since §5.3)
    before building more input channels on it.
+
+## 0d. Third session, part 4: the three options and charge vs drain (`focus_fovea.py`)
+
+All top-only, tolerance 0.01, 2 laps alone per object, both objects together with gaze on object 0.
+Reads added: coarse periphery expectation for the focused object as well (same resolution as the
+background); share of P toward previous-only / current / next-only cells; a structural read (cells in
+the after routes of constructed Nethra whose first (before) route is complete in this interval's
+closure). Image units; staying put ≈ 0.04-0.07.
+
+| setting, both objects 0-79 | frontier | ms (parallel runs) | focused fovea offset / staying | focused coarse point / staying | background / staying |
+|---|---|---|---|---|---|
+| sustained fovea (base) | 345-379 | 87-120 | 0.073 / 0.048 | 0.19-0.22 / 0.065 | 0.20 / 0.05 |
+| 1. change-signalling fovea only | 355-398 | 99-119 | - | 0.17-0.20 / 0.064 | 0.21-0.22 / 0.05 |
+| 1. sustained + change-signalling | 452-494 | 137-202 | 0.068-0.071 | 0.19-0.21 | 0.19-0.21 |
+| 2. gaze grid 4 (instead of 6) | 267-295 | 76-93 | 0.075 | 0.20-0.22 | 0.20-0.21 |
+| leakage 2 | 291-322 | 74-95 | 0.072 | 0.18-0.21 | 0.19-0.20 |
+| leakage 4 | 192-207 | 47-59 | 0.078-0.080 | 0.20-0.22 | 0.20 |
+| leakage 4 + gaze 4, 160 intervals | 174 → 208 | 40 → 68 (alone) | 0.078-0.082 | 0.19-0.22 | 0.20-0.22 |
+
+Change-signalling cells are pushed with max(0, input now - input last interval) per fovea cell.
+
+3. Why expectation reads are worse than staying put:
+- Share of P (base): toward previous-only / current / next-only cells: fovea 0.05-0.06 / 0.06-0.09 /
+  0.07-0.09; background periphery 0.07 / 0.12-0.14 / 0.06-0.07. Previous ≈ next (conduction is
+  symmetric; the only forward bias is leftover in the previous cells), and the three together get
+  only 20-30% of P; the rest goes to cells of other positions along the loop.
+- Structural read: focused 0.113-0.152 (staying put 0.059-0.072), background 0.18-0.34 (0.043-0.046);
+  available in only 26-72 of 80 intervals.
+
+Charge vs drain (the user's question): leakage sets the leftover (e^-leak per interval at C=1,
+dt=1) and the per-hop spread (about g/(g+leak) per hop). Leakage 4 halves the frontier; it does not
+change the reads. Construction counts at leakage 2/4 equal those at 1 in these runs (27/24/...), but
+admission-seed balance, M/P and the other streams were not measured.
 
 ## 1. Goal (the user's words, condensed)
 
@@ -426,7 +550,7 @@ Nethra at the food location.
   (a) step(1) always, (b) step(Δt), (c) step(Δt) plus Δt receptive Nethra; read construction count
   and P toward the next image point split by Δt. Predict first (CLAUDE.md section 0).
 
-## 8. Execution / CUDA (not started)
+## 8. Execution / CUDA (second session's plan; see §0b for what was done)
 
 - Fedora runner: `runs-on: self-hosted`. Earlier sessions triggered it with a workflow whose
   `on: push: paths:` matches the pushed files (see `.github/workflows/nethra-online-hotfield-cuda.yml`)
