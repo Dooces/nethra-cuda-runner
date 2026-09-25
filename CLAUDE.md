@@ -78,12 +78,20 @@ closure. Never declare it in the harness.
 
 ## 3. How to feed and read (short form; details in the notes)
 
-- **Feed:** push a number onto each Nethra present in this interval, then `step(1.0)`.
+- **Feed:** push a number onto each input Nethra (one bound to a source) whose source is present
+  in this interval, then `step(1.0)`. Nothing else is pushed; every other Nethra gets activation
+  only by propagation through the field.
   - One interval per observation.
   - Nothing else: no labels, no history window, no targets.
 - **Co-present context:** push it in the same interval as what it accompanies.
 - **Read:**
   - live activation right after an interval (that is the expectation);
+  - prior flow `P` toward each Nethra for the next step: sum over its incidences of
+    `max(0, g (A_relation - A_member))`, with `A` = the completed interval's activation integrals.
+    This is the P the next step subtracts from the manifestation M. Live activation is dominated
+    by leftover from the interval before; P shows what structure carries forward.
+  - ratios over many intervals: geometric mean, not arithmetic (the arithmetic mean of ratios
+    inflated one result from 3.7 to 9);
   - closure: which constructed Nethra are refound.
     - `previous_closure` after `step` was computed **before** that interval's construction, so it
       misses Nethra built at that boundary (a t-1 read).
@@ -108,16 +116,21 @@ closure. Never declare it in the harness.
 
 ## 5. Current work
 
+- **Start here:** `docs/HANDOFF.md` (state, measurements, next steps).
 - **Roadmap:** `docs/NETHRA_ROADMAP.md`.
-- **Current item:** sub-pattern transfer (`nethra/tests/transfer.py`).
-  - Its stream does not build the small factors first (see §4).
-  - Fix the stream before reading anything from it.
+- **Not a concern:** never-seen positions or situations. A real environment always has something
+  to look at. Do not design for, measure, or try to fix what happens there.
 
 ## 6. Practical
 
-- **Container:** 4 cores. Runs over about 10 minutes go in the background.
-- **Killing processes:** don't use `pkill -f <pattern>`. The pattern also matches the shell
-  running the kill, which kills your own command. Kill by PID.
+- **Container:** 4 cores.
+- **Runs:** small and short. Write the prediction first (§0), run the smallest thing that answers
+  it, stop when it has answered. No run of more than a few minutes without a stated question it
+  alone can answer. Never edit a script while a run is using it.
+- **Timing:** wall clock (`time.perf_counter`), one numeric thread
+  (`OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`), nothing else running.
+- **Processes:** never use `pkill -f` or `pgrep -f <pattern>`, not even to wait. The pattern
+  matches the shell running it: a kill kills your own command, a wait loop never ends. Use PIDs.
 - **Files:**
   - disposable scripts go in the scratchpad, not the repo;
   - repo layout: core, notes and old ledger in `nethra/`, the user's test scripts in
