@@ -1,4 +1,4 @@
-"""Conduction rule variants (PROTOTYPE, 2026-09-25 comparison, docs/HANDOFF.md section 0f).
+"""Conduction rule variants (PROTOTYPE, 2026-09-25 comparison, docs/HANDOFF_LOG.md section 0f).
 COND = top | all | topleaves (= core default "top_and_leaves") | leaves | beforeall | afterall |
 leavesbefore | leavesafter.  Requires conduction="top" as the base rule.
 Installs the rule on nethra.NethraField (the class the user scripts use)."""

@@ -23,7 +23,11 @@ Every rule here exists because it was broken before.
      a complete route of another member of the same route is covered and never earns evidence
      (g = 0). Primitive members (no routes) always conduct. So a constructed Nethra conducts with
      its top members and directly with the pushed Nethra of its routes. `"top"` (covers primitive
-     members too) and `"all"` remain as options; see docs/HANDOFF.md §0f for why.
+     members too) and `"all"` remain as options; see docs/HANDOFF_LOG.md §0f for why.
+   - Direction (`direction="shared"`, default): one conductance per incidence, both ways.
+     `"split"` (option, user request 2026-09-25): two conductances per incidence, one per flow
+     direction, each earning evidence from its own term of the existing evidence change. This is
+     a field-law option; the default is unchanged. See docs/HANDOFF_LOG.md §0g, §0h.
 2. **Run it tiny** (tens of intervals).
 3. **Compare.** If the numbers differ from the prediction, stop and find out why in the code
    before running anything larger or on the runner.
@@ -85,6 +89,17 @@ closure. Never declare it in the harness.
    `nethra.py` must not change code: compare the AST without docstrings before committing.
 9. **`nethra/NETHRA_MISTAKE_LEDGER.md` is an old copy, for reference only.** Do not append to it.
 
+10. **People are a sanity check, not a target.** What people can do on the same task, in the
+    combination of their capabilities, with a source, tells what is good enough:
+    - if people can do it and the field cannot (or only far below them), that is a failure;
+    - it is not a cutoff: doing better than people is fine;
+    - it is not a template: reproducing people's particular behaviour or limits (their lag, the
+      spacing effect, a 2:1 forward bias in recall) is not a goal and not an argument for a design;
+    - it is not an optimum: that a dedicated program or machine does better (a perfect actuator, a
+      filter, a lookup table, an optimal controller) has no bearing on what the whole system should
+      organically be able to do. Never judge a result against such a solution.
+    If no human data for the task is known, say so instead of inventing one.
+
 ## 3. How to feed and read (short form; details in the notes)
 
 - **Feed:** push a number onto each input Nethra (one bound to a source) whose source is present
@@ -128,7 +143,8 @@ closure. Never declare it in the harness.
 
 ## 5. Current work
 
-- **Start here:** `docs/HANDOFF.md` (state, measurements, next steps).
+- **Start here:** `docs/HANDOFF.md` (current state, instructions, next steps). Every measurement is in
+  `docs/HANDOFF_LOG.md` (session log, newest first; HANDOFF.md points into it by section).
 - **Roadmap:** `docs/NETHRA_ROADMAP.md`.
 - **Not a concern:** never-seen positions or situations. A real environment always has something
   to look at. Do not design for, measure, or try to fix what happens there.
