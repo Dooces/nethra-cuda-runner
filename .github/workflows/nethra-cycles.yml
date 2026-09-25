@@ -27,19 +27,13 @@ jobs:
           /usr/bin/python3 --version
           /usr/bin/python3 -c "import numpy; print('numpy', numpy.__version__)"
           sha256sum nethra/nethra.py nethra/tests/cycles.py
-      - name: Cycle streams in parallel (1000 intervals x 3 passes each)
+      - name: Cycle streams, one process per period set (1000 intervals x 3 passes each)
         shell: bash
         run: |
-          set -uxo pipefail
+          set -euxo pipefail
           mkdir -p out
           cd nethra/tests
-          for periods in 3,5,7 2,3,5 3,4,6 5,7,11; do
-            /usr/bin/time -f "elapsed=%e maxrss_kb=%M" /usr/bin/python3 cycles.py 3 1000 "$periods" 100 \
-              > "../../out/cycles_${periods//,/_}.txt" 2>&1 &
-          done
-          wait
-          cd ../..
-          for f in out/*.txt; do echo "=== $f"; cat "$f"; done
+          /usr/bin/python3 -u cycles.py 3 1000 "3,5,7/2,3,5/3,4,6/5,7,11" 100 | tee ../../out/cycles.txt
       - name: Upload
         if: always()
         uses: actions/upload-artifact@v4
