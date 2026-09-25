@@ -1,104 +1,78 @@
 # Nethra roadmap
 
-Built from `nethra.py` (one-file core), `NETHRA_OPERATING_NOTES.md` and `tests/robust.py` as of
-2026-09-25. Read the operating notes and the mistake ledger before starting any task. Every task
-below respects the contract in the notes: one Nethra type, no winner/selector, all learned
-incidences conduct, no gating or multiplier on `g`, `g(0) = 0`, departure is not a negative push.
+Built from `nethra/nethra.py` (one-file core), `nethra/NETHRA_OPERATING_NOTES.md` and the tests in
+`nethra/tests/`, as of 2026-09-25. Read the operating notes and the mistake ledger before starting
+any task. Every task respects the contract in the notes: one Nethra type, no winner/selector, all
+learned incidences conduct, no gating or multiplier on `g`, `g(0) = 0`, departure is not a
+negative push. Per the ledger (2026-09-23), validation is one-off and disposable unless the user
+explicitly asks for a standing test file or workflow.
 
 ## Why this order
 
-1. **Trust the numbers first.** The capability table in the notes is single-run. The repo history
-   is mostly cancel/retry commits for OOM and stale runs. Nothing downstream can be judged until
-   results are reproducible, multi-seed and cheap to rerun.
-2. **Measure before adding mechanism.** Three open problems (adaptive frontier, native rehearsal,
-   confidence) all stall on the same missing piece: a usable surprise signal. Build the readout,
-   then the things that depend on it.
-3. **Make it cheap before making it big.** Cost follows total population, not active set. Larger
-   worlds (sequences, market data, feeding) need bounded cost first.
-4. **Fix known capability gaps next**, in dependency order: gap-holding, then combination
-   contexts, then graded recurrence.
-5. **Then scale to real streams and closed-loop action**, where the earlier work pays off.
+1. **Trust the numbers first.** Done (Phase 0 below): the core reproduces, is deterministic,
+   resumes exactly, and obeys its own equation.
+2. **Measure before adding mechanism.** Adaptive frontier, native rehearsal and confidence all
+   stall on the same missing piece: a usable surprise signal.
+3. **Keep the population bounded.** Phase 0 showed that 10% amplitude noise makes `"exact"` source
+   support build one new Nethra every interval. Every later cost and real-data task depends on
+   fixing that, so graded recurrence moved up from Phase 3 to 1.4.
+4. **Make it cheap before making it big.** Cost follows total population, not active set.
+5. **Fix known capability gaps next**: gap-holding, then combination contexts.
+6. **Then scale to real streams and closed-loop action.**
 
 | # | Task | Depends on | Why now |
 |---|---|---|---|
-| 0.1 | Canonical layout + test import fix | — | Scripts must run from one place |
-| 0.2 | Regression harness with receipts | 0.1 | Every later claim needs a receipt |
-| 0.3 | Field invariant tests | 0.1 | Catch law changes automatically |
-| 0.4 | Multi-seed statistics | 0.2 | Single-run numbers can mislead |
-| 0.5 | One parametrized CI workflow | 0.2 | Stop cancel/retry churn and OOM |
-| 1.1 | Normalized surprise readout | 0.4 | Unblocks 1.3, 2.2, 3.1 |
+| 0 | Reproducibility check | — | Done, results below |
+| 1.1 | Normalized surprise readout | 0 | Unblocks 1.2, 2.2, 3.1 |
 | 1.2 | Confidence calibration study | 1.1 | Decide which readout is usable |
-| 1.3 | Admission-seed map | 0.4 | Later tasks need a chosen seed |
-| 2.1 | Profile + remove O(N) Python loops | 0.2 | Cheapest speedup, zero semantics |
+| 1.3 | Admission-seed map | 0 | Later tasks need a chosen seed |
+| 1.4 | Graded source recurrence evaluation | 0 | Noisy input grows N by one per interval |
+| 2.1 | Profile + remove O(N) Python loops | 1.4 | Cheapest speedup, zero semantics |
 | 2.2 | Adaptive frontier on new surprise | 1.1, 2.1 | Bound cost by active set |
 | 2.3 | Array backend (CuPy) for RK4 path | 2.1 | Large N on the GPU runner |
 | 2.4 | Krylov exact passive step for N > 400 | 2.3 | Keep ETD accuracy past 400 |
-| 3.1 | Native gap-holding (loop-back via receptive Nethra) | 1.1 | Biggest structural limit |
-| 3.2 | Combination (XOR) contexts | 0.4, 1.3 | Configural lookup beats Nethra |
-| 3.3 | Graded source recurrence evaluation | 3.2 | Real inputs never recur exactly |
-| 4.1 | Stochastic sequence world, log-loss scoring | 2.x, 3.3 | First real-stream capability test |
+| 3.1 | Native gap-holding (loop-back via receptive Nethra) | 1.1, 1.4 | Biggest structural limit |
+| 3.2 | Combination (XOR) contexts | 1.3 | Configural lookup beats Nethra |
+| 4.1 | Stochastic sequence world, log-loss scoring | 1.4, 2.x | First real-stream capability test |
 | 4.2 | Market stream replay (AAPL branches) | 4.1 | Existing data, honest baselines |
 | 4.3 | Closed-loop feeding / hand-ball revisit | 2.x, 3.1 | Action, memory-bounded |
 | 4.4 | Long-horizon persistence + checkpoint size | 4.x | Run for days, resume exactly |
 
 ---
 
-## Phase 0 — Reproducibility
+## Phase 0 — Reproducibility (done 2026-09-25, one-off checks, no standing files)
 
-### 0.1 Canonical layout + test import fix
-- **What:** Put `nethra.py`, `NETHRA_OPERATING_NOTES.md`, `NETHRA_MISTAKE_LEDGER.md` and every
-  script the notes cite (`capability.py`, `explore*.py`, `scale*.py`, `cue_capacity.py`,
-  `human.py`, `strengths.py`, `baselines.py`, `robust.py`, `familiarity.py`, `waiting.py`,
-  `frontier_test.py`, `binocular.py`) in one tree: `nethra/` + `nethra/tests/`.
-- **Imports:** tests import `nethra_presence` / `nethra_etd`; these are shims in `tests/` that load
-  `../nethra.py`. Not broken. Still missing from the repo: `baselines.py` and the other cited scripts.
-- **Ledger constraint (2026-09-23):** no assistant-authored standing regression suites or test
-  workflows unless the user explicitly asks. 0.2, 0.3 and 0.5 need that explicit go-ahead; until
-  then, validation stays one-off and disposable.
-- **Why:** Work is spread over ~80 branches. A task can't be regression-checked if its scripts live
-  on a different branch than the core.
-- **Test:** every script runs to completion from a clean checkout with `PYTHONPATH=nethra`.
+Layout: `nethra/nethra.py`, notes, ledger (repo copy, last entry 2026-09-24), `nethra/tests/` with
+the `nethra_presence` / `nethra_etd` shims, `robust.py`, `smear2.py`. The imports work through the
+shims.
 
-### 0.2 Regression harness with receipts
-- **What:** `tests/run_all.py` runs every capability script, parses its numbers, writes one JSON
-  receipt: sha256 of `nethra.py`, parameters, seed, each metric, wall time, peak RSS.
-  `tests/expected.json` holds the current notes values with a tolerance per metric.
-- **How:** give each script a `main(seed) -> dict` instead of print-only; `run_all` imports and
-  calls them. Keep the prints for humans.
-- **Why:** turns the notes' capability tables into executable claims. A semantic change that moves
-  a number shows up immediately, with the receipt as evidence for the ledger.
-- **Test:** harness reproduces notes sections 6, 6b and 7 within tolerance on the current core.
+| Check | Result |
+|---|---|
+| `robust.py`, Nethra rows (baselines stubbed: `baselines.py` not in repo) | clean 0.83, partial 0.38, noisy 0.50, noisy2 0.04: matches notes 6b exactly; 86 s |
+| `smear2.py`, a(v+1)/a(v-1) for v = 1, 2, 3 | seed 5: trained 1.006 / 0.960 / 0.776; seed 14: 0.941 / 0.979 / 0.952; never-learned 0.525 / 0.493 / 0.471. Learning roughly doubles forward priming but v+1 does not exceed v-1 |
+| Determinism: same inputs twice, N = 191 | bit-identical activations and checkpoint |
+| Checkpoint save at 120 intervals, reload, 120 more, N = 251 | bit-identical to uninterrupted run |
+| Charge balance `d(sum a)/dt = sum J - leak sum a` (so Gamma sums to zero), learned field, 30 intervals | ETD rel err 7.8e-15; RK4 9.2e-9 |
+| ETD vs RK4, one interval, N = 191 | max abs diff 1.1e-5 (max activation 0.097) |
 
-### 0.3 Field invariant tests
-Cheap exact checks on the equation itself, run on random small fields:
-- **Charge balance:** `Gamma` sums to zero, so `d(sum a)/dt = sum J - leak * sum a`. Check
-  `sum a(t+dt)` against the closed form within integrator error.
-- **`g(0) = 0`:** zero-evidence incidences carry no flow.
-- **ETD vs RK4:** same interval, both integrators, max abs diff below tolerance.
-- **Frontier 0 is exact:** `frontier_tolerance=0` bit-identical to the reference path.
-- **Checkpoint continuation:** save at step k, reload, run to 2k; bit-identical to uninterrupted.
-- **Zero-input decay:** no source, no learning: every activation decays, never grows.
-- **Why:** the ledger shows law changes slipped in under other names. These fail the moment the
-  field law changes, regardless of task numbers.
+Findings:
+- **Unbounded construction under noise.** 180 intervals, 12 inputs: constant amplitudes build 24
+  Nethra; the same world with 10% amplitude noise builds 179 (one per interval) under `"exact"`,
+  44 under `"min"`, 46 under `"product"`. This is the contract working as stated (every noisy
+  transition is distinct), but it makes `"exact"` unusable for real inputs. Hence 1.4.
+- **Default ETD is not the most accurate integrator.** Against ETD with 64 pieces: ETD 2 pieces
+  (default) 3.1e-5, ETD 8 pieces 4.3e-7, RK4 default (8 substeps) 1.2e-5, RK4 32 substeps
+  6.8e-8. ETD's passive part is exact, but the stepped F61 convergence term dominates its error at
+  `etd_pieces=2`. Small in absolute terms; matters only if two integrators are compared to 1e-5.
+- **Checkpoint omits the adaptive frontier tolerance** (`_tol`). Exact resume holds only when
+  `frontier_min` is unset.
+- Not rerunnable yet: the other scripts the notes cite (`baselines.py`, `capability.py`,
+  `explore*.py`, `scale*.py`, `cue_capacity.py`, `human.py`, `strengths.py`, `familiarity.py`,
+  `waiting.py`, `frontier_test.py`, `binocular.py`) are not in the repo.
 
-### 0.4 Multi-seed statistics
-- **What:** every metric reported as mean and 95% interval over at least 10 seeds (world RNG and
-  presentation order).
-- **Why:** 0.83 vs 1.00 on 48 probes is a handful of trials. Decisions between variants in later
-  phases need intervals, not point values.
-- **Test:** `expected.json` switches from point + tolerance to interval overlap.
-
-### 0.5 One parametrized CI workflow
-- **What:** replace the ~27 one-off workflows and the cancel/force-cancel workflows with one
-  `workflow_dispatch` workflow taking `ref`, `script`, `args`, `seeds`.
-- **How:** `concurrency: {group: nethra-${{ inputs.script }}, cancel-in-progress: true}` removes
-  the need for cancel commits. Wrap the run in `systemd-run --user --scope -p MemoryMax=...` (or
-  `ulimit -v`) so OOM kills one job, not the runner. Upload the 0.2 receipt as the artifact.
-  Add a fast CPU job on `ubuntu-latest` running 0.3 + a short 0.2 subset on every push.
-- **Why:** history shows repeated OOM and stale queued runs; a cap and a concurrency group fix
-  both without manual commits.
-- **Test:** dispatch two runs of the same script; the first is cancelled automatically; an
-  over-limit run dies alone and uploads a partial receipt.
+Not done, and only on explicit request (ledger 2026-09-23): a standing test runner, invariant test
+files, CI workflows. Multi-seed reporting (10+ seeds, mean and 95% interval) is a per-task rule
+instead of a harness.
 
 ## Phase 1 — Readouts before mechanism
 
@@ -138,6 +112,16 @@ Cheap exact checks on the equation itself, run on random small fields:
 - **Test:** Pareto table: regime-switch latency vs old-regime retention vs few-shot. Pick defaults.
   No mechanism change.
 
+### 1.4 Graded source recurrence evaluation
+- **What:** `source_support="min"` and `"product"` exist but are marked experimental. Run the full
+  harness on both vs `"exact"`, plus `robust.py` partial/noisy probes and a real-valued world
+  (receptive-field encoded values with noise).
+- **Why:** real inputs never recur bit-exactly; with `"exact"` construction grows by one Nethra
+  per interval under 10% amplitude noise (Phase 0). Also the only path to better partial/noisy robustness
+  (currently 0.38 / 0.50, same as linear learners).
+- **Test:** Nethra count per 10k intervals (bounded?), accuracy on robust probes, noisy real-valued
+  world. Promote one mode to default only if it matches `"exact"` on the clean harness.
+
 ## Phase 2 — Bounded cost
 
 ### 2.1 Profile, then remove O(N) Python loops
@@ -150,7 +134,7 @@ Cheap exact checks on the equation itself, run on random small fields:
   `lam ** k` on read). All exact, no semantic change.
 - **Why:** cheapest speedup, zero risk to the law; makes frontier gains real rather than eaten by
   bookkeeping.
-- **Test:** 0.3 bit-identity (checkpoint path) + harness unchanged; `scale.py` ms/interval vs N
+- **Test:** Phase 0 checks (determinism, checkpoint bit-identity, charge balance) still pass; `scale.py` ms/interval vs N
   before and after.
 
 ### 2.2 Adaptive frontier on the new surprise
@@ -193,7 +177,7 @@ Cheap exact checks on the equation itself, run on random small fields:
   *does* recur and construction reuses it. The actuator is just a physical binding (the core
   already allows any actuator to read any Nethra); no selector, no threshold in the core.
 - **Alternatives:** (a) graded `source_support="min"/"product"` on raw loop-back — notes measured
-  0.45, record as rejected unless 3.3 changes it; (b) a fixed-amplitude echo on every source
+  0.45, record as rejected unless 1.4 changes it; (b) a fixed-amplitude echo on every source
   Nethra (harness policy, not native — keep only as a control).
 - **Why here:** biggest structural limit; needs 1.1 to judge whether rehearsal reduces surprise.
 - **Test:** `waiting.py` table with a new row. Pass: cue's own outcome primed more ≥ 0.9 for gaps
@@ -216,16 +200,6 @@ Cheap exact checks on the equation itself, run on random small fields:
 - **Test:** `human.py` XOR ≥ 0.85 over 10 seeds, and no regression on blocking ratio, continual
   learning (old regimes 1.00 after 400 blocks), 15-regime overlap (0.83). Ledger entry either way.
 
-### 3.3 Graded source recurrence evaluation
-- **What:** `source_support="min"` and `"product"` exist but are marked experimental. Run the full
-  harness on both vs `"exact"`, plus `robust.py` partial/noisy probes and a real-valued world
-  (receptive-field encoded values with noise).
-- **Why:** real inputs never recur bit-exactly; with `"exact"` construction grows without bound on
-  noisy streams (Phase 4 blocker). Also the only path to better partial/noisy robustness
-  (currently 0.38 / 0.50, same as linear learners).
-- **Test:** Nethra count per 10k intervals (bounded?), accuracy on robust probes, noisy real-valued
-  world. Promote one mode to default only if it matches `"exact"` on the clean harness.
-
 ## Phase 4 — Real streams and action
 
 ### 4.1 Stochastic sequence world, log-loss scoring
@@ -235,7 +209,7 @@ Cheap exact checks on the equation itself, run on random small fields:
   a distribution and report log-loss / calibration vs count n-gram and Rescorla-Wagner baselines.
   Probability matching (notes §6) says shares should track odds; this tests it at scale.
 - **Why:** first test where Nethra must hold context longer than one interval (uses 3.1) on
-  graded, noisy input (uses 3.3), at N in the thousands (uses Phase 2).
+  graded, noisy input (uses 1.4), at N in the thousands (uses Phase 2).
 - **Test:** log-loss within 10% of the best n-gram of matching order; construction bounded;
   continual learning when the source switches corpora.
 
@@ -249,8 +223,8 @@ Cheap exact checks on the equation itself, run on random small fields:
   (hash recorded in receipt).
 
 ### 4.3 Closed-loop feeding / hand-ball revisit
-- **What:** rerun the reward-free feeding emergence experiment with Phase 2 cost bounds and the
-  0.5 memory cap; action via actuator reads of ordinary Nethra (no selector).
+- **What:** rerun the reward-free feeding emergence experiment with Phase 2 cost bounds and a
+  memory cap on the run; action via actuator reads of ordinary Nethra (no selector).
 - **Why:** these runs were repeatedly cancelled for OOM and staleness; with bounded cost and
   receipts they can finish.
 - **Test:** peak RSS below cap over 120k steps × 16 lineages; persistence metric per lineage;
@@ -258,7 +232,7 @@ Cheap exact checks on the equation itself, run on random small fields:
 
 ### 4.4 Long-horizon persistence + checkpoint size
 - **What:** days-long runs with periodic checkpoints; measure checkpoint size growth, reload time,
-  and bit-identical resume (0.3) at scale. Add compact binary checkpoint (npz) alongside JSON if
+  and bit-identical resume (as in Phase 0) at scale. Add compact binary checkpoint (npz) alongside JSON if
   JSON size dominates.
 - **Test:** 1M intervals, resume at 10 random points, bit-identical continuation; size vs N curve.
 
@@ -266,7 +240,7 @@ Cheap exact checks on the equation itself, run on random small fields:
 
 ## Working rules for every task
 - Read notes + ledger first; append a ledger entry for any mistake found.
-- One change per branch; receipt (0.2) attached to the commit message or PR.
+- One change per branch; results (numbers, seeds, core sha256) in the commit message or PR.
 - No task may change the field law, add a selector, or gate conduction. If a task seems to need
   that, stop and write the observed failure down first.
 - Report results as intervals over seeds and against the baselines in `baselines.py`.

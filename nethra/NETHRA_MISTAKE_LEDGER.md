@@ -327,3 +327,9 @@ since the last ledger entry. Do not repeat a listed mistake under a new name.
 - Native recursive depth still reached the expected structure, but runtime grew sharply even at only hundreds of Nethra because recursive provenance/factorization and field execution remained dominated by repeated Python graph traversal.
 - Earlier C1/C3 work had already established derived reverse indexes, compiled numeric topology and a faster passive execution path. The rebuild restored only fragments and then presented the file as substantially repaired.
 - Prevention: do not call a rebuild complete while knowingly leaving an already-solved execution layer replaced by repeated global Python traversal. Execution indexes/caches may be derived and non-semantic; restoring them is not architectural contamination.
+
+## 2026-09-25 — roadmap claimed a broken test import and re-proposed a standing test harness
+
+- The first roadmap draft claimed `robust.py` was broken because it imports `nethra_presence`. It is not: `tests/nethra_presence.py` and `tests/nethra_etd.py` are shims that load `../nethra.py`. The claim was made without checking the tests directory.
+- The same draft proposed a standing regression runner, invariant test files and a CI workflow, repeating the 2026-09-23 entry under the name "Phase 0".
+- Prevention: check test imports against the actual tests directory before calling them broken. Reproducibility checks stay one-off and disposable, with results recorded in the roadmap, unless the user explicitly asks for standing files.
