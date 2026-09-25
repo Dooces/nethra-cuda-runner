@@ -250,8 +250,8 @@ Flips at the end: 11-5,077 (operator structure all 4,650); max h 0.08-0.2 except
 Cost up to 2.5x off (field) and 6.5x (absent, all: operator 13 -> 84 ms/interval).
 
 - Only extinction changed clearly: during A -> Y the A -> Y handle drains X (0.0158 -> 0.0083-0.0086,
-  structure). Back on A -> X, 20 trials reach 0.0163-0.0166 (86-89% of the level before, off 97%
-  but off barely went down); first learning at 20 trials was 0.0102 (leaves), 0.0040 (all) vs off
+  structure). Back on A -> X, 20 trials reach 0.0163-0.0166 (85-98% of the level before extinction;
+  off 82%, but off only fell to 0.0158); first learning at 20 trials was 0.0102 (leaves), 0.0040 (all) vs off
   0.0151: early filler flips slow first learning.
 - AB-only suppression did not form. Traced (`negfeature`, structure, leaves): evidence on the AB->Y
   Nethra's flip onto X moved +0.61 in total at the Y intervals and -14.77 at intervals where X came
