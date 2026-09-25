@@ -61,6 +61,7 @@ because the opposite was assumed at some point and cost days of work.
 |---|---|---|
 | `admission_seed` | 14 (default) | Starting evidence of a new Nethra. At 0.01 the equations sit at a fixed point: a new Nethra's conductance is about 1.5e-4, its activation never exceeds its members, all flow runs member-to-relation, and both evidence-change terms stay zero forever (measured over 15,000 intervals). It must be large enough that `g(seed)` is comparable to the leak. Lower values (about 5) follow recent regimes and switch fast; higher values (14 to 50) keep accumulated structure and resist switching. |
 | `g_min` | 0 (default) | Keep 0. `g(0) = 0`. |
+| `source_similarity_threshold` | 0.999 (default) | Structural recurrence of graded source patterns: a new pattern refinds the stored pattern with the highest cosine above this (earliest among equals); otherwise it is stored. Physical current stays exact. Cosine ignores overall size, so one Nethra pushed 1.0 and 1.25 is the same structural event. Without this, graded input never recurs exactly and construction adds a Nethra every interval (a nested chain while the pushed members stay the same). |
 | `leakage`, `capacitance` | 1, 1 | Field timescale. One interval of `dt = 1` per observation. |
 | `integrator` | `auto` | Runtime only. ETD (exact passive part, eigendecomposition) up to 400 Nethra, RK4 with stiffness subdivision above that. Both integrate the same equation. |
 

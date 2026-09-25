@@ -275,6 +275,9 @@ class NethraField:
         # recurrence can be refound by cosine similarity without exact float or nonzero-set identity.
         self.source_patterns = []
         self.relation_source_events = defaultdict(set)
+        # Derived execution indexes over source_patterns (rebuilt when out of step with it).
+        self._pattern_index = {}
+        self._pattern_members = defaultdict(list)
 
         # Transient source/closure coordinates. Independent external source support earns
         # construction; recursive closure is the structural description available to a newly
@@ -709,13 +712,18 @@ class NethraField:
         return sqrt(sum(v * v for _n, v in pattern))
 
     def _canonical_source_event(self, source_current):
-        """Return the structural source event for this finite interval: the ACTUAL graded pattern.
+        """Refind or register one structural source event from its graded current vector.
 
-        The current interval's graded source evidence is preserved exactly; it is never replaced
-        by a previously stored pattern.  Stored patterns are an index of observed evidence:
-        an exactly recurring pattern returns the stored object (identity of identical evidence),
-        anything else is recorded as observed.  Graded similarity to stored patterns is not used
-        to substitute evidence.
+        The physical source currents remain exact and are never replaced.  This function supplies
+        only structural recurrence: a new smeared current pattern refinds the closest stored
+        pattern when cosine similarity exceeds source_similarity_threshold (the earliest stored one
+        among equals).  A receptive-field tail crossing exact zero therefore has no special
+        structural authority.  A pattern that refinds nothing is stored.
+
+        Execution only: an exactly recurring pattern returns its stored object directly (no other
+        stored pattern can pass the threshold against it, or it would not have been stored), and
+        only stored patterns sharing a member are compared (no shared member means cosine 0), in
+        storage order, so the result equals a scan over every stored pattern.
         """
         pattern = frozenset(
             (n, float(value))
@@ -724,15 +732,38 @@ class NethraField:
         )
         if not pattern:
             return frozenset()
-        index = self.__dict__.setdefault("_pattern_index", {})
-        if not index and self.source_patterns:
-            for existing in self.source_patterns:
-                index.setdefault(existing, existing)
+        index = self._pattern_index
+        by_member = self._pattern_members
+        if len(index) != len(self.source_patterns):
+            index.clear()
+            by_member.clear()
+            for position, existing in enumerate(self.source_patterns):
+                index[existing] = existing
+                for n, _value in existing:
+                    by_member[n].append(position)
         known = index.get(pattern)
         if known is not None:
             return known
+
+        positions = set()
+        for n, _value in pattern:
+            positions.update(by_member.get(n, ()))
+        best = None
+        best_similarity = -1.0
+        for position in sorted(positions):
+            existing = self.source_patterns[position]
+            similarity = self._source_cosine(pattern, existing)
+            if similarity > self.source_similarity_threshold and similarity > best_similarity:
+                best = existing
+                best_similarity = similarity
+        if best is not None:
+            return best
+
+        position = len(self.source_patterns)
         self.source_patterns.append(pattern)
         index[pattern] = pattern
+        for n, _value in pattern:
+            by_member[n].append(position)
         return pattern
 
     def _physical_within(self, event, within):
