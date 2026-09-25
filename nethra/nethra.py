@@ -153,7 +153,7 @@ class NethraField:
                  source_similarity_threshold=.999, source_support="exact",
                  integrator="auto", etd_pieces=2,
                  frontier_tolerance=0.0, frontier_min=None, join_on_recurrence=True,
-                 top_only_conduction=True):
+                 conduction="top_and_leaves", top_only_conduction=None):
         """Initialize one field without creating semantic structure.
 
         g_min/g_max/tau map earned incidence evidence to conductance; the native default gives
@@ -196,16 +196,28 @@ class NethraField:
         #          happens once does not.
         #   False: every interval with unresolved residual is joined whole (previous behaviour).
         self.join_on_recurrence = bool(join_on_recurrence)
-        # Which members of a newly registered route earn incidence evidence (PROVISIONAL, user
-        # decision 2026-09-25):
-        #   True:  only its top members.  A member that lies in a complete route of another member
-        #          of the same route (a covered member) is already reached through that member; its
-        #          incidence to the new Nethra earns no evidence and keeps g = 0.  The route itself is
-        #          whole, so closure is unchanged.  Coverage is decided once, when the route is
-        #          registered, from the routes the other members have at that moment.
-        #   False: every member earns evidence (previous behaviour, bit-identical; old checkpoints
-        #          load with False).
-        self.top_only_conduction = bool(top_only_conduction)
+        # Which members of a newly registered route earn incidence evidence (user decision
+        # 2026-09-25: try alternatives to top-only, keep the one that is clearly better):
+        #   "top_and_leaves" (default): a member lying in a complete route of another member of the
+        #          same route (covered) earns no evidence and keeps g = 0, unless it is primitive
+        #          (has no routes of its own: a Nethra that only ever receives pushed current).
+        #          So a constructed Nethra conducts with its top members and with every primitive
+        #          member of its routes: what is present drives it directly, whatever was built
+        #          before it on the same members.
+        #   "top": every covered member earns nothing, primitive or not (previous default).  A
+        #          Nethra built later on the same members is then reached only through the earlier
+        #          one, and in a continuous stream the before side of every transition is covered
+        #          by the previous transition's Nethra (docs/HANDOFF.md section 0f).
+        #   "all": every member earns evidence (the core before 2026-09-25; old checkpoints load
+        #          with "all").
+        # Coverage is decided once, when the route is registered, from the routes the other
+        # members have at that moment.  The route itself is always whole, so closure and
+        # construction do not depend on this.
+        if top_only_conduction is not None:           # earlier keyword: True = "top", False = "all"
+            conduction = "top" if top_only_conduction else "all"
+        if conduction not in ("top_and_leaves", "top", "all"):
+            raise ValueError("conduction must be 'top_and_leaves', 'top' or 'all'")
+        self.conduction = conduction
         # Runtime integrator for one fixed-topology interval (same field equation either way):
         #   "rk4": explicit RK4 with passive-stiffness subdivision
         #   "etd": exponential time differencing (Cox-Matthews ETDRK4).  The passive operator
@@ -387,6 +399,15 @@ class NethraField:
         self._pi_vals = np.zeros(0)
         self._triu_cache = {}
 
+    @property
+    def top_only_conduction(self):
+        """Whether covered route members are kept from earning evidence (conduction != "all")."""
+        return self.conduction != "all"
+
+    @top_only_conduction.setter
+    def top_only_conduction(self, value):
+        self.conduction = "top" if value else "all"
+
     def new(self):
         """Create and register one otherwise undifferentiated Nethra.
 
@@ -518,16 +539,27 @@ class NethraField:
 
         if self.top_only_conduction and is_new_route and len(route) > 1:
             covered = self._covered_by[nethra]
-            for member in route:
-                for other in route:
-                    if other is member:
-                        continue
-                    if any(member in r and r <= route for r in other.routes):
-                        key = (nethra, route, member)
-                        self.covered_incidences.add(key)
-                        covered.add(key)
-                        break
+            for member in self._covered_members(nethra, route):
+                key = (nethra, route, member)
+                self.covered_incidences.add(key)
+                covered.add(key)
             self._clear_covered((nethra,))
+
+    def _covered_members(self, nethra, route):
+        """Members of a newly registered route that earn no evidence (see `conduction`): each
+        member lying in a complete route of another member of the same route; with
+        "top_and_leaves", primitive members (no routes) are never among them."""
+        keep_leaves = self.conduction == "top_and_leaves"
+        out = []
+        for member in route:
+            for other in route:
+                if other is member:
+                    continue
+                if any(member in r and r <= route for r in other.routes):
+                    if not (keep_leaves and not member.routes):
+                        out.append(member)
+                    break
+        return out
 
     def _clear_covered(self, relations):
         """Covered incidences of these relations hold no evidence (construction may have re-seeded
@@ -1272,6 +1304,7 @@ class NethraField:
             for route in dict.fromkeys((before_route, after_route)):
                 if not route or relation in route:
                     continue
+                self._registering_before = route == before_route
                 if route not in relation.routes:
                     self._route(relation, route, frozenset(), self.admission_seed)
                     continue
@@ -1690,7 +1723,7 @@ class NethraField:
                 "frontier_tolerance": self.frontier_tolerance,
                 "frontier_min": self.frontier_min,
                 "join_on_recurrence": self.join_on_recurrence,
-                "top_only_conduction": self.top_only_conduction,
+                "conduction": self.conduction,
             },
             "nodes": nodes,
             "incidence_evidence": incidence,
@@ -1735,8 +1768,10 @@ class NethraField:
                 params[new] = params.pop(old)
         # Checkpoints written before join_on_recurrence existed continue whole-interval joining.
         params.setdefault("join_on_recurrence", False)
-        # ... and before top_only_conduction existed, every member conducts.
-        params.setdefault("top_only_conduction", False)
+        # ... checkpoints of 2026-09-25 store top_only_conduction; before that every member conducts.
+        if "top_only_conduction" in params:
+            params["conduction"] = "top" if params.pop("top_only_conduction") else "all"
+        params.setdefault("conduction", "all")
         field = cls(**params)
         node_rows = list(payload["nodes"])
         nodes = [field.new() for _ in node_rows]

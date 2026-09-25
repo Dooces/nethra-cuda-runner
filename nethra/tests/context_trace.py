@@ -2,8 +2,8 @@ import os, sys, random
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ[v]="1"
 sys.path.insert(0,os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); import nethra as core
 NAMES=["C1","C2","X","Y","Z","F1","F2"]; C1,C2,X,Y,Z,F1,F2=range(7)
-TOP=os.environ.get("TOP","1")=="1"
-rng=random.Random(0); f=core.NethraField(top_only_conduction=TOP); L=[f.new() for _ in range(7)]
+
+rng=random.Random(0); f=core.NethraField(conduction=os.environ.get("COND","top_and_leaves")); L=[f.new() for _ in range(7)]
 def show(xs):
     for x in xs: L[x].push(1.0)
     f.step(1.0)

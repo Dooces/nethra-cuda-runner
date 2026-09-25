@@ -2,8 +2,8 @@
 
 ## START HERE
 
-Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0e (fourth
-session), §0-§0d (third session), then `nethra/nethra.py`. Older sections (§1-§10) are the second
+Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0f and §0e
+(fourth session), §0-§0d (third session), then `nethra/nethra.py`. Older sections (§1-§10) are the second
 session's state and are still valid unless a §0 section says otherwise.
 
 **Branch:** `claude/tender-cray-bk3jq6` (Dooces/nethra-cuda-runner). It contains everything from
@@ -12,6 +12,13 @@ gone after a session; every script used is in `nethra/tests/`.
 
 ### What changed in the core in the fourth session
 
+- **Latest (§0f): `conduction="top_and_leaves"` is the default.** Covered constructed members earn no
+  evidence (as top-only), primitive members always conduct. Chosen over top-only after comparing 8
+  rules on the user scripts: it passes the context and cue tests top-only fails, keeps blocking,
+  interference and 15-regime results at or above full conduction, at a third of full conduction's
+  cost (4-5x top-only's). `"top"` and `"all"` stay available, bit-identical to before;
+  `top_only_conduction=True/False` still works; old checkpoints load with `"all"`, the fourth
+  session's with what they stored. Earlier in the session (below) top-only was the default.
 - `top_only_conduction=True` (default, **provisional**, user decision): the `TopField` prototype moved
   into the core. A route member that lies in a complete route of another member of the same route is
   covered: its incidence earns no evidence (g = 0). Routes stay whole, so closure and construction
@@ -36,7 +43,10 @@ gone after a session; every script used is in `nethra/tests/`.
 
 ### Decisions waiting for the user
 
-1. **Top-only stays default?** It fails the context tests: the continuation built second is 2 hops
+0. **Superseded by §0f:** the user asked for a better rule than top-only; `top_and_leaves` is now the
+   default. Remaining for the user: accept its cost (30 -> 47 ms/interval on two objects over 400
+   intervals vs 7 -> 10 top-only, 55 -> 145 full), and delta input is not adopted (§0f.3).
+1. (Earlier, answered) **Top-only stays default?** It fails the context tests: the continuation built second is 2 hops
    further than the first, and context doesn't select it (`context_partwise.py`: C2+X primes Y 0.042
    vs Z 0.0014; `cue_capacity.py`: cue 4 still selects B). Also loses blocking and changes
    interference and spacing (§0e.2). Cost: flat vs rising (§0b). `top_only_conduction=False` restores
@@ -179,6 +189,135 @@ gone after a session; every script used is in `nethra/tests/`.
   streams, compare a hash of `checkpoint_dict()` and of all activations; include frontier, rk4 and a
   checkpoint round trip mid-stream.
 - Known: `source_support="product"` gives a different checkpoint on every run (pre-existing).
+
+## 0f. Fourth session, part 2: a conduction rule better than top-only; delta input by field reads
+
+User: "test top-only as default, and try delta input, though make sure you aren't just migrating
+towards another framework and the field itself is doing the work"; then "you can try something other
+than top-only as default, run tests and explain why it's clearly better, make it work".
+
+### 0f.1 Why top-only fails (traced)
+
+`cue_trace.py` (the `cue_capacity.py` cue stream: A -> B with cue1 40 times, then A -> C with cue2):
+- N6 = {A, c1} | {B, c1} is built first, with nothing before it, so A, B, c1 conduct to it directly;
+  evidence change saturates them (g 1.50).
+- N10 = {A, N9, c2} | {C, c2}: its before route contains N9's after route {A, c2} (N9 = the previous
+  transition, Z -> A+c2), so A and c2 are covered; N10 is driven only through N9 and its g stays at
+  the seed (0.20). A + c2 reaches C via 1.5 -> 0.2 -> 0.2, B via 1.5 -> 1.5: B wins.
+- In a continuous stream this always happens: a Nethra's before route is the previous interval's
+  closure, which contains the previous transition Nethra's after route. So under top-only the
+  present drives "what comes next" only through "how it got here", and whichever Nethra was built
+  first on a member gets the direct incidences, saturates, and dominates (rich get richer).
+  `context_partwise.py` (§0e.2) is the same mechanism.
+
+### 0f.2 Rules compared (all decide once, at route registration, which members earn evidence;
+routes stay whole, so closure and construction are identical in all of them)
+
+| rule | members earning evidence |
+|---|---|
+| top | members not covered (previous default) |
+| all | every member (the core before 2026-09-25) |
+| **topleaves (now `top_and_leaves`, default)** | top members + every primitive member (no routes: pushed Nethra) |
+| leaves | primitive members only (top rule when a route has none) |
+| beforeall / afterall | every member on the before / after side, top rule on the other |
+| leavesbefore / leavesafter | primitive members added on the before / after side only |
+
+User scripts, leakage 1 (`with_conduction_variant.py`, prototype `conduction_variants.py`):
+
+| test | top | all | afterall | beforeall | **topleaves** | leaves | leavesafter |
+|---|---|---|---|---|---|---|---|
+| `context_partwise` small first, activation right / wrong, C1; C2 | .043/.001; **.001/.042** | .041/.037; .041/.037 | .043/.021; .042/.022 | .041/.033; .049/.039 | .042/.039; .042/.040 | .037/.039; .041/.036 | .043/.021; .046/.022 |
+| same, P right / wrong, C1; C2 | .043/.001; .001/.042 | .046/.042; .046/.042 | .044/.017; .044/.018 | .043/.043; .061/.042 | **.047/.048; .047/.049** | .042/.049; .048/.043 | .050/.020; .048/.021 |
+| `cue_capacity` cue2: C (right) / B | .003/.043 | .101/.065 | .006/.045 | .088/.068 | **.103/.063** | .102/.059 | .005/.043 |
+| same, no cue (recent C / old B) | .001/.003 | .069/.052 | .028/.004 | .009/.014 | **.070/.051** | .062/.007 | .030/.003 |
+| 8 regimes 61% overlap; 15 regimes | .88; .70 | .94; .83 | .85; .12 | .91; 1.00 | **.94; .93** | .93; .80 | .84; .15 |
+| `human.py 14` blocking ratio (low = blocking) | .89 | .38 | 1.00 | .98 | **.18** | 9.71 | .86 |
+| interference after 150 unrelated, B / C | .001/.000 | .015/.036 | .001/.004 | .001/.004 | **.014/.037** | .001/.050 | .001/.004 |
+| spacing, massed / spaced | .002/.046 | .037/.025 | .002/.032 | .003/.040 | .040/.026 | .038/.028 | .003/.033 |
+| `robust.py` clean / partial / noisy / noisy2 | 1.00/.40/.58/.06 | .83/.38/.50/.04 | .92/.42/.54/.06 | .92/.35/.52/.06 | .83/.40/.50/.04 | .83/.40/.48/.04 | 1.00/.40/.58/.06 |
+| `focus_symbolic` share with / without F | .489/.488 | .495/.482 | .456/.490 | .437/.473 | .484/.480 | .485/.479 | .459/.485 |
+| `consequence_reach` P toward F: first k; peak | 6; 1.3e-2 | 8; 4.3e-2 | 6; 8.6e-3 | 8; 6.0e-2 | 8; 5.0e-2 | 8; 5.1e-2 | 6; 5.7e-3 |
+
+Cost, two objects (`conduction_cost.py 0 400 x`: gpu_bench stream, 3 alone laps each, then 400
+together, tolerance 0.01, local, one thread), ms/interval per 80 together; frontier; conducting
+incidences at the end:
+
+| rule | 0-79 ... 320-399 | frontier | conducting of 8,871 |
+|---|---|---|---|
+| top | 7, 8, 9, 10, 10 | 114 -> 136 | 968 |
+| leavesafter | 16, 17, 21, 23, 24 | 176 -> 231 | 2,104 |
+| leavesbefore | 24, 27, 28, 31, 38 | 198 -> 256 | 3,180 |
+| **topleaves** | 30, 33, 40, 43, 47 | 216 -> 277 | 4,316 |
+| beforeall | 39, 54, 66, 76, 87 | 216 -> 323 | 6,182 |
+| all | 55, 74, 94, 112, 145 | 239 -> 358 | 8,871 |
+
+Why topleaves (`top_and_leaves`):
+- Every pushed Nethra conducts directly to every constructed Nethra whose route holds it, whatever
+  was built before. The present drives the Nethra that expects the next step directly (fixes 0f.1).
+  Constructed members inside another member's route stay covered (the duplication top-only removed
+  among constructed Nethra).
+- It is the only rule that passes every test full conduction passes: cue selection, recency,
+  regimes (0.93 vs 0.83 full), blocking (0.18, stronger than full), interference, consequence reach.
+- Cost: a third of full conduction and it rises at about the same relative rate as top-only (+57% vs
+  +43% over 320 intervals; full +164%). It is 4-5x top-only.
+- Rules that keep the before side covered (top, afterall, leavesafter) fail cue selection and
+  15 regimes; rules that open the before side fully (beforeall) lose blocking and cost 2x.
+- Weak spot: `context_partwise.py` small factors first. Activation right in both rows but by 7%;
+  P slightly wrong in both (0.047 vs 0.048). The conjunction Nethra (C1+X -> Y, C2+X -> Z) conduct
+  directly with C, X and Y/Z but stay at seed-level g (0.15-0.29) while the phase-1 X -> Y, X -> Z
+  Nethra are at 1.5 (`context_trace.py`); full conduction has the same small margin (P 0.046 vs
+  0.042). The context tilt is small because evidence does not grow on the conjunction Nethra; that is
+  evidence change, not conduction. Open.
+
+Core change: parameter `conduction` ("top_and_leaves" default, "top", "all"); `_covered_members`
+holds the rule. Checks: "top" and "all" equal the previous commit's `top_only_conduction` True/False
+(checkpoints with the parameter key normalized, activations and conducting incidences; all
+bitcheck modes); the default equals the prototype rule (`conduction_variants.py` topleaves) on the
+bitcheck streams with a round trip, and gives the same output on `cue_capacity`, `human`, `robust`,
+`focus_symbolic`, `consequence_reach`.
+
+### 0f.3 Delta input, judged by field reads only
+
+The structural read of §0e.3 (cells of after routes of Nethra refound by their before route) is a
+lookup done by the harness on the topology, a transition table. The question here is whether the
+field (P, frontier 0) carries the next position better with displacement Nethra. `delta_field.py`:
+object bouncing on a line; MODE none / delta / shuffle (same displacement values permuted in time,
+so they carry no information about the motion); ablation = frozen copy, same interval pushed
+without the displacement Nethra. Share of P over position cells landing on the true next position:
+
+| setting | none | delta | shuffle | delta, d not pushed at read |
+|---|---|---|---|---|
+| L=8, one per position, top | 0.33 | 0.22 | 0.20 | 0.24 |
+| L=16, one per position, top | 0.64 (P total 0.001) | 0.075 | 0.089 | 0.082 |
+| L=16, all | 0.40 | 0.14 | 0.16 | 0.18 |
+| L=16, topleaves | 0.40 | 0.14 | 0.16 | 0.18 |
+| L=16, speeds 1-3, topleaves | 0.19 | 0.13 | 0.11 | 0.13 |
+| L=16, 6 coarse cells, top | 0.06 | 0.03 | 0.03 | 0.03 |
+
+- Delta lowers the share at the next position in every setting, and real displacement is no better
+  than shuffled: the field does not use the displacement's information about the motion.
+- Mechanism (`delta_field.py` trace at x=8 moving left, L=16, top): d- (A 0.205) conducts to every
+  leftward Nethra (A 0.045-0.10 all along the line), which pour P into every cell x1..x14. The
+  displacement Nethra is a hub for "moving left", present all run long, not a pointer to the next
+  cell. Without delta, the leftward Nethra conduct to no cells at all (covered), so the 0.64 share
+  at L=16 top is a share of 0.001.
+- So delta input makes the harness's structural lookup exact (§0e.3) and leaves the field's
+  expectation worse. Not adopted.
+- Also measured (§0e.1, rules above): no conduction rule makes positive P point forward on the
+  graded ring (behind >= ahead at step 1 for every rule); the input-free continuation beats staying
+  put only in some settings (afterall 0.77 on 12/8, topleaves 0.52 on 12/12, all 0.52 on 12/12).
+
+### 0f.4 Scripts (`nethra/tests/`)
+
+| script | what |
+|---|---|
+| `conduction_variants.py` | prototype rules (env COND), installed on `nethra.NethraField` |
+| `with_conduction_variant.py` | `COND=afterall python3 with_conduction_variant.py cue_capacity.py` |
+| `conduction_cost.py` | `COND=... conduction_cost.py 0 400 x`: cost table above |
+| `cue_trace.py` | env COND: cue stream topology, conductances, activations |
+| `delta_field.py` | env COND (default top), L, NC, MODE, ND, VMAX, SPEEDS, PASSES, ABL |
+| `with_params.py` | now env LEAK and COND=top/all/top_and_leaves (core values) |
+| `context_trace.py` | env COND (core values, default top_and_leaves) |
 
 ## 0e. Fourth session (2026-09-25, night): top-only in core, where next, delta input, leakage, execution
 
