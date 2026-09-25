@@ -1,0 +1,45 @@
+name: Nethra GPU bench
+
+on:
+  push:
+    branches:
+      - claude/zen-cerf-mqrlxe
+    paths:
+      - '.github/workflows/nethra-gpu-bench.yml'
+      - 'nethra/tests/gpu_bench.py'
+      - 'nethra/tests/gpu_field.py'
+  workflow_dispatch:
+
+concurrency:
+  group: nethra-gpu-bench
+  cancel-in-progress: true
+
+jobs:
+  bench:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname; nproc; free -h; nvidia-smi || true
+          /usr/bin/python3 --version
+          /usr/bin/python3 -c "import numpy, cupy; print('numpy', numpy.__version__, 'cupy', cupy.__version__)"
+          sha256sum nethra/nethra.py nethra/tests/gpu_field.py nethra/tests/gpu_bench.py nethra/tests/top_conduction_prototype.py
+      - name: Two objects, CPU vs GPU integration, core vs top-only conduction
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p out
+          cd nethra/tests
+          timeout 1500 /usr/bin/python3 -u gpu_bench.py 240 40 | tee ../../out/gpu_bench.txt
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-gpu-bench
+          path: out
+          if-no-files-found: warn
+          retention-days: 7
