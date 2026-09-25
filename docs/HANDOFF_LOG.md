@@ -10,6 +10,48 @@ were written before the user clarified the bar. Read them through `docs/HANDOFF.
 capability is a sanity check for failure; reproducing people's particular behaviour (the spacing
 effect, a 2:1 forward bias, their lag) is not a criterion.
 
+## 0i. Sixth session: timer sources for periodicity and time to finish (`timers.py`, `timers_trace.py`)
+
+User question: several "timer" Nethra at different frequencies, maybe log-spaced so they need not
+cover the whole joint state space; can they give the field references for periodicity and for
+roughly when something finishes? Tiny test, shared direction, default core.
+
+Stream: timers = square waves, periods 2, 4, 8 (each a high and a low Nethra, one of them pushed every
+interval; powers of 2, so 8 joint states instead of an lcm product). 32 warm-up intervals of timers
+alone (small factors first), then 20 episodes: E pushed D=5 intervals, O one interval, then a gap
+of timers only. Conditions: `none` (no timers, gap silent, gap 7-13), `locked` (gap 10: episode 16,
+E always starts at the same joint phase), `random` (gap 7-13: onset phase random), `reset` (timers
+restart at E onset; the harness does this: a device, reference only). Reads after each E interval k,
+last 8 episodes: P toward O; closure of the completed interval: number of refound Nethra having O in
+a route (N9 = {E}|{O} gives 1 everywhere).
+
+Prediction from the code (written before running): locked and reset build a Nethra
+{E + phase before} | {O + phase after}, refound only at k=5, so P toward O rises at k=5; random and
+none give no rise.
+
+| COND | built | P->O k=1..5 | refound with O route k=1..5 | ratio P(k=5)/P(k<5) (geo) |
+|---|---|---|---|---|
+| none | 2 | .062 .123 .125 .121 .118 | 1 1 1 1 1 | 1.14 |
+| locked | 16 | .070 .094 .090 .088 .090 | 1 1 1 1 **2** | 1.06 |
+| random | 35 | .059 .063 .062 .062 .061 | 2.4 2.0 2.0 2.0 2.3 | 1.01 |
+| reset (device) | 21 | .066 .083 .078 .077 .080 | 1 1 1 1 **2** | 1.05 |
+
+- Prediction held for structure and closure, failed for the flow. Locked topology (`timers_trace.py
+  locked`): warm-up N1-N8 = one Nethra per joint phase; N15 = {E, N14, phase-4 timers, ...} |
+  {O, phase-5 timers, ...}, in closure only at k=5. Flow into O at k=1..5: N9 (g 1.15-1.09) .053
+  .081 .080 .080 .078; N15 (g 0.33-0.30) .015 .014 .012 .011 .013. N15's activation is 0.086-0.139 at
+  every k: its members (E, N9, shared timer Nethra) drive it whether or not its route is complete.
+  Closure does not gate conduction, so the timing sits in closure, not in P.
+- Random onset: phase-bound E->O Nethra get built for many onset phases; each k completes some of
+  them (2.0-2.9 refound at every k, seeds 1-3). No timing in closure either.
+- D drawn from {4,5,6} (30 episodes, read last 15), reset: refound with O route k=1..6 = 1 1 1 2 2 3,
+  share of episodes where O came next = 0 0 0 .27 .36 1.00 (seeds 1-3: same counts, shares .27-.33,
+  .36-.45). Graded: "not before 4, surely by 6". P toward O flat (.064-.075). `locked` with D drawn is
+  not locked (episode length varies, onset drifts): 2.0 1.5 1.3 1.7 1.9 2.2, no clean timing.
+- Summary of measurements: free-running timers carry timing only when the world's events are locked
+  to their phase; with a reset at onset (harness) closure refinds "time to finish", graded when D
+  varies; in no condition does the flow toward O (P, live activation) show it.
+
 ## Former start-here of the fifth session (superseded by docs/HANDOFF.md; note added when the log was split off)
 
 Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0g (fifth
