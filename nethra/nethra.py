@@ -152,7 +152,7 @@ class NethraField:
                  outgoing_evidence_per_flow=1200.0, incoming_evidence_per_tension=2400.0,
                  source_similarity_threshold=.999, source_support="exact",
                  integrator="auto", etd_pieces=2,
-                 frontier_tolerance=0.0, frontier_min=None):
+                 frontier_tolerance=0.0, frontier_min=None, join_on_recurrence=True):
         """Initialize one field without creating semantic structure.
 
         g_min/g_max/tau map earned incidence evidence to conductance; the native default gives
@@ -186,6 +186,15 @@ class NethraField:
         if source_support not in ("exact", "min", "product"):
             raise ValueError("source_support must be 'exact', 'min' or 'product'")
         self.source_support = source_support
+        # How construction treats an interval whose parts existing structure already accounts for:
+        #   True:  per part.  A constructed Nethra with one route complete on the before side and one
+        #          on the after side accounts for the pushed Nethra in those routes.  Nothing is built
+        #          for accounted parts; construction joins only the unaccounted remainder.  The whole
+        #          interval is joined (as with False) only when the same transition of pushed Nethra
+        #          has been pushed before: a co-presence that recurs becomes structure, one that
+        #          happens once does not.
+        #   False: every interval with unresolved residual is joined whole (previous behaviour).
+        self.join_on_recurrence = bool(join_on_recurrence)
         # Runtime integrator for one fixed-topology interval (same field equation either way):
         #   "rk4": explicit RK4 with passive-stiffness subdivision
         #   "etd": exponential time differencing (Cox-Matthews ETDRK4).  The passive operator
@@ -317,6 +326,11 @@ class NethraField:
         # Transient source/closure coordinates. Independent external source support earns
         # construction; recursive closure is the structural description available to a newly
         # admitted ordinary Nethra. Neither coordinate is another persistent object type.
+        # Transitions of pushed Nethra already witnessed (join_on_recurrence): each entry is
+        # (Nethra pushed in one interval, Nethra pushed in the next).  Bookkeeping over
+        # observations only, like source_patterns; it has no activation.
+        self.witnessed_transitions = set()
+
         self.previous_explicit = frozenset()
         self.previous_closure = frozenset()
         self.previous_source_event = frozenset()
@@ -1011,14 +1025,75 @@ class NethraField:
         # misses a Nethra constructed at that boundary; interpreting t-1 with stale topology is the
         # same class of mistake as interpreting t with t-1 state.
         before_route = frozenset(self.closure(self.previous_explicit, self.current_source_event))
-        after_route = frozenset(current_closed)
+        return self._admit_sides(
+            before_route, frozenset(current_closed),
+            (self.current_source_event, current_source_event),
+            self.current_event, current_description, unresolved,
+        )
+
+    def _admit_by_parts(self, current_closed, current_description, unresolved, current_source_event):
+        """Structural subtraction per part before construction (join_on_recurrence, first sight).
+
+        Every constructed Nethra with one route complete in the before side and one route complete
+        in the after side accounts for the source Nethra inside those routes; all such Nethra are
+        kept, none is picked.  If every source Nethra of both sides is accounted, nothing is built.
+        If nothing accounts for anything, the whole interval is joined as usual.  Otherwise the
+        unaccounted source Nethra of each side are described on their own and joined, when both
+        sides have some.
+        """
+        if unresolved <= self.admission_threshold or not self.previous_closure:
+            return ()
+        before_side = frozenset(self.closure(self.previous_explicit, self.current_source_event))
+        after_side = frozenset(current_closed)
+        before_source = self._event_members(self.current_source_event)
+        after_source = self._event_members(current_source_event)
+        touched = set()
+        for member in before_source:
+            for relation, _route in self.member_to_routeuses.get(member, ()):
+                touched.add(relation)
+        accounted_before, accounted_after, handles = set(), set(), []
+        for relation in self._ordered(touched):
+            before_routes = [r for r in relation.routes if r <= before_side]
+            after_routes = [r for r in relation.routes if r <= after_side]
+            if not before_routes or not after_routes:
+                continue
+            covered_before = {m for r in before_routes for m in r if m in before_source}
+            covered_after = {m for r in after_routes for m in r if m in after_source}
+            if not covered_before or not covered_after:
+                continue
+            handles.append(relation)
+            accounted_before |= covered_before
+            accounted_after |= covered_after
+        rest_before = before_source - accounted_before
+        rest_after = after_source - accounted_after
+        if not rest_before and not rest_after:
+            return tuple(handles)
+        if not handles:
+            return self._admit_sides(
+                before_side, after_side, (self.current_source_event, current_source_event),
+                self.current_event, current_description, unresolved,
+            )
+        if not rest_before or not rest_after:
+            return tuple(handles)
+        # Only the remainder is described and joined across the interval.
+        rest_before_event = frozenset((n, v) for n, v in self.current_source_event if n in rest_before)
+        rest_after_event = frozenset((n, v) for n, v in current_source_event if n in rest_after)
+        return self._admit_sides(
+            frozenset(self.closure(rest_before, rest_before_event)),
+            frozenset(self.closure(rest_after, rest_after_event)),
+            (rest_before_event, rest_after_event),
+            frozenset(), frozenset(), unresolved,
+        )
+
+    def _admit_sides(self, before_route, after_route, source_pair, before_description,
+                     current_description, unresolved):
+        """Refind or admit handles for one before side and one after side (see _admit_whole_support)."""
         participants = before_route | after_route
         if len(participants) < 2:
             return ()
 
-        source_pair = (self.current_source_event, current_source_event)
         if self.source_support != "exact":
-            return self._admit_graded(before_route, after_route, source_pair,
+            return self._admit_graded(before_route, after_route, source_pair, before_description,
                                       current_description, unresolved)
         relations = list(self._existing_temporal_support_relations(
             before_route, after_route, source_pair
@@ -1029,9 +1104,9 @@ class NethraField:
         # completed transient descriptions as well as the source-pair index, and preserve every
         # compatible handle.  A handle already indexed to a different source transition is not
         # silently conflated with this one.
-        if self.current_event and current_description:
+        if before_description and current_description:
             for accounting_nethra, _left, _right in self._accounted(
-                self.current_event, current_description
+                before_description, current_description
             ):
                 if accounting_nethra in known:
                     continue
@@ -1125,7 +1200,8 @@ class NethraField:
             for m in route
         )
 
-    def _admit_graded(self, before_route, after_route, source_pair, current_description, unresolved):
+    def _admit_graded(self, before_route, after_route, source_pair, before_description,
+                      current_description, unresolved):
         """EXPERIMENTAL graded refinding: all structurally compatible handles resonate with support
         s; only the residual unresolved * prod(1 - s) can construct a new handle."""
         routes = tuple(dict.fromkeys((before_route, after_route)))
@@ -1134,8 +1210,8 @@ class NethraField:
         with_b = {r for r, _ in self.domain_to_routeuses.get(self._route_leaf_domain(before_route), ())}
         with_a = {r for r, _ in self.domain_to_routeuses.get(self._route_leaf_domain(after_route), ())}
         compatible |= with_b & with_a
-        if self.current_event and current_description:
-            compatible |= {c for c, _l, _r in self._accounted(self.current_event, current_description)}
+        if before_description and current_description:
+            compatible |= {c for c, _l, _r in self._accounted(before_description, current_description)}
         supported = []
         remaining = float(unresolved)
         for relation in self._ordered(compatible):
@@ -1279,9 +1355,19 @@ class NethraField:
             max(0.0, manifest_minus_prior.get(n, 0.0))
             for n in source_current
         )
-        self._admit_whole_support(
-            current_closed, current_description, unresolved, current_source_event
-        )
+        join_whole = True
+        if self.join_on_recurrence:
+            transition = (frozenset(self.current_interval_source), frozenset(source_current))
+            join_whole = transition in self.witnessed_transitions
+            self.witnessed_transitions.add(transition)
+        if join_whole:
+            self._admit_whole_support(
+                current_closed, current_description, unresolved, current_source_event
+            )
+        else:
+            self._admit_by_parts(
+                current_closed, current_description, unresolved, current_source_event
+            )
         return manifest_minus_prior
 
     @staticmethod
@@ -1453,6 +1539,7 @@ class NethraField:
                 "etd_pieces": self.etd_pieces,
                 "frontier_tolerance": self.frontier_tolerance,
                 "frontier_min": self.frontier_min,
+                "join_on_recurrence": self.join_on_recurrence,
             },
             "nodes": nodes,
             "incidence_evidence": incidence,
@@ -1472,6 +1559,10 @@ class NethraField:
             "current_event": self._checkpoint_event_row(self.current_event, index),
             "rho": rho,
             "pair_stats": pair_stats,
+            "witnessed_transitions": sorted(
+                [sorted(index[n] for n in left), sorted(index[n] for n in right)]
+                for left, right in self.witnessed_transitions
+            ),
         }
         # Refuse JSON NaN/Infinity rather than silently persisting invalid field state.
         json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -1487,6 +1578,8 @@ class NethraField:
         for old, new in _RENAMED_CHECKPOINT_PARAMETERS.items():
             if old in params:
                 params[new] = params.pop(old)
+        # Checkpoints written before join_on_recurrence existed continue whole-interval joining.
+        params.setdefault("join_on_recurrence", False)
         field = cls(**params)
         node_rows = list(payload["nodes"])
         nodes = [field.new() for _ in node_rows]
@@ -1608,6 +1701,14 @@ class NethraField:
                 raise RuntimeError("checkpoint pair_stats contains non-finite value")
             restored_pairs[frozenset((nodes[a], nodes[b]))] = vals
         field.pair_stats = restored_pairs
+
+        for left, right in payload.get("witnessed_transitions", ()):
+            if not all(0 <= int(i) < len(nodes) for i in list(left) + list(right)):
+                raise RuntimeError("checkpoint witnessed transition references unknown Nethra")
+            field.witnessed_transitions.add((
+                frozenset(nodes[int(i)] for i in left),
+                frozenset(nodes[int(i)] for i in right),
+            ))
 
         field._rebuild_indexes()
         return field

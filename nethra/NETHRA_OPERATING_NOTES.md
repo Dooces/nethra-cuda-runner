@@ -22,7 +22,9 @@ because the opposite was assumed at some point and cost days of work.
     description, recursively.
   - **Construction** happens only from unresolved residual. It first reuses every compatible
     existing Nethra, and admits one weak new Nethra only when existing structure does not account
-    for the experience. The new Nethra's before side (the previous interval's closure) and after
+    for the experience. With `join_on_recurrence` (default) a transition of pushed Nethra seen for
+    the first time is accounted per part and only the unaccounted remainder is joined; a
+    transition that recurs is joined whole. The new Nethra's before side (the previous interval's closure) and after
     side (this interval's closure) are separate routes.
 - **Evidence change**: after each interval the field is integrated twice from the same start, with the
   real input and with zero input. The difference is what the input actually caused (`M`).
@@ -63,6 +65,7 @@ because the opposite was assumed at some point and cost days of work.
 | `g_min` | 0 (default) | Keep 0. `g(0) = 0`. |
 | `source_similarity_threshold` | 0.999 (default) | Structural recurrence of graded source patterns: a new pattern refinds the stored pattern with the highest cosine above this (earliest among equals); otherwise it is stored. Physical current stays exact. Cosine ignores overall size, so one Nethra pushed 1.0 and 1.25 is the same structural event. Without this, graded input never recurs exactly and construction adds a Nethra every interval (a nested chain while the pushed members stay the same). |
 | `leakage`, `capacitance` | 1, 1 | Field timescale. One interval of `dt = 1` per observation. |
+| `join_on_recurrence` | True (default) | Construction per part on first sight of a transition of pushed Nethra, whole-interval joining once the same transition recurs. Independent objects then no longer build a Nethra per joint state; eyes of one object and contexts that recur are still joined (one occurrence later). False = whole-interval joining every interval (previous behaviour, bit-identical; old checkpoints load with False). Keeps a set of witnessed transitions (bookkeeping, grows with distinct transitions). See docs/HANDOFF.md section 0. |
 | `integrator` | `auto` | Runtime only. ETD (exact passive part, eigendecomposition) up to 400 Nethra, RK4 with stiffness subdivision above that. Both integrate the same equation. |
 
 ## 5. How to read it

@@ -7,6 +7,9 @@ import nethra_presence as core
 
 class PartwiseField(core.NethraField):
     subtraction_log = None
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("join_on_recurrence", False)   # this prototype does its own per-part subtraction
+        super().__init__(*args, **kwargs)
     def _admit_whole_support(self, current_closed, current_description, unresolved, current_source_event):
         if unresolved <= self.admission_threshold or not self.previous_closure:
             return ()

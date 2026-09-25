@@ -1,4 +1,4 @@
-# Handoff: binocular Nethra, focus and consequence (state as of 2026-09-25, second session)
+# Handoff: binocular Nethra, focus and consequence (state as of 2026-09-25, third session)
 
 Read in this order before doing anything: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this file,
 then `nethra/nethra.py`. Branch `claude/sharp-thompson-wmszc5` (PR Dooces/nethra-cuda-runner#1 into
@@ -7,6 +7,66 @@ below is in `nethra/tests/`.
 
 **`nethra.py` was not changed in this session.** Everything new is harness scripts, one prototype
 subclass file (`nethra/tests/partwise_prototype.py`, not core), and measurements.
+
+## 0. Third session (2026-09-25): per-part subtraction decided and moved into the core
+
+The user's answer to §9.1: test (b) structural per-part subtraction for vision, or an alternative;
+use whichever is better. Result: an alternative, now the core default.
+
+**Rule (`join_on_recurrence=True`, default):** a transition of pushed Nethra (the Nethra pushed in
+interval t-1, the Nethra pushed in t) seen for the first time is subtracted per part
+(`_admit_by_parts`, the `PartwiseField` logic of §6.2): constructed Nethra with a route complete on
+each side account for the pushed Nethra in those routes; nothing is built for accounted parts, the
+unaccounted remainder is joined on its own. When the same transition of pushed Nethra recurs, the
+whole interval is joined as before (`_admit_whole_support`). A co-presence that recurs becomes
+structure (one occurrence later than before); one that happens once does not.
+`join_on_recurrence=False` is the previous core, bit-identical. Old checkpoints load with False.
+Bookkeeping: `witnessed_transitions` (set of pushed-member pairs, checkpointed; grows with the
+number of distinct transitions).
+
+Checks: `False` = previous core, identical checkpoints and activations on a symbolic and a graded
+stream, each with default, frontier 1e-2, rk4 + threshold 0.9; `True` = the scratch prototype
+bit-identical on the same; checkpoint round trip mid-stream bit-identical.
+`source_support="product"` could not be compared: **the previous core itself gives a different
+checkpoint on every run in that mode** (3 runs, 3 hashes; graded stream). Not investigated.
+
+Recurrence criteria tried (scratch prototypes; two objects, 0.8, jitter ±10, R=16, `binocular_multi.py`):
+
+| gate | eyes joined (mono first) | context conjunctions | 40/37 loops, 400 together: whole-joined intervals, built |
+|---|---|---|---|
+| canonical pattern recurs (cosine) | yes | yes | 126, 151; cost 76 → 624 ms |
+| pushed member set recurs | yes | yes | 52, 97 |
+| canonical pattern pair recurs | yes | yes | 52, 90 |
+| **pushed member-set pair recurs (adopted)** | yes | yes | **18, 68**; 73 → 169 ms |
+| none (per-part always, option b) | **no** | **no** | 0, 51; 15 → 29 ms |
+
+At cosine 0.8 joint patterns of independent objects "recur" approximately, so a cosine gate still
+joins them. The adopted gate uses the exact set of pushed Nethra, independent of the threshold.
+
+Measurements, adopted rule vs previous core vs (b), `16 0.8 10 3 160 40` (loops 40 and 30):
+
+| | built together 0-119 | ms/interval together | 3D located obj0 / obj1 per 40 |
+|---|---|---|---|
+| previous core, monocular first | 120 | 107 → 305 (0-79; 400-800 later, §6.1) | 35/27, 36/31 |
+| (b) per-part, monocular first | 23 | 16-20 | 4/6, 8/5, 6/3 |
+| **adopted, monocular first** | **24** (4 in 120-159) | **63-81** | **34/27, 35/31, 34/30, 34/27** |
+| previous core, both eyes first | 120 | 47 → 165 | 31/31, 36/30, 27/34, 32/30 |
+| adopted, both eyes first | 59 | 32-56 (parallel runs) | same as core |
+
+Longer, joint never repeating (loops 40/37, 400 together, adopted): built 22/12/9/14/11 per 80
+(47 of 68 from unaccounted single-object remainders, i.e. jittered positions not seen alone yet;
+18 on recurrence); frontier 239 → 358, cost 73 → 169 ms, still rising. The rise is frontier size
+(integrated Nethra), not construction; that is the execution item (§8).
+
+Other streams, adopted vs previous core:
+- `context_partwise.py`: the 8 conjunction Nethra are built (one block later); P right/wrong
+  0.0458/0.0424 vs 0.0467/0.0428. (b) builds nothing there.
+- `consequence_reach.py 8 0.95 10 40 10 0`: 263 vs 281 constructed, 31 vs 35 ms; P toward F on
+  contact 2.4e-3 ... 4.3e-2 vs 2.3e-3 ... 4.2e-2; misses 0 in both.
+- `focus_symbolic.py`: share 0.495 / 0.482 vs 0.495 / 0.481.
+
+Open from this: rising frontier cost with two objects (§8); `product` mode nondeterminism; the
+witnessed-transition set grows without bound on a never-repeating stream.
 
 ## 1. Goal (the user's words, condensed)
 
@@ -46,6 +106,7 @@ subclass file (`nethra/tests/partwise_prototype.py`, not core), and measurements
 ## 3. Core facts checked in code this session (use them in predictions)
 
 - Construction: `_admit_whole_support` joins the complete closure of consecutive intervals.
+  (Since §0: only when the transition of pushed Nethra recurs; otherwise `_admit_by_parts`.)
   Reuse happens only through the source-pair index (`_existing_temporal_support_relations`) or
   `_accounted`, and `_accounted` **skips** handles already indexed to a different source pair.
   So subtraction before construction is per whole interval, not per part.
@@ -265,7 +326,7 @@ Nethra at the food location.
 
 ## 9. Open decisions for the user and proposed next steps (do not start unasked)
 
-1. **Per part vs per interval.** Options: (a) numeric residual per pushed Nethra (Nethra-native,
+1. **Per part vs per interval.** Decided in §0 (recurrence-gated per-part subtraction, core default). Former options: (a) numeric residual per pushed Nethra (Nethra-native,
    separates objects from contexts in principle, but needs P comparable to M: residual scale or
    parameters, the user's call); (b) structural per-part subtraction for vision only (works for
    objects, loses eye joining unless each object is seen binocularly first, loses context
