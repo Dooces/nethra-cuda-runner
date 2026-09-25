@@ -17,10 +17,9 @@ the start of each pass).  Every REPORT intervals, measured over the intervals si
   ms/int      process time per interval
 
 Several period sets run at once, one field per set, each in its own process (a field's intervals
-are sequential: each starts from the state the previous one left).  The runner service may start
-jobs pinned to one core, and child processes inherit that pin, so the parent widens its CPU affinity
-to every core and each process pins itself to its own core.  Lines are prefixed with the period set
-and printed as they are produced.
+are sequential: each starts from the state the previous one left).  Small period sets build few
+Nethra and finish in seconds; a set with a long joint period builds many and runs alone at the end.
+Lines are prefixed with the period set and printed as they are produced.
 
 usage: python3 cycles.py [passes] [stream] [period sets, e.g. 3,5,7/2,3,5] [report]"""
 import os
@@ -41,19 +40,8 @@ def depth(n, memo):
     v = 0 if not n.routes else 1 + max((depth(x, memo) for r in n.routes for x in r), default=0)
     memo[n] = v; return v
 
-def pin(slot):
-    """Pin this process to its own core (execution only); return the cores it runs on."""
-    try:
-        cores = sorted(os.sched_getaffinity(0))
-        os.sched_setaffinity(0, {cores[slot % len(cores)]})
-    except OSError as e:
-        print(f"affinity not changed: {e}", flush=True)
-    return sorted(os.sched_getaffinity(0))
-
-def run(job):
-    slot, periods = job
+def run(periods):
     tag = "p" + ",".join(map(str, periods))
-    print(f"[{tag}] pid {os.getpid()} on cores {pin(slot)}", flush=True)
     f = core.NethraField(g_min=0.0, admission_seed=14.0)
     phase_nethra = [[f.new() for _ in range(p)] for p in periods]
     for p_i in range(PASSES):
@@ -77,13 +65,8 @@ def run(job):
     return tag
 
 if __name__ == "__main__":
-    before = sorted(os.sched_getaffinity(0))
-    try:
-        os.sched_setaffinity(0, range(os.cpu_count()))
-    except OSError as e:
-        print(f"could not widen affinity: {e}", flush=True)
     print(f"period sets {SETS}, stream {STREAM} intervals x {PASSES} passes, admission seed 14; "
-          f"{os.cpu_count()} cores, affinity before {before}, after {sorted(os.sched_getaffinity(0))}", flush=True)
+          f"{len(SETS)} processes on {os.cpu_count()} cores", flush=True)
     with mp.Pool(len(SETS)) as pool:
-        for tag in pool.imap_unordered(run, list(enumerate(SETS))):
+        for tag in pool.imap_unordered(run, SETS):
             print(f"[{tag}] done", flush=True)

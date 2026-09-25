@@ -24,8 +24,6 @@ jobs:
         run: |
           set -euxo pipefail
           hostname; nproc; free -h
-          grep Cpus_allowed_list /proc/self/status
-          cat /sys/fs/cgroup/$(cut -d: -f3 /proc/self/cgroup)/cpuset.cpus.effective 2>/dev/null || true
           /usr/bin/python3 --version
           /usr/bin/python3 -c "import numpy; print('numpy', numpy.__version__)"
           sha256sum nethra/nethra.py nethra/tests/cycles.py
