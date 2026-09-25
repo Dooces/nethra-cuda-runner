@@ -3,23 +3,23 @@ World: object bounces on 0..L-1 at speed 1.  Eye at e (clamped to 0..L-1).
 Nethra: retina (one per offset o = x - e, |o| <= R), motor command mL/mR, eye position (one per e).
 Interval t: the eye moves by m_t during the interval.  Pushed: retina o_t, eye position e_t, and (only
 while the reflex drives) the motor command m_t.  Then e += m_t, object moves.
-Learning phase (TRAIN intervals): an innate reflex drives: m_t = sign(o_(t-LAT)).
+Learning phase (EXPOSE intervals): an innate reflex drives: m_t = sign(o_(t-LAT)).
 Test phase (TEST intervals, reflex off): nothing pushes the motor Nethra; the actuator reads their live
 activation after interval t-1:  m_t = sign(a_R - a_L) if |a_R - a_L| > DEAD else 0.
 Conditions at test (same world state, same actuator):
-  trained      - the field after the learning phase
+  exposed      - the field after the learning phase
   lesion       - same field, every constructed Nethra's incidence evidence 0
-  shuffletrain - learning phase with the object at random positions (reflex still drives)
+  shuffled - learning phase with the object at random positions (reflex still drives)
   noconstruct  - learning phase with construction and evidence change off
-Reads: test mean |o|; teacher (reflex) mean |o| on the same world; staying put; share of test intervals the
+Reads: test mean |o|; reflex (reflex) mean |o| on the same world; staying put; share of test intervals the
 eye moves; reversal timing (interval of eye reversal minus interval of object reversal)."""
 import os,sys,math,random,time
 for v in ("OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","MKL_NUM_THREADS"): os.environ[v]="1"
 sys.path.insert(0,os.path.dirname(os.path.dirname(os.path.abspath(__file__)))); import nethra as core
 E=os.environ.get
 L=int(E("L",10)); R=int(E("R",4)); DIR=E("DIR","split"); LAT=int(E("LAT",2))
-TRAIN=int(E("TRAIN",300)); TEST=int(E("TEST",80)); DEAD=float(E("DEAD",0.002)); LEARN=E("LEARN","0")=="1"; PROP=E("PROP","1")=="1"
-CONDS=E("CONDS","trained,lesion,shuffletrain,noconstruct").split(",")
+EXPOSE=int(E("EXPOSE",300)); TEST=int(E("TEST",80)); DEAD=float(E("DEAD",0.002)); LEARN=E("LEARN","0")=="1"; PROP=E("PROP","1")=="1"
+CONDS=E("CONDS","exposed,lesion,shuffled,noconstruct").split(",")
 class World:
     def __init__(s, mode="bounce", seed=0): s.x=0; s.v=1; s.e=0; s.mode=mode; s.rng=random.Random(seed); s.hist=[]
     def advance(s, m):
@@ -76,19 +76,19 @@ def summary(log):
     mv_=[r for r in log if r[3]]; match=sum(1 for r in mv_ if r[3]==r[4])/len(mv_) if mv_ else float("nan")
     return mo,mv,lags,near,match
 t0=time.perf_counter()
-trained={}
-f=make_field(); w=World(); run(f,w,TRAIN,"reflex",True); trained["trained"]=(f,w)
-if "shuffletrain" in CONDS:
-    fs=make_field(); ws=World("random",7); run(fs,ws,TRAIN,"reflex",True); trained["shuffletrain"]=(fs,None)
+exposed={}
+f=make_field(); w=World(); run(f,w,EXPOSE,"reflex",True); exposed["exposed"]=(f,w)
+if "shuffled" in CONDS:
+    fs=make_field(); ws=World("random",7); run(fs,ws,EXPOSE,"reflex",True); exposed["shuffled"]=(fs,None)
 if "noconstruct" in CONDS:
-    fn=make_field(False); wn=World(); run(fn,wn,TRAIN,"reflex",True); trained["noconstruct"]=(fn,None)
-print(f"L={L} R={R} DIR={DIR} LAT={LAT} TRAIN={TRAIN} TEST={TEST} DEAD={DEAD} LEARN={LEARN}: Nethra built {len(f.nethra)-(2*R+3+L)}")
+    fn=make_field(False); wn=World(); run(fn,wn,EXPOSE,"reflex",True); exposed["noconstruct"]=(fn,None)
+print(f"L={L} R={R} DIR={DIR} LAT={LAT} EXPOSE={EXPOSE} TEST={TEST} DEAD={DEAD} LEARN={LEARN}: Nethra built {len(f.nethra)-(2*R+3+L)}")
 tl=run(core.NethraField.from_checkpoint_dict(f.checkpoint_dict()),clone_world(w),TEST,"reflex",True)
-mo,mv,lags,near,match=summary(tl); print(f"  {'teacher':12s} mean |o| {mo:.2f} |o|<=1 {near:.2f} moving {mv:.2f} moves with object {match:.2f} eye reversal lag {lags}")
+mo,mv,lags,near,match=summary(tl); print(f"  {'reflex':12s} mean |o| {mo:.2f} |o|<=1 {near:.2f} moving {mv:.2f} moves with object {match:.2f} eye reversal lag {lags}")
 xs=[r[0] for r in tl]; best=min(sum(abs(x-e) for x in xs)/len(xs) for e in range(L))
 print(f"  {'best fixed eye':12s} mean |o| {best:.2f} |o|<=1 {max(sum(1 for x in xs if abs(x-e)<=1)/len(xs) for e in range(L)):.2f}")
 for c in CONDS:
-    base,_=trained["trained"] if c=="lesion" else trained[c]
+    base,_=exposed["exposed"] if c=="lesion" else exposed[c]
     g=core.NethraField.from_checkpoint_dict(base.checkpoint_dict()); g.topology_and_evidence_change=LEARN
     if c=="lesion": lesion(g)
     log=run(g,clone_world(w),TEST,"field",False)

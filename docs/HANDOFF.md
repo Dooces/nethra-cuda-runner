@@ -21,10 +21,10 @@ decides which direction strengthens. On moving objects it makes the field's own 
 forward (ring: 24/24 intervals vs 8/24 shared; shuffled stream: chance). New action loop
 (`gaze_loop.py`): an innate lagged reflex drives the eye while the field watches; then the reflex is
 switched off and an actuator reads only the motor Nethra's activation, which nothing pushes any more.
-With split direction the field-driven eye follows a bouncing object better than its teacher and
-roughly halves its teacher's reversal lag (people reverse before the target after 1-2 cycles;
-the field does not reach that); lesioned structure, shuffled training or no eye-position input
-remove it; shared vs split in the loop is not consistent (0g.3). Split direction costs context capacity
+With split direction the field-driven eye follows a bouncing object better than the reflex that drove it and
+roughly halves the reflex's reversal lag (people reverse before the target after 1-2 cycles;
+the field does not reach that); lesioned structure, shuffled exposure or no eye-position input
+remove it; shared vs split in the loop is not consistent (0g.3). Split direction costs context selection
 (`cue_capacity` 15 regimes 0.93 -> 0.59, `robust` clean 0.83 -> 0.58): not made default. §0g.
 
 ### What changed in the core in the fourth session
@@ -364,31 +364,31 @@ o, eye position e and, while the reflex drives, the motor command m; step; then 
 Results, LAT 2, R 4, split (share |o| <= 1; "with object" = moving intervals that move the object's
 way; reversal lag = intervals from object reversal to eye reversal):
 
-| L | teacher (reflex) | best fixed eye | **trained, reflex off** | lesion | shuffled training |
+| L | reflex | best fixed eye | **after exposure, reflex off** | lesion | shuffled exposure |
 |---|---|---|---|---|---|
 | 8 | 3.33 | 1.82 | 2.02, with object 0.70, lags 0-4 | 2.79, moves 0.06 | 1.79, moves 0.15 |
 | 10 | 3.70, lag 4 | 2.25 | **2.15**, near 0.39, with object 0.76, lags 3,0,4,2,1,0,3,2 | 4.64, moves 0.06 | 3.76, moves 0.01 |
 | 12 | 3.88 | 2.67 | 2.62, with object 0.81 | 5.79 | 3.51, moves 0.01 |
 | 14 (R 5) | 4.03 | 3.30 | **2.16**, with object 0.83, lags 3,2,1,0,0 | 6.35 | 4.14 |
 
-Ablations at L=10 (mean |o|, trained):
+Ablations at L=10 (mean |o|, after exposure):
 
 | | result |
 |---|---|
 | shared direction | 4.62 (moves 0.79, with object 0.48: drives into a wall); but 1.94 after 288 intervals (see exposure table) |
 | no eye-position Nethra (`PROP=0`), split | 3.79 (reversal lags 2-15) |
 | no construction during learning | 4.64, moves 0.09 |
-| LAT 1 (teacher 2.58) | split 2.86, shared 4.67 |
-| LAT 3 (teacher 4.35) | split 1.88, near 0.54, with object 0.88, lags 0,3,0,2,0,2,0,2,0 |
+| LAT 1 (reflex 2.58) | split 2.86, shared 4.67 |
+| LAT 3 (reflex 4.35) | split 1.88, near 0.54, with object 0.88, lags 0,3,0,2,0,2,0,2,0 |
 | 600 learning intervals | split 1.98 |
 | evidence change on at test | split 1.96, shared 3.01 |
 | actuator threshold 0.0005 / 0.01 | split 2.04 / 2.39 (moves 0.06 at 0.01) |
 
 - What the field does here: learns from the reflex which motor command follows which retina and
   eye-position pattern, and drives it with the reflex gone. It acts on the latest pattern, not the
-  one the reflex used, so it is earlier than its teacher; reversal lag 0 means the eye turned in the
+  one the reflex used, so it is earlier than the reflex; reversal lag 0 means the eye turned in the
   same interval as the object (it uses the eye-position Nethra: without them the lags are 2-15).
-- What it does not do: it is not better than the best fixed eye at L=8. Shuffled training
+- What it does not do: it is not better than the best fixed eye at L=8. Shuffled exposure
   sometimes moves (L=8: 1.79 with 15% moving intervals, parked near the middle).
 - One run per configuration (deterministic world); the configurations are the replications.
 
@@ -409,7 +409,7 @@ Exposure needed (L=10, LAT 2, split; test 72 intervals, reflex off; one cycle = 
 | split: mean abs(o) | 2.74 | 2.86 | 2.11 | 2.03 | 1.99 | 2.10 |
 | shared: mean abs(o) | 2.71 | 2.67 | 3.18 | 3.14 | 3.58 | **1.94** |
 
-- Against people: the field roughly halves its teacher's reversal lag (4 -> ~2) from the first
+- Against people: the field roughly halves the reflex's reversal lag (4 -> ~2) from the first
   cycles on, but it does not reverse before the object as people do after 1-2 cycles; lag 0 shows
   up only in some runs (300 intervals: 2 of 8 reversals). Below the human reference.
 - **Correction:** shared direction is not a consistent failure in this loop: 4.62 at 300 learning
@@ -468,9 +468,9 @@ Against what people do (CLAUDE.md §2.10), qualitative direction only:
 | `direction_ring.py` | env K, LAPS, ORDER: symbolic ring, both modes: directed g, P, free-step gain |
 | `direction_motion.py` | env STREAM=RING/BOUNCE, L, NC, STEP, LAPS, SPEEDS, PASSES, DIR, SHUF: centre shift, gain ahead/behind, profile |
 | `direction_bounce.py` | env L, PASSES, DIR, COND: symbolic bounce topology and free-step gain |
-| `gaze_loop.py` | env L, R, DIR, LAT, TRAIN, TEST, DEAD, LEARN, PROP, CONDS: action loop (0g.3), ~10-20 s |
+| `gaze_loop.py` | env L, R, DIR, LAT, EXPOSE, TEST, DEAD, LEARN, PROP, CONDS: action loop (0g.3), ~10-20 s |
 | `gaze_retina_device.py` | first loop design (actuator reads retina): tracks without structure, discarded |
-| `gaze_motor_probe.py` | motor Nethra activation trained vs lesioned during learning (why the motor is not pushed at test) |
+| `gaze_motor_probe.py` | motor Nethra activation with structure vs lesioned, during exposure (why the motor is not pushed at test) |
 | `with_params.py` | now also env DIR=shared/split |
 
 ## 0f. Fourth session, part 2: a conduction rule better than top-only; delta input by field reads
