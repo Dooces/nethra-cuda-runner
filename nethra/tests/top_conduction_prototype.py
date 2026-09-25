@@ -10,6 +10,8 @@ class TopField(_Base):
     def __init__(self, *a, **k):
         super().__init__(*a, **k)
         self.covered = set()
+        self._covered_by = {}
+        self._touched = set()
     def _route(self, nethra, members, signature=frozenset(), evidence=0):
         route = frozenset(members)
         new = route not in nethra.routes
@@ -19,18 +21,27 @@ class TopField(_Base):
                 for m2 in route:
                     if m2 is m: continue
                     if any(m in r and r <= route for r in m2.routes):
-                        self.covered.add((nethra, route, m)); break
-            self._zero()
+                        self.covered.add((nethra, route, m)); self._covered_by.setdefault(nethra, set()).add((nethra, route, m)); break
+            self._zero([nethra])
         return out
-    def _zero(self):
+    def _zero(self, relations=None):
+        """Covered incidences keep evidence 0 (construction may re-seed a retained route)."""
         ev = self.incidence_evidence
-        for key in self.covered:
+        keys = self.covered if relations is None else [k for r in relations for k in self._covered_by.get(r, ())]
+        for key in keys:
             c = ev.get(key)
             if c:
                 for s in c: c[s] = 0.0
+
+    def _admit_sides(self, *a, **k):
+        out = super()._admit_sides(*a, **k)
+        self._touched.update(out)
+        return out
+
     def step(self, dt=.1):
+        self._touched = set()
         out = super().step(dt)
-        self._zero()
+        self._zero(self._touched)
         return out
 
     def _frontier(self, source_current, tol):
@@ -57,7 +68,7 @@ class TopField(_Base):
                 if len(route) < 2: continue
                 for m in route:
                     if any(m in r and r <= route for m2 in route if m2 is not m for r in m2.routes):
-                        self.covered.add((nethra, route, m))
+                        self.covered.add((nethra, route, m)); self._covered_by.setdefault(nethra, set()).add((nethra, route, m))
 
 
 import gpu_field

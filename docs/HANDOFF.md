@@ -68,6 +68,83 @@ Other streams, adopted vs previous core:
 Open from this: rising frontier cost with two objects (§8); `product` mode nondeterminism; the
 witnessed-transition set grows without bound on a never-repeating stream.
 
+## 0b. Third session, part 2: why cost rises, participation threshold, top-only conduction, GPU
+
+User: cost must not keep rising; expected ~10 Nethra participating with two objects; "the top Nethra
+is computed, not every leaf"; maybe a dynamic participation threshold that rises with confidence;
+look at what humans do; use the Fedora runner for CUDA.
+
+**Who participates** (two objects together, interval 240, current core): pushed 16; |a| >= 0.1:
+0-2, >= 0.03: 10-19, >= 0.01: ~130 (100+ constructed), >= 0.001: ~300-390 of 864. Frontier (one-hop
+halo) 256-355, 3.7k-5.7k incidences. So ~10-19 carry real activation, but the ~110 thin ones
+(0.01-0.03) together hold more activation than the top ones. Cause: a route has ~23 members, 93% of
+them leaves already inside another member's route (§6.1), and **each member is a conducting
+incidence**. 6,909 of 7,799 incidences are such leaf duplicates. Every constructed Nethra touching an
+active cell draws flow from the leaves directly.
+
+**Participation threshold** (frontier tolerance; from interval 240, 80 intervals, error vs exact for
+the 13.5 Nethra/interval with exact |a| >= 0.03). Structure reads (built, refound, 3D located, state
+distance) are identical at every tolerance, including exact.
+
+| current core | ms | relative error | top-10 same as exact |
+|---|---|---|---|
+| exact | 484 | 0 | 1 |
+| 0.01 | 137 (rising) | 3.0% | 0.99 |
+| 0.03 | 57 | 13.5% | 0.96 |
+| 0.05 | 53 | 19.5% | 0.95 |
+| dynamic 0.01 / 0.05 | 65 | 18% | 0.95 |
+
+Dynamic = next interval's tolerance high when every pushed Nethra was accounted for (by parts or
+whole), low otherwise; 66/80 intervals were accounted. Dynamic gives the same trade as a fixed
+tolerance at its high value. No gain found.
+
+**Top-only conduction (`nethra/tests/top_conduction_prototype.py`, prototype, not core):** routes
+stay whole (closure unchanged); at construction a member that lies in a complete route of another
+member of the same route (covered) earns no incidence evidence, so g = 0 there. Only the top members
+conduct; leaves reach the relation through the top member's own routes. Frontier halo through
+conducting incidences only. Construction and every structure read are identical to the core.
+
+| two objects, 40/37 loops | current core (join_on_recurrence) | top-only |
+|---|---|---|
+| ms/interval together, 0-79 ... 320-399 (tol .01) | 73, 97, 113, 130, 169 | **13, 17, 18, 21, 19** |
+| frontier | 239 → 358 | 114 → 136 (levels off) |
+| exact integration, whole field (866 Nethra), local | 484 ms | 79 ms |
+| error of important Nethra at tol .01 / .03 | 3.0% / 13.5% | 1.7% / 4.2% |
+
+Behaviour on the other streams, current core vs top-only:
+- `context_partwise.py` small factors first, P right/wrong: 0.0458/0.0424 vs **0.0432/0.0014**.
+  Context only: C1 0.104/0.054 vs 0.069/0.060, C2 0.103/0.055 vs 0.109/0.019 (depends on build order:
+  a path through more hops is weaker).
+- `consequence_reach.py 8 0.95 10 40 10 0`: P toward F starts at k=8 and peaks 4.3e-2 vs starts at
+  k=6 and peaks 1.3e-2. The earlier reach was receptive overlap through leaf cells (§7.1); with leaves
+  not conducting, anticipation needs the top Nethra itself to activate. 7.9 vs 31.7 ms.
+- `focus_symbolic.py`: F tilt of the gaze share +0.013 vs ~0.
+
+Not moved into the core: which incidences conduct is a field-law question (CLAUDE.md §2.1:
+"all earned incidences conduct"; here the leaves are never earned). **User's decision.**
+
+**What humans do** (for the threshold question): only ~1-4% of cortical neurons are strongly active
+at once and the energy cost is at active synapses (Lennie 2003, Curr Biol 13:493); expected input
+gives lower overall V1 activity with a sharper representation (Kok, Jehee, de Lange 2012, Neuron
+75:265); gain shifts between a focused mode when the task is predictable and a broad mode when it is
+not (Aston-Jones & Cohen 2005, Annu Rev Neurosci 28:403). Sparse activity with a hierarchy of
+convergent connections matches top-only conduction better than a moving threshold.
+
+**GPU (Fedora runner, RTX 5070, cupy; `nethra/tests/gpu_field.py`, `gpu_bench.py`, workflow
+`nethra-gpu-bench.yml`, run 36103291516).** ETD integration on the device; equals CPU ETD to 3e-16
+(numpy fallback bit-identical). Two objects, 866 Nethra, 40 intervals after 240 together, one CPU
+thread:
+
+| | CPU exact | GPU exact | CPU tol .01 | GPU tol .01 |
+|---|---|---|---|---|
+| current core | 258 (integration 199) | 130 (66) | 65 (25) | 65 (23) |
+| top-only | **36 (2.6)** | 101 (67) | **15.7 (2.3)** | 64 (52) |
+
+The GPU halves exact integration for the current core. With top-only conduction integration is
+2.6 ms for the whole field; the rest is per-incidence Python bookkeeping (evidence change, incidence
+compilation, closure, pattern cosine), which a GPU integrator does not touch. Next for speed: array
+storage of incidences (roadmap item 7), bit-identical.
+
 ## 1. Goal (the user's words, condensed)
 
 1. Binocular vision input; track objects in a 500 x 500 x 500 space; an internal state that
