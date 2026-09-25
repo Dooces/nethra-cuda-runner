@@ -8,7 +8,7 @@ session: direction, action loop), §0f and §0e (fourth session), §0-§0d (thir
 a §0 section says otherwise.
 
 **Sixth session (§0h):** branch `claude/modest-bohr-avn2ng` = the fifth session plus operator tags and a drain
-prototype (not core). Core unchanged.
+prototype (not core), and flipped channels (§0i, prototype). Core unchanged.
 
 **Branch:** `claude/pensive-davinci-zla3pj` (Dooces/nethra-cuda-runner). It contains everything from
 `claude/tender-cray-bk3jq6` (fourth session) plus the fifth session. No PR opened. Scratchpad files are
@@ -209,6 +209,70 @@ remove it; shared vs split in the loop is not consistent (0g.3). Split direction
   streams, compare a hash of `checkpoint_dict()` and of all activations; include frontier, rk4 and a
   checkpoint round trip mid-stream.
 - Known: `source_support="product"` gives a different checkpoint on every run (pre-existing).
+
+## 0i. Sixth session, part 2: flipped channels (prototype, not core)
+
+User's idea: each directed channel between Nethra can be individually reversed: instead of N
+sourcing m, N drains m ("a makes b unlikely", "something happens when something does not").
+User's answers: drained charge goes into the draining Nethra (yes); where flips come from and
+whether closure uses them: test.
+
+### 0i.1 What was built (`tests/flip_prototype.py`, `tests/flip_streams.py`)
+
+- `direction="split"` (two channels per incidence). A flipped channel N -| m pulls `h max(0, a_N)`
+  out of m into N while m has charge (at most m's charge per substep plus its inflow; m never below
+  zero, lowest seen -4e-5 from that limiter). h = conductance(e), h(0) = 0. Not a route member.
+- Evidence cannot cross zero on an existing channel: its change is proportional to its own flow,
+  which vanishes with g (the admission-seed fixed point, notes §4). So the sign is set at
+  construction: each handle of the transition gets as flipped members what was expected and did
+  not come. `expect="structure"`: after-route members of Nethra refound by their first route in
+  the before side; `"residual"`: Nethra with M - P < 0. New flips start at admission_seed; inert
+  ones found again are re-seeded (as the core re-seeds inert routes). `flip_to`: "all" or "leaves".
+- Residual at m is net of the pulls (M + Q - P) for the core's evidence change too;
+  `delta e(N -| m) = -outgoing_evidence_per_flow * q * r_m`.
+- `closure_mode="field"`: flips are field only. `"absent"`: a Nethra whose flipped member is in the
+  positive closure is blocked, closure recomputed once.
+- Off: bit-identical to the core with direction="split", integrator="rk4" (both closure modes).
+
+### 0i.2 Streams (300 trials, seed 0; baseline is split without flips; outcomes never silent)
+
+| stream, read (last block) | off (split) | structure field all / leaves | structure absent all / leaves | residual field all / leaves | residual absent all / leaves |
+|---|---|---|---|---|---|
+| A->X, AB->Y, C->X: X after AB/A; CB/C | 1.10; 1.05 | 1.16 / 1.13; 1.07 / 1.06 | 1.22 / 1.09; 1.10 / 1.04 | 1.15 / 1.13; 1.06 / 1.05 | 1.19 / 1.09; 1.16 / 1.04 |
+| A->X, B->X, AB->Y: X after AB/A | 1.90 | 1.84 / 1.90 | 1.58 / 1.90 | 1.85 / 1.88 | 1.68 / 1.88 |
+| operator, trained share c(x+1) O+ / O- | 0.562 / 0.572 | 0.473 / 0.444; 0.557 / 0.537 | 0.564 / 0.507; 0.561 / 0.533 | 0.512 / 0.537; 0.520 / 0.537 | 0.595 / 0.575; 0.529 / 0.527 |
+| operator, held-out c3 with O+ (off 0.369) | | 0.133 / 0.352 | 0.125 / 0.376 | 0.208 / 0.341 | 0.259 / 0.366 |
+| X->B 75%: share B | 0.532 | 0.530 / 0.535 | 0.512 / 0.535 | 0.506 / 0.504 | 0.585 / 0.504 |
+| bounce: share ahead, right / left | 0.398 / 0.422 | 0.400 / 0.424; 0.401 / 0.422 | same as field | 0.392 / 0.439; 0.394 / 0.430 | same as field |
+| extinction: X after A end of A->X / end of A->Y / 20 into A->X again | 0.0197 / 0.0158 / 0.0162 | 0.0170 / 0.0086 / 0.0166; 0.0191 / 0.0083 / 0.0163 | 0.0112 / 0.0081 / 0.0086; leaves = field | 0.0190 / 0.0122 / 0.0167; 0.0189 / 0.0121 / 0.0163 | 0.0138 / 0.0071 / 0.0103; leaves = field |
+
+Flips at the end: 11-5,077 (operator structure all 4,650); max h 0.08-0.2 except extinction (0.83).
+Cost up to 2.5x off (field) and 6.5x (absent, all: operator 13 -> 84 ms/interval).
+
+- Only extinction changed clearly: during A -> Y the A -> Y handle drains X (0.0158 -> 0.0083-0.0086,
+  structure). Back on A -> X, 20 trials reach 0.0163-0.0166 (86-89% of the level before, off 97%
+  but off barely went down); first learning at 20 trials was 0.0102 (leaves), 0.0040 (all) vs off
+  0.0151: early filler flips slow first learning.
+- AB-only suppression did not form. Traced (`negfeature`, structure, leaves): evidence on the AB->Y
+  Nethra's flip onto X moved +0.61 in total at the Y intervals and -14.77 at intervals where X came
+  (A->X and C->X trials); ends at 0 and is re-seeded at every AB->Y. Cause: A alone conducts into the
+  AB Nethra (primitive members conduct without closure), so the flip pulls during A trials, and when
+  X comes its residual (~0.2) is about 10x the over-carry the flip cancels in AB trials (~0.03).
+- Early on (30 trials, structure, all) flips from random filler transitions landed on A and on the
+  A -> X Nethra: X after A 0.0006 (off ~0.003); they wore off by 150-200 trials (X comes, they weaken).
+- `absent` with `all` removes structure broadly: held-out O+ 0.125, relearning after extinction
+  stays at 0.0086, AB/B in negpattern 2.66. With `leaves`, `absent` equals `field` on most streams.
+- Bounce: flips barely formed (h ~0); no change.
+- Stability: nothing negative beyond the limiter's -4e-5; no oscillation seen.
+
+### 0i.3 Decisions waiting for the user
+
+1. The flip is erased because the draining Nethra is partly active without its route complete.
+   Options: pull only while the draining Nethra is refound (a closure gate on the flip: the
+   rejected "recognition gates conduction" class, but on a new channel); or evidence change on flips
+   weighted differently when the target comes (asymmetric rates: a parameter). Not chosen.
+2. Structure-expectation flips from unpredictable transitions (random fillers) are numerous
+   (hundreds to thousands) and temporarily harm what they touch. `leaves` bounds the count 3-6x.
 
 ## 0h. Sixth session: operator tags, and drain incidences (prototype, not core)
 
