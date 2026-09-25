@@ -152,7 +152,8 @@ class NethraField:
                  outgoing_evidence_per_flow=1200.0, incoming_evidence_per_tension=2400.0,
                  source_similarity_threshold=.999, source_support="exact",
                  integrator="auto", etd_pieces=2,
-                 frontier_tolerance=0.0, frontier_min=None, join_on_recurrence=True):
+                 frontier_tolerance=0.0, frontier_min=None, join_on_recurrence=True,
+                 top_only_conduction=True):
         """Initialize one field without creating semantic structure.
 
         g_min/g_max/tau map earned incidence evidence to conductance; the native default gives
@@ -195,6 +196,16 @@ class NethraField:
         #          happens once does not.
         #   False: every interval with unresolved residual is joined whole (previous behaviour).
         self.join_on_recurrence = bool(join_on_recurrence)
+        # Which members of a newly registered route earn incidence evidence (PROVISIONAL, user
+        # decision 2026-09-25):
+        #   True:  only its top members.  A member that lies in a complete route of another member
+        #          of the same route (a covered member) is already reached through that member; its
+        #          incidence to the new Nethra earns no evidence and keeps g = 0.  The route itself is
+        #          whole, so closure is unchanged.  Coverage is decided once, when the route is
+        #          registered, from the routes the other members have at that moment.
+        #   False: every member earns evidence (previous behaviour, bit-identical; old checkpoints
+        #          load with False).
+        self.top_only_conduction = bool(top_only_conduction)
         # Runtime integrator for one fixed-topology interval (same field equation either way):
         #   "rk4": explicit RK4 with passive-stiffness subdivision
         #   "etd": exponential time differencing (Cox-Matthews ETDRK4).  The passive operator
@@ -330,6 +341,10 @@ class NethraField:
         # (Nethra pushed in one interval, Nethra pushed in the next).  Bookkeeping over
         # observations only, like source_patterns; it has no activation.
         self.witnessed_transitions = set()
+        # Covered incidences (top_only_conduction): (relation, route, member) that earn no evidence.
+        # Bookkeeping over structure; _covered_by is its derived index by relation.
+        self.covered_incidences = set()
+        self._covered_by = defaultdict(set)
 
         self.previous_explicit = frozenset()
         self.previous_closure = frozenset()
@@ -478,6 +493,30 @@ class NethraField:
             if ibucket is None:
                 ibucket = self.incidence_evidence[(nethra, route, member)] = Counter()
             ibucket[signature] += float(evidence)
+
+        if self.top_only_conduction and is_new_route and len(route) > 1:
+            covered = self._covered_by[nethra]
+            for member in route:
+                for other in route:
+                    if other is member:
+                        continue
+                    if any(member in r and r <= route for r in other.routes):
+                        key = (nethra, route, member)
+                        self.covered_incidences.add(key)
+                        covered.add(key)
+                        break
+            self._clear_covered((nethra,))
+
+    def _clear_covered(self, relations):
+        """Covered incidences of these relations hold no evidence (construction may have re-seeded
+        a retained route whole)."""
+        evidence = self.incidence_evidence
+        for relation in relations:
+            for key in self._covered_by.get(relation, ()):
+                bucket = evidence.get(key)
+                if bucket:
+                    for signature in bucket:
+                        bucket[signature] = 0.0
 
     def _matching_routes(self, relation, event):
         """Return every already-earned route of relation supported by this transient event.
@@ -862,6 +901,18 @@ class NethraField:
             candidates = self._hot
         core = {n for n in candidates if abs(n.activation) >= tol} | set(source_current)
         halo = set(core)
+        if self.top_only_conduction and self.covered_incidences:
+            # Halo through conducting incidences only: covered incidences have g = 0.
+            covered = self.covered_incidences
+            for n in core:
+                for relation, route in self.member_to_routeuses.get(n, ()):
+                    if (relation, route, n) not in covered:
+                        halo.add(relation)
+                for route in n.routes:
+                    for m in route:
+                        if (n, route, m) not in covered:
+                            halo.add(m)
+            return halo
         for n in core:
             for relation, _route in self.member_to_routeuses.get(n, ()):
                 halo.add(relation)
@@ -1154,6 +1205,8 @@ class NethraField:
             # independently observed source transition remains valid provenance for this handle.
             self._index_source_pair(relation, source_pair)
 
+        if self.top_only_conduction:
+            self._clear_covered(relations)
         return tuple(relations)
 
     def _source_similarity(self, left, right):
@@ -1231,6 +1284,8 @@ class NethraField:
                 self._give_side_support(relation, route, 1.0)
             self._index_source_pair(relation, source_pair)
             out.append(relation)
+        if self.top_only_conduction:
+            self._clear_covered(out)
         return tuple(out)
 
     def _move_evidence_and_construct(
@@ -1540,6 +1595,7 @@ class NethraField:
                 "frontier_tolerance": self.frontier_tolerance,
                 "frontier_min": self.frontier_min,
                 "join_on_recurrence": self.join_on_recurrence,
+                "top_only_conduction": self.top_only_conduction,
             },
             "nodes": nodes,
             "incidence_evidence": incidence,
@@ -1563,6 +1619,10 @@ class NethraField:
                 [sorted(index[n] for n in left), sorted(index[n] for n in right)]
                 for left, right in self.witnessed_transitions
             ),
+            "covered_incidences": sorted(
+                [index[relation], sorted(index[m] for m in route), index[member]]
+                for relation, route, member in self.covered_incidences
+            ),
         }
         # Refuse JSON NaN/Infinity rather than silently persisting invalid field state.
         json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -1580,6 +1640,8 @@ class NethraField:
                 params[new] = params.pop(old)
         # Checkpoints written before join_on_recurrence existed continue whole-interval joining.
         params.setdefault("join_on_recurrence", False)
+        # ... and before top_only_conduction existed, every member conducts.
+        params.setdefault("top_only_conduction", False)
         field = cls(**params)
         node_rows = list(payload["nodes"])
         nodes = [field.new() for _ in node_rows]
@@ -1709,6 +1771,19 @@ class NethraField:
                 frozenset(nodes[int(i)] for i in left),
                 frozenset(nodes[int(i)] for i in right),
             ))
+
+        for relation_id, route_ids, member_id in payload.get("covered_incidences", ()):
+            ids = [int(relation_id), int(member_id)] + [int(i) for i in route_ids]
+            if not all(0 <= i < len(nodes) for i in ids):
+                raise RuntimeError("checkpoint covered incidence references unknown Nethra")
+            relation = nodes[int(relation_id)]
+            route = frozenset(nodes[int(i)] for i in route_ids)
+            member = nodes[int(member_id)]
+            if route not in relation.routes or member not in route:
+                raise RuntimeError("checkpoint covered incidence does not belong to stored route")
+            key = (relation, route, member)
+            field.covered_incidences.add(key)
+            field._covered_by[relation].add(key)
 
         field._rebuild_indexes()
         return field
