@@ -12,15 +12,24 @@ Every rule here exists because it was broken before.
    - when each is read (§3).
 
    Key facts:
-   - `_admit_whole_support` joins the complete closure of consecutive intervals.
+   - Construction (`join_on_recurrence=True`, default): a transition of pushed Nethra seen for the
+     first time is subtracted per part (`_admit_by_parts`): constructed Nethra with a route complete
+     on each side account for the pushed Nethra in them; only the unaccounted remainder is joined.
+     A transition of pushed Nethra that recurs is joined whole (`_admit_whole_support`: the complete
+     closure of consecutive intervals). So co-presence becomes structure on its second occurrence.
    - Every co-present Nethra enters the route. No subsets are enumerated.
    - Existing structure is reused before anything new is built.
+   - Conduction (`conduction="top_and_leaves"`, default): a constructed route member that lies in
+     a complete route of another member of the same route is covered and never earns evidence
+     (g = 0). Primitive members (no routes) always conduct. So a constructed Nethra conducts with
+     its top members and directly with the pushed Nethra of its routes. `"top"` (covers primitive
+     members too) and `"all"` remain as options; see docs/HANDOFF.md §0f for why.
 2. **Run it tiny** (tens of intervals).
 3. **Compare.** If the numbers differ from the prediction, stop and find out why in the code
    before running anything larger or on the runner.
 
-Every mistake made so far would have been caught here. Example: three cycles always pushed
-together can only build one Nethra per joint state (input Nethra + lcm of the periods). No cycle
+Every mistake made so far would have been caught here. Example (whole-interval joining): three
+cycles always pushed together can only build one Nethra per joint state (input Nethra + lcm of the periods). No cycle
 gets structure of its own, because no cycle is ever present alone.
 
 ## 1. What Nethra is not
@@ -51,7 +60,7 @@ closure. Never declare it in the harness.
 ## 2. Hard rules
 
 1. **Do not change the field law.**
-   - All earned incidences conduct.
+   - All earned incidences conduct (covered members under `conduction` never earn).
    - No gate or multiplier on `g`.
    - No selector or winner.
    - No new participant type.

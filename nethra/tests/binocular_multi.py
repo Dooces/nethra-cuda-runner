@@ -1,5 +1,7 @@
 """Objects on jittered closed loops.  Each object alone first (left eye, right eye, both eyes), then all
-together.  usage: multi.py R th J alone_laps joint_intervals chunk [tol]"""
+together.  usage: multi.py R th J alone_laps joint_intervals chunk [tol]
+env: WHOLE=1 whole-interval joining (join_on_recurrence=False), PER2 period of the second loop (default 30),
+PARTWISE / EXACTSRC the old prototypes."""
 import os
 for v in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"): os.environ[v] = "1"
 import sys, math, time, random
@@ -12,14 +14,14 @@ rng = random.Random(1)
 def loop(c, rx, ry, rz, per, fy):
     return [(c[0] + rx * math.sin(2 * math.pi * k / per), c[1] + ry * math.sin(fy * 2 * math.pi * k / per + .5),
              c[2] + rz * math.cos(2 * math.pi * k / per)) for k in range(per)]
-LOOPS = [loop((250, 130, 250), 200, 80, 200, 40, 2), loop((250, 370, 250), 180, 80, 200, 30, 1)]
+LOOPS = [loop((250, 130, 250), 200, 80, 200, 40, 2), loop((250, 370, 250), 180, 80, 200, int(os.environ.get("PER2", "30")), 1)]
 counters = [0] * len(LOOPS)
 def where(i):
     base = LOOPS[i][counters[i] % len(LOOPS[i])]; counters[i] += 1
     return tuple(min(499, max(0, round(base[a] + rng.randint(-J, J)))) for a in range(3))
 import partwise_prototype as partwise
 FIELD = (partwise.ExactSourcePartwiseField if os.environ.get("EXACTSRC") else partwise.PartwiseField) if os.environ.get("PARTWISE") else core.NethraField
-f = FIELD(frontier_tolerance=TOL, source_similarity_threshold=TH)
+f = FIELD(frontier_tolerance=TOL, source_similarity_threshold=TH, **({"join_on_recurrence": False} if os.environ.get("WHOLE") else {}))
 if os.environ.get("PARTWISE"): f.subtraction_log = []
 for _ in range(2 * b.R * b.R): f.new()
 K = len(f.nethra); cache = {}; origin = {}

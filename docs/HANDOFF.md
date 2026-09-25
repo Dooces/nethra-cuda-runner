@@ -1,12 +1,716 @@
-# Handoff: binocular Nethra, focus and consequence (state as of 2026-09-25, second session)
+# Handoff: binocular Nethra, focus and consequence (state as of 2026-09-25, end of third session)
 
-Read in this order before doing anything: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this file,
-then `nethra/nethra.py`. Branch `claude/sharp-thompson-wmszc5` (PR Dooces/nethra-cuda-runner#1 into
-`main`; pushes to the branch update it). Scratchpad files are gone after a session; every script
-below is in `nethra/tests/`.
+## START HERE
 
-**`nethra.py` was not changed in this session.** Everything new is harness scripts, one prototype
-subclass file (`nethra/tests/partwise_prototype.py`, not core), and measurements.
+Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0f and §0e
+(fourth session), §0-§0d (third session), then `nethra/nethra.py`. Older sections (§1-§10) are the second
+session's state and are still valid unless a §0 section says otherwise.
+
+**Branch:** `claude/tender-cray-bk3jq6` (Dooces/nethra-cuda-runner). It contains everything from
+`claude/zen-cerf-mqrlxe` (third session) plus the fourth session. No PR opened. Scratchpad files are
+gone after a session; every script used is in `nethra/tests/`.
+
+### What changed in the core in the fourth session
+
+- **Latest (§0f): `conduction="top_and_leaves"` is the default.** Covered constructed members earn no
+  evidence (as top-only), primitive members always conduct. Chosen over top-only after comparing 8
+  rules on the user scripts: it passes the context and cue tests top-only fails, keeps blocking,
+  interference and 15-regime results at or above full conduction, at a third of full conduction's
+  cost (4-5x top-only's). `"top"` and `"all"` stay available, bit-identical to before;
+  `top_only_conduction=True/False` still works; old checkpoints load with `"all"`, the fourth
+  session's with what they stored. Earlier in the session (below) top-only was the default.
+- `top_only_conduction=True` (default, **provisional**, user decision): the `TopField` prototype moved
+  into the core. A route member that lies in a complete route of another member of the same route is
+  covered: its incidence earns no evidence (g = 0). Routes stay whole, so closure and construction
+  are unchanged. Covered incidences are checkpointed. `False` = previous core, bit-identical; old
+  checkpoints load with `False`. `True` = the prototype, bit-identical. **Measured regressions: §0e.2.**
+- Execution only, bit-identical (checkpoints, activations and conducting incidences equal on
+  symbolic and graded streams; default, frontier, frontier_min, rk4 + 0.9, whole joining, no
+  evidence change; top-only on and off; checkpoint round trip; two-object binocular stream; user
+  scripts `context_partwise.py`, `human.py` give identical output): per-relation incidence plan,
+  cached pattern norms, vectorized interval compile and evidence-change arithmetic, closure
+  route-use index, frontier halo cache. Numbers §0e.5.
+
+### State of the user's goals
+
+| goal | state |
+|---|---|
+| several objects without combination growth | solved for construction (§0) |
+| cost must not keep rising | top-only now in core: flat on two objects (§0b). Execution now 12.3 ms/interval on the two-object stream (was 27.0); ETD integration is 45% of that (§0e.5) |
+| one object tracked in detail, rest rough | input design tested (§0c); reads not good yet (§0d) |
+| expectation of where things go next | **cause found on a tiny exact loop (§0e.1)**: structure carries next exactly; the field carries it weakly (symmetric conduction, hops at g ≈ 0.2 against leak 1), and the P read cannot point at cells that are already active. Delta input makes the structural next exact (§0e.3) |
+| CUDA on the Fedora runner | unchanged (§0b) |
+
+### Decisions waiting for the user
+
+0. **Superseded by §0f:** the user asked for a better rule than top-only; `top_and_leaves` is now the
+   default. Remaining for the user: accept its cost (30 -> 47 ms/interval on two objects over 400
+   intervals vs 7 -> 10 top-only, 55 -> 145 full), and delta input is not adopted (§0f.3).
+1. (Earlier, answered) **Top-only stays default?** It fails the context tests: the continuation built second is 2 hops
+   further than the first, and context doesn't select it (`context_partwise.py`: C2+X primes Y 0.042
+   vs Z 0.0014; `cue_capacity.py`: cue 4 still selects B). Also loses blocking and changes
+   interference and spacing (§0e.2). Cost: flat vs rising (§0b). `top_only_conduction=False` restores
+   the previous core.
+2. Leakage: measured on seven streams (§0e.4). No setting better everywhere; leakage 2 helped
+   `cue_capacity` 15 regimes (0.70 → 0.93) and hurt magnitudes elsewhere (P and activation 10-100x
+   smaller at 4). Kept at 1.
+3. Delta input (§0e.3): makes the structural next exact with one Nethra per position; with coarse
+   position cells it helps at one speed and not at three. Whether to use it is an input-design
+   decision (CLAUDE.md §4).
+4. `_admit_by_parts` direction-blind accounting (§0e.3): a Nethra whose after route is complete on
+   the before side and before route on the after side accounts for the reverse transition. Observed,
+   not changed.
+
+### Suggested next steps (do not start unasked)
+
+1. Decide 1 above. If top-only stays, the context failure needs a look (open problem, observed
+   failure): the second continuation is reached through the first one's Nethra.
+2. Where next: the structural read (after routes of Nethra refound by their before route) works on
+   exact loops (§0e.1, §0e.3); the fovea stream's structural read was worse than staying put (§0d).
+   Find which of the differences (cosine 0.8 substitution, jitter, several objects) breaks it, on a
+   stream one step bigger than the ring.
+3. Execution: remaining cost is ETD integration (exact); anything faster changes rounding. The
+   evidence dicts themselves are still dicts (writes 1-2 ms/interval); moving them to arrays is the
+   rest of roadmap item 7.
+
+### How to run things
+
+- Local container: 4 cores, `pip install numpy` if missing. One numeric thread, `timeout` on every
+  run, runs under 2-3 minutes.
+- Fourth-session scripts (all in `nethra/tests/`, each under a minute):
+
+  | script | what |
+  |---|---|
+  | `ring_symbolic.py` | env K, LAPS, TOP, LEAK, V=1 prints conductances. One Nethra per ring position; closure, structural next, P toward p(k-2..k+2) |
+  | `ring_graded.py` | env L, NC, STEP, LAPS, TOP, LEAK. Tent cells on a ring; structural next and P as a point vs staying put |
+  | `ring_split.py` | same env; share of P behind / at / ahead; input-free continuation |
+  | `ring_trace.py` | same env + X: routes, integrals and every conducting incidence's flow at position X |
+  | `delta_input.py` | env L, NC, DELTA, ND, VMAX, SPEEDS, PASSES, TOP, LEAK, TH, TOL, DUMP. Bouncing object with displacement Nethra |
+  | `delta_runlength.py` | env as delta_input (ND=3, VMAX=1 default): d+ activation along a run; Nethra refound across a run |
+  | `context_trace.py` | env TOP: `context_partwise.py` stream; conducting incidences of X, Y, Z, C1, C2 and every constructed Nethra |
+  | `with_params.py` | `LEAK=2 TOP=0 python3 with_params.py script.py args`: runs a user script with other defaults |
+  | `bitcheck_cores.py` | `bitcheck_cores.py OLD.py NEW.py`: bit-identity of two core files (see §0e.5) |
+  | `exec_stream.py`, `exec_prof.py`, `exec_parts.py` | two-object checkpoint (`exec_stream.py 120 80 out.json`, env TOP), then ms/interval + hashes (`exec_prof.py CORE.py out.json [profile]`), ms by part (`exec_parts.py CORE.py out.json`) |
+
+- Third-session scripts and runner: see §0-§0d and the old "How to run things" notes in §4 and §8.
+  Example runtimes there were for the core before top-only; most are faster now.
+- Bit-identity check pattern: keep the old core (`git show <commit>:nethra/nethra.py > old.py`),
+  `bitcheck_cores.py old.py nethra/nethra.py`, plus `exec_prof.py` on both for the two-object stream.
+- Known: `source_support="product"` and `"min"` give a different checkpoint on every run (pre-existing);
+  the adaptive `_tol` (frontier_min) is not checkpointed, so a round trip in that mode diverges.
+
+### Third session's start-here (kept for reference; its top-only and runner notes still apply)
+
+#### What changed in the core this session
+
+- `join_on_recurrence=True` (default) in `nethra/nethra.py`: a transition of pushed Nethra seen for
+  the first time is subtracted per part (`_admit_by_parts`); only the unaccounted remainder is
+  joined; a transition that recurs is joined whole (`_admit_whole_support`). `False` = previous
+  core, bit-identical; old checkpoints load with `False`; `witnessed_transitions` is checkpointed.
+  Details and measurements: §0.
+- Nothing else in the core. `_admit_graded` gained a `before_description` argument (refactor only).
+
+#### Prototypes and harness added (not core)
+
+| file | what |
+|---|---|
+| `nethra/tests/top_conduction_prototype.py` | `TopField`: routes stay whole for closure; at construction only the top members of a route earn incidence evidence (covered leaves stay at g = 0); frontier halo through conducting incidences. `GpuTopField` = same + GPU integration. §0b |
+| `nethra/tests/gpu_field.py` | `GpuField` / `GpuMixin`: ETD integration on the GPU (cupy); `NETHRA_GPU=0` = numpy, bit-identical to CPU ETD. §0b |
+| `nethra/tests/gpu_bench.py` + `.github/workflows/nethra-gpu-bench.yml` | runner benchmark: CPU vs GPU, core vs top-only. Triggered by a push to this branch touching those files, or manually. §0b |
+| `nethra/tests/focus_fovea.py` | focus test: coarse periphery, fine gaze-centred fovea, gaze Nethra, pursuit device; env options for fovea mode, gaze grid, leakage; reads: P centroid, share of P toward previous/current/next cells, structural next. §0c, §0d |
+| `nethra/tests/binocular_multi.py` | now also `WHOLE=1` (join_on_recurrence False) and `PER2` (second loop period) |
+| `nethra/tests/partwise_prototype.py` | pinned to `join_on_recurrence=False` so its earlier numbers reproduce |
+
+#### State of the user's goals (§1)
+
+| goal | state |
+|---|---|
+| several objects without combination growth | solved for construction (§0): 24 built per 120 together instead of 120; eyes and contexts still joined |
+| cost must not keep rising | not solved in the core. Top-only conduction (prototype) makes it flat on the two-object stream (13 → 19 ms over 400 intervals, §0b); with the fovea setup it still rises (§0c, §0d) |
+| one object tracked in detail, rest rough | input design built and tested (§0c); cost and expectation reads not good yet (§0d) |
+| expectation of where things go next | **open, main problem**: neither P nor a structural read gives a next position better than "staying put" (§0d) |
+| CUDA on the Fedora runner | works (RTX 5070, cupy); only useful for the current core's exact integration; with top-only, CPU is faster (§0b). Bottleneck is per-incidence Python bookkeeping |
+
+#### Decisions waiting for the user
+
+1. Top-only conduction into the core? (changes which incidences conduct; CLAUDE.md §2.1). Gains:
+   flat cost, sharper context. (Fourth session: context is not sharper, it selects the first-built continuation, §0e.2.) Losses: consequence reach through shared leaf cells, focus tilt (§0b).
+2. Leakage (drain rate) other than 1? Leakage 4 halves the frontier in the fovea stream (§0d). The
+   user asked about charge vs drain; it is a parameter (notes §4, CLAUDE.md §2.3) and also shifts the
+   admission-seed balance and the M/P scale. Only frontier/cost were measured, not construction
+   quality or the other streams.
+3. Input design for focus (change-signalling cells, grids): no option tried so far helped (§0d).
+
+#### Suggested next steps (in order; do not start unasked)
+
+1. **Why the field carries no usable "where next"** (§0d). Measured: P goes ~equally to previous and
+   next cells and 70-80% to cells of other loop positions (the object's whole structure is lit and
+   conduction is symmetric). The direction exists only in before/after routes, but reading after
+   routes of Nethra refound by their before route is also worse than staying put. Look first at what
+   the before routes contain (they are the whole closure of the interval, including refound
+   constructed Nethra), and at which Nethra are refound by their before route at each interval, on a
+   tiny stream (one object, one exact loop, no jitter) where the right answer is known.
+2. Array storage of incidences (roadmap item 7), bit-identical: the remaining cost is per-incidence
+   Python work (evidence change, incidence compilation, closure, pattern cosine), not integration.
+3. **User's idea to consider: encode deltas.** If Nethra received displacement (the change of
+   position between consecutive intervals) as its own graded input, construction could come to
+   carry "how long in a direction": a steady motion pushes the same displacement Nethra interval
+   after interval, and the chain of intervals with the same displacement is what closure refinds.
+   The numbers already exist in every stream (positions at t-1 and t). Notes for whoever picks it up:
+   - Feed it like any graded value (notes §3): receptive Nethra over displacement per axis (or
+     direction × speed), each pushed with its share. Negative displacement is a region of the
+     receptive range, not a negative push (notes §2 rejects signed presence-change events and -1
+     pushes; this is a quantity, not a presence change).
+   - Different from what §0d tried: those change-signalling cells were pushed with the increase of
+     one cell's input, not with displacement.
+   - With lag-one pursuit the fovea offset already is the image displacement of the focused object;
+     §0c/§0d show its pattern is nearly constant, which lit that object's whole structure. So
+     test first how a constantly pushed displacement pattern behaves (holding-like presence,
+     notes §7) and what closure refinds over a run of equal displacements, on a tiny stream.
+   - Input design is the user's call (CLAUDE.md §4); predict first (CLAUDE.md §0).
+4. Only after 1: fovea/gaze design again; multi-scale reach; Δt (§7.4, which is the same kind of
+   graded input).
+
+#### How to run things
+
+- Local container: 4 cores, `pip install numpy` if missing. One numeric thread, `timeout` on every
+  run, runs under 2-3 minutes. Examples: `binocular_multi.py 16 0.8 10 3 160 40` (~25 s);
+  `focus_fovea.py top 0.01 2 80 40` (~40 s); `context_partwise.py`, `consequence_reach.py 8 0.95 10 40 10 0`,
+  `focus_symbolic.py` (their numbers are in §0-§0b).
+- To run a prototype field in a script written for the core: replace `core.NethraField` before the
+  script runs (see how `gpu_bench.py` picks classes); capture the base class first to avoid
+  recursion.
+- Fedora runner (`runs-on: self-hosted`, runner name `fedora`, Python 3.14 at `/usr/bin/python3`,
+  numpy, cupy, numba, torch, RTX 5070): add a workflow whose `on: push: paths:` matches the files you
+  push, or `workflow_dispatch`; read results from the job log (GitHub MCP `get_job_logs`) or the
+  uploaded artifact. Pattern: `.github/workflows/nethra-gpu-bench.yml`.
+- Bit-identity check pattern (used for `join_on_recurrence`): keep the old core
+  (`git show <commit>:nethra/nethra.py`), import it from a separate directory, feed identical
+  streams, compare a hash of `checkpoint_dict()` and of all activations; include frontier, rk4 and a
+  checkpoint round trip mid-stream.
+- Known: `source_support="product"` gives a different checkpoint on every run (pre-existing).
+
+## 0f. Fourth session, part 2: a conduction rule better than top-only; delta input by field reads
+
+User: "test top-only as default, and try delta input, though make sure you aren't just migrating
+towards another framework and the field itself is doing the work"; then "you can try something other
+than top-only as default, run tests and explain why it's clearly better, make it work".
+
+### 0f.1 Why top-only fails (traced)
+
+`cue_trace.py` (the `cue_capacity.py` cue stream: A -> B with cue1 40 times, then A -> C with cue2):
+- N6 = {A, c1} | {B, c1} is built first, with nothing before it, so A, B, c1 conduct to it directly;
+  evidence change saturates them (g 1.50).
+- N10 = {A, N9, c2} | {C, c2}: its before route contains N9's after route {A, c2} (N9 = the previous
+  transition, Z -> A+c2), so A and c2 are covered; N10 is driven only through N9 and its g stays at
+  the seed (0.20). A + c2 reaches C via 1.5 -> 0.2 -> 0.2, B via 1.5 -> 1.5: B wins.
+- In a continuous stream this always happens: a Nethra's before route is the previous interval's
+  closure, which contains the previous transition Nethra's after route. So under top-only the
+  present drives "what comes next" only through "how it got here", and whichever Nethra was built
+  first on a member gets the direct incidences, saturates, and dominates (rich get richer).
+  `context_partwise.py` (§0e.2) is the same mechanism.
+
+### 0f.2 Rules compared (all decide once, at route registration, which members earn evidence;
+routes stay whole, so closure and construction are identical in all of them)
+
+| rule | members earning evidence |
+|---|---|
+| top | members not covered (previous default) |
+| all | every member (the core before 2026-09-25) |
+| **topleaves (now `top_and_leaves`, default)** | top members + every primitive member (no routes: pushed Nethra) |
+| leaves | primitive members only (top rule when a route has none) |
+| beforeall / afterall | every member on the before / after side, top rule on the other |
+| leavesbefore / leavesafter | primitive members added on the before / after side only |
+
+User scripts, leakage 1 (`with_conduction_variant.py`, prototype `conduction_variants.py`):
+
+| test | top | all | afterall | beforeall | **topleaves** | leaves | leavesafter |
+|---|---|---|---|---|---|---|---|
+| `context_partwise` small first, activation right / wrong, C1; C2 | .043/.001; **.001/.042** | .041/.037; .041/.037 | .043/.021; .042/.022 | .041/.033; .049/.039 | .042/.039; .042/.040 | .037/.039; .041/.036 | .043/.021; .046/.022 |
+| same, P right / wrong, C1; C2 | .043/.001; .001/.042 | .046/.042; .046/.042 | .044/.017; .044/.018 | .043/.043; .061/.042 | **.047/.048; .047/.049** | .042/.049; .048/.043 | .050/.020; .048/.021 |
+| `cue_capacity` cue2: C (right) / B | .003/.043 | .101/.065 | .006/.045 | .088/.068 | **.103/.063** | .102/.059 | .005/.043 |
+| same, no cue (recent C / old B) | .001/.003 | .069/.052 | .028/.004 | .009/.014 | **.070/.051** | .062/.007 | .030/.003 |
+| 8 regimes 61% overlap; 15 regimes | .88; .70 | .94; .83 | .85; .12 | .91; 1.00 | **.94; .93** | .93; .80 | .84; .15 |
+| `human.py 14` blocking ratio (low = blocking) | .89 | .38 | 1.00 | .98 | **.18** | 9.71 | .86 |
+| interference after 150 unrelated, B / C | .001/.000 | .015/.036 | .001/.004 | .001/.004 | **.014/.037** | .001/.050 | .001/.004 |
+| spacing, massed / spaced | .002/.046 | .037/.025 | .002/.032 | .003/.040 | .040/.026 | .038/.028 | .003/.033 |
+| `robust.py` clean / partial / noisy / noisy2 | 1.00/.40/.58/.06 | .83/.38/.50/.04 | .92/.42/.54/.06 | .92/.35/.52/.06 | .83/.40/.50/.04 | .83/.40/.48/.04 | 1.00/.40/.58/.06 |
+| `focus_symbolic` share with / without F | .489/.488 | .495/.482 | .456/.490 | .437/.473 | .484/.480 | .485/.479 | .459/.485 |
+| `consequence_reach` P toward F: first k; peak | 6; 1.3e-2 | 8; 4.3e-2 | 6; 8.6e-3 | 8; 6.0e-2 | 8; 5.0e-2 | 8; 5.1e-2 | 6; 5.7e-3 |
+
+Cost, two objects (`conduction_cost.py 0 400 x`: gpu_bench stream, 3 alone laps each, then 400
+together, tolerance 0.01, local, one thread), ms/interval per 80 together; frontier; conducting
+incidences at the end:
+
+| rule | 0-79 ... 320-399 | frontier | conducting of 8,871 |
+|---|---|---|---|
+| top | 7, 8, 9, 10, 10 | 114 -> 136 | 968 |
+| leavesafter | 16, 17, 21, 23, 24 | 176 -> 231 | 2,104 |
+| leavesbefore | 24, 27, 28, 31, 38 | 198 -> 256 | 3,180 |
+| **topleaves** | 30, 33, 40, 43, 47 | 216 -> 277 | 4,316 |
+| beforeall | 39, 54, 66, 76, 87 | 216 -> 323 | 6,182 |
+| all | 55, 74, 94, 112, 145 | 239 -> 358 | 8,871 |
+
+Why topleaves (`top_and_leaves`):
+- Every pushed Nethra conducts directly to every constructed Nethra whose route holds it, whatever
+  was built before. The present drives the Nethra that expects the next step directly (fixes 0f.1).
+  Constructed members inside another member's route stay covered (the duplication top-only removed
+  among constructed Nethra).
+- It is the only rule that passes every test full conduction passes: cue selection, recency,
+  regimes (0.93 vs 0.83 full), blocking (0.18, stronger than full), interference, consequence reach.
+- Cost: a third of full conduction and it rises at about the same relative rate as top-only (+57% vs
+  +43% over 320 intervals; full +164%). It is 4-5x top-only.
+- Rules that keep the before side covered (top, afterall, leavesafter) fail cue selection and
+  15 regimes; rules that open the before side fully (beforeall) lose blocking and cost 2x.
+- Weak spot: `context_partwise.py` small factors first. Activation right in both rows but by 7%;
+  P slightly wrong in both (0.047 vs 0.048). The conjunction Nethra (C1+X -> Y, C2+X -> Z) conduct
+  directly with C, X and Y/Z but stay at seed-level g (0.15-0.29) while the phase-1 X -> Y, X -> Z
+  Nethra are at 1.5 (`context_trace.py`); full conduction has the same small margin (P 0.046 vs
+  0.042). The context tilt is small because evidence does not grow on the conjunction Nethra; that is
+  evidence change, not conduction. Open.
+
+Core change: parameter `conduction` ("top_and_leaves" default, "top", "all"); `_covered_members`
+holds the rule. Checks: "top" and "all" equal the previous commit's `top_only_conduction` True/False
+(checkpoints with the parameter key normalized, activations and conducting incidences; all
+bitcheck modes); the default equals the prototype rule (`conduction_variants.py` topleaves) on the
+bitcheck streams with a round trip, and gives the same output on `cue_capacity`, `human`, `robust`,
+`focus_symbolic`, `consequence_reach`.
+
+### 0f.3 Delta input, judged by field reads only
+
+The structural read of §0e.3 (cells of after routes of Nethra refound by their before route) is a
+lookup done by the harness on the topology, a transition table. The question here is whether the
+field (P, frontier 0) carries the next position better with displacement Nethra. `delta_field.py`:
+object bouncing on a line; MODE none / delta / shuffle (same displacement values permuted in time,
+so they carry no information about the motion); ablation = frozen copy, same interval pushed
+without the displacement Nethra. Share of P over position cells landing on the true next position:
+
+| setting | none | delta | shuffle | delta, d not pushed at read |
+|---|---|---|---|---|
+| L=8, one per position, top | 0.33 | 0.22 | 0.20 | 0.24 |
+| L=16, one per position, top | 0.64 (P total 0.001) | 0.075 | 0.089 | 0.082 |
+| L=16, all | 0.40 | 0.14 | 0.16 | 0.18 |
+| L=16, topleaves | 0.40 | 0.14 | 0.16 | 0.18 |
+| L=16, speeds 1-3, topleaves | 0.19 | 0.13 | 0.11 | 0.13 |
+| L=16, 6 coarse cells, top | 0.06 | 0.03 | 0.03 | 0.03 |
+
+- Delta lowers the share at the next position in every setting, and real displacement is no better
+  than shuffled: the field does not use the displacement's information about the motion.
+- Mechanism (`delta_field.py` trace at x=8 moving left, L=16, top): d- (A 0.205) conducts to every
+  leftward Nethra (A 0.045-0.10 all along the line), which pour P into every cell x1..x14. The
+  displacement Nethra is a hub for "moving left", present all run long, not a pointer to the next
+  cell. Without delta, the leftward Nethra conduct to no cells at all (covered), so the 0.64 share
+  at L=16 top is a share of 0.001.
+- So delta input makes the harness's structural lookup exact (§0e.3) and leaves the field's
+  expectation worse. Not adopted.
+- Also measured (§0e.1, rules above): no conduction rule makes positive P point forward on the
+  graded ring (behind >= ahead at step 1 for every rule); the input-free continuation beats staying
+  put only in some settings (afterall 0.77 on 12/8, topleaves 0.52 on 12/12, all 0.52 on 12/12).
+
+### 0f.4 Scripts (`nethra/tests/`)
+
+| script | what |
+|---|---|
+| `conduction_variants.py` | prototype rules (env COND), installed on `nethra.NethraField` |
+| `with_conduction_variant.py` | `COND=afterall python3 with_conduction_variant.py cue_capacity.py` |
+| `conduction_cost.py` | `COND=... conduction_cost.py 0 400 x`: cost table above |
+| `cue_trace.py` | env COND: cue stream topology, conductances, activations |
+| `delta_field.py` | env COND (default top), L, NC, MODE, ND, VMAX, SPEEDS, PASSES, ABL |
+| `with_params.py` | now env LEAK and COND=top/all/top_and_leaves (core values) |
+| `context_trace.py` | env COND (core values, default top_and_leaves) |
+
+## 0e. Fourth session (2026-09-25, night): top-only in core, where next, delta input, leakage, execution
+
+User's requests: put top-only into the core, provisionally; test leakage; find on a tiny exact loop
+why the field doesn't carry where next; array storage; test the delta input idea.
+
+### 0e.1 Why the field doesn't carry "where next" (tiny exact loops)
+
+**Symbolic ring** (`ring_symbolic.py`, K=6, one Nethra per position, pushed 1.0, top-only). Predicted
+from the code and matched: lap 1 builds N1..N5, lap 2 builds N6 (the wrap), then 0. N_k routes
+{p_(k-1), N_(k-1)} | {p_k}; N1 = {p0} | {p1}; N6 = {N5, p5} | {N1, p0}. Closure at p_k = {p_k, N_k,
+N_(k+1)}: N_(k+1) is refound by its before route and its after route is {p_(k+1)}, so **the structural
+next is exact in every interval**. Conducting incidences (top-only): p_k - N_k, N_k - N_(k+1), N1 - p0,
+N1 - p1. Conductances stay near the admission seed (g(14) = 0.196; 0.2-0.35, N1 0.56-0.78).
+
+P toward the cells, last two laps (P = sum of max(0, g (A_relation - A_member)), completed interval):
+
+| position k | 0 | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| P toward p(k-1) | 0 | 0 | 0 | 0 | 0 | 0 |
+| P toward p(k+1) | 0.011-0.017 | 0.002-0.003 | 5e-4 | 1e-4 | 0 | 1e-3 |
+| P toward p(k+2) | 0 | 0 | 0 | 0 | 0.003 | 1e-4 |
+
+- Previous cell: 0, because its own leftover makes A_member > A_relation.
+- Next cell: reached p_k -> N_k -> N_(k+1) -> p_(k+1), 3 hops at g ~ 0.2 against leak 1 (1e-4);
+  at k=0 only 2 hops (N1 holds both p0 and p1): 1e-2.
+- Being refound gives a Nethra no activation. N_(k+1) is structurally present but its activation
+  comes only by conduction from the pushed cell.
+
+**Graded ring** (`ring_graded.py`, 12 positions, 8 tent cells, step 1): built 8, 3, 1, 0, 0 per lap.
+Structural next (cells of after routes of Nethra refound by their first route) 0.50 from the true
+next, staying put 1.00, P as a point 3.6. Split of positive P (`ring_split.py`, last lap):
+
+| setting | P behind | P at the object (within one cell spacing) | P ahead | input-free continuation as a point / staying put |
+|---|---|---|---|---|
+| 12 positions, 8 cells | 0.49 | **0.00** | 0.51 | 2.56 / 1.00 |
+| 12 positions, 12 cells | 0.41 | 0.00 | 0.59 | 0.90 / 1.00 |
+| 24 positions, 8 cells | 0.53 | 0.00 | 0.47 | 4.65 / 1.00 |
+| 24 positions, 8 cells, step 5 (> spacing 3) | 0.32 | 0.00 | 0.68 | 3.69 / 5.00 |
+| 12, 8, full conduction | 0.53 | 0.00 | 0.47 | 1.32 / 1.00 |
+| 12, 8, leakage 2 / 4 | 0.57 / 0.52 | 0.00 | 0.43 / 0.48 | 2.42 / 1.70 |
+
+(Input-free continuation: a copy of the field stepped once with nothing pushed; cells' activation
+minus leakage-only decay, positive part, as a point.)
+
+- **P toward the cells at the object is 0.00 in every setting.** When the step is smaller than a
+  receptive field, the next position's cells are the ones active now, and no positive flow can go
+  into a Nethra more active than its relation. So P as a point cannot show a small step; it only
+  reaches cells that are off.
+- The rest splits about half behind, half ahead. Traced at x=5 (`ring_trace.py`): leftover in the
+  previous cell c2 (A 0.19) feeds N2 (the Nethra of an earlier transition; A 0.05), which flows into
+  c1 behind (+0.0066); ahead, N6 is two hops from the pushed cells (A 0.001, +0.0001 into c5).
+- Leakage 1, 2, 4 does not change the split.
+- Direction exists in the structure (before vs after route), not in conduction: an incidence
+  conducts both ways, and the same incidence carries the forward expectation before a cell is pushed
+  and the backward spill after it, so evidence change pushes its g up and down.
+
+### 0e.2 Top-only in the core, and what it breaks
+
+Implementation: parameter `top_only_conduction` (default True). Equal to `TopField` bit-identically
+(`bitcheck_cores.py`-style check against the prototype on symbolic and graded streams, default,
+frontier, rk4 + 0.9, whole joining, round trip). Covered incidences are zeroed after construction
+re-seeds a retained route (as the prototype did); the route summary Counter keeps the re-seeded max
+(only its > 0 is read).
+
+User scripts, leakage 1, full conduction (False) vs top-only (True):
+
+| script | full conduction | top-only |
+|---|---|---|
+| `context_partwise.py`, small factors first: C1+X P toward Y / Z | 0.0458 / 0.0424 | 0.0432 / 0.0014 |
+| same, C2+X P toward Z (right) / Y | 0.0456 / 0.0419 | **0.0014 / 0.0418 (wrong)** |
+| `cue_capacity.py` A->B then A->C, no cue: B / C | 0.052 / 0.069 (recent) | 0.0034 / 0.0011 (first) |
+| same with differentiating cues: cue1 B / C; cue2 B / C | 0.102 / 0.065; 0.065 / **0.101** | 0.086 / 0.0008; **0.043 / 0.003 (wrong)** |
+| `cue_capacity.py` 8 regimes at 11/39/61% overlap; 15 regimes | 1.00 / 1.00 / 0.94; 0.83 (234 s) | 1.00 / 0.94 / 0.88; 0.70 |
+| `human.py 14` blocking ratio | 0.38 | 0.89 (no blocking) |
+| same, interference after A: B / C; after 150 unrelated | 0.018 / 0.040; 0.015 / 0.036 | 0.0016 / 0.0024; 0.0011 / 0.0001 |
+| same, spacing: massed / spaced, immediately | 0.037 / 0.025 | 0.0017 / 0.046 |
+| same, XOR learning curve | 0.59-0.78 | 0.55-0.69 |
+| `robust.py` Nethra clean / partial / noisy / noisy2 | 0.83 / 0.38 / 0.50 / 0.04 | 1.00 / 0.40 / 0.58 / 0.06 |
+| `focus_symbolic.py` share with / without F | 0.495 / 0.482 | 0.489 / 0.488 |
+| `consequence_reach.py 8 0.95 10 40 10 0` P toward F on contact, first k / peak; ms | k=8 / 4.3e-2; 51 ms | k=6 / 1.3e-2; 10 ms |
+
+**Correction to §0b:** the third session reported top-only `context_partwise.py` as "P right/wrong
+0.0432/0.0014"; that is only the C1 row. In the C2 row top-only primes the wrong continuation 30:1.
+
+Mechanism (`context_trace.py`): X conducts only to N10, the first Nethra built with X (X -> Y was
+learned first). Y hangs on N11 = {N10, X} | {Y}, next to N10: X reaches Y in 3 hops. Z hangs only on
+N14 = {N10, N11, N13, X} | {Z}, whose members X, N10, N11 are covered by N13: X reaches Z via N10 ->
+N11 -> N13 -> N14, 5 hops (g N14-Z 0.28 vs N11-Y 1.48). The phase-2 conjunction Nethra (C2 + X -> Z)
+conduct to neither X nor Z directly either. Whatever is built second on a member is reached through
+what was built first on it.
+
+### 0e.3 Delta input (`delta_input.py`, `delta_runlength.py`)
+
+Object bouncing on a line of L positions; speed per pass from SPEEDS. Displacement Nethra: ND tent
+cells over [-VMAX, VMAX], pushed with their shares of x_t - x_(t-1) in the same interval as the
+position. Last 2 passes; errors in positions.
+
+| position cells | speeds | structural next without delta | with delta | staying put |
+|---|---|---|---|---|
+| one per position, L=8 | 1 | 0.86 (1.9 cells in the set) | **0.00** (1.0) | 1.00 |
+| one per position, L=16 | 1 | 0.93 | **0.00** | 1.00 |
+| one per position, L=16 | 1, 2, 3 | 1.77 (2.7 cells) | **0.02** (ND 7) | 1.70 |
+| 6 tent cells over 16 | 1 | 1.10 | 0.67 (ND 3) | 1.00 |
+| 6 tent cells over 16 | 1, 2, 3 | 1.72 | 1.75 (ND 7), 0.62 (ND 4; 26/30 intervals have a read) | 1.70 |
+
+- Predicted and seen: without delta, at x every Nethra whose after route is cells(x) is refound in
+  both directions, so both x+1 and x-1 are read. With delta the after routes carry d+ or d-, and only
+  the current direction's Nethra is refound.
+- P: share toward displacement Nethra 0.15-0.33; P ahead / behind along the motion 0.60 / 0.40
+  (without delta 0.37-0.79 ahead, varying). P at the object's own cells 0.00-0.01 as in §0e.1.
+- Refound constructed Nethra per interval fall with delta (3.9 -> 2.1; coarse 7.3 -> 4.5).
+- **How long in a direction:** no constructed Nethra is refound across a run of equal
+  displacements; each is refound in at most 2 intervals (its before and after). Every interval of a
+  run pushes the same displacement pattern, so structure cannot count a run. Duration shows only as
+  charge on d+: 0.219, 0.230, 0.234, 0.235 ... at leakage 1 (saturates in 2 intervals); 0.318,
+  0.375, 0.412, ... 0.539 at step 8, still rising, at leakage 0.25. d+ itself stays at ~0.22 of its
+  push because it conducts into every Nethra of that direction.
+- Side finding, `_admit_by_parts`: without delta, the first leftward pass built nothing. A rightward
+  Nethra N(x -> x+1) has route {x+1} complete on the before side of the leftward transition x+1 -> x
+  and route {x, ...} complete on the after side, so it counts as accounting for both parts. The
+  accounting does not ask which route is the before route. Leftward structure was built on the second
+  leftward pass (whole joining on recurrence). Not changed.
+
+### 0e.4 Leakage (user: "you can test")
+
+All top-only; user scripts via `with_params.py` (sets the default leakage of every field).
+
+| script | leakage 1 | 2 | 4 |
+|---|---|---|---|
+| `cue_capacity.py` 8 regimes 11/39/61%; 15 regimes | 1.00/0.94/0.88; 0.70 | 1.00/1.00/0.96; **0.93** | 1.00/1.00/0.94; 0.90 |
+| `cue_capacity.py` cue2 B / C (C right) | 0.043 / 0.003 | 0.022 / 0.009 | 0.0075 / 0.0040 |
+| `human.py 14` blocking ratio | 0.89 | 0.78 (both ~0) | 1.02 (both ~0) |
+| same, interference after 150: B / C | 0.0011 / 0.0001 | 0.0285 / 0.0000 | 0.0079 / 0.0000 |
+| same, spacing massed / spaced | 0.0017 / 0.046 | 0.0001 / 0.025 | 0.0000 / 0.0019 |
+| `robust.py` clean / partial / noisy / noisy2 | 1.00/0.40/0.58/0.06 | 1.00/0.38/0.65/0.06 | 0.67/0.38/0.46/0.06 |
+| `context_partwise.py` small first, C1: Y / Z; C2: Z / Y | 0.043/0.0014; 0.0014/0.042 | 0.0045/0.00006; 0.00006/0.0042 | 1e-4/0; 0/1e-4 |
+| `focus_symbolic.py` share with / without F | 0.489 / 0.488 | 0.505 / 0.507 | 0.502 / 0.502 |
+| `consequence_reach.py` P toward F on contact, first k / peak; ms | 6 / 1.3e-2; 10 | 6 / 1.9e-3; 7.6 | 4 / 1.5e-4; 5.1 |
+| ring (§0e.1) P behind / ahead | 0.49 / 0.51 | 0.57 / 0.43 | 0.52 / 0.48 |
+
+- Higher leakage shrinks every P and activation (10x at 2, 100-1000x at 4 in `context_partwise.py`,
+  `consequence_reach.py`) and cost (10 -> 5 ms). Construction counts equal in these scripts (the
+  counts printed are the same at every leakage).
+- `cue_capacity.py` 15 regimes: 0.70 -> 0.93 -> 0.90. The others: no consistent change.
+- Leakage stays 1 (parameter; CLAUDE.md §2.3).
+
+### 0e.5 Execution (roadmap item 7), bit-identical
+
+Two-object binocular stream (gpu_bench stream: 3 alone laps each, 120 intervals together, 80
+measured; 857 Nethra, frontier 0.01, one thread, local container), ms/interval:
+
+| | start of session | end |
+|---|---|---|
+| top-only (default) | 27.0 | **12.3** |
+| full conduction | 135.6 | 119.0 |
+
+End state by part, top-only (`exec_parts.py`): ETD integration 5.6, evidence change + construction
+2.3, compile 0.8, closure 0.7, pair statistics 0.7, incidence compile 0.7, pattern refinding 0.3,
+frontier 0.25.
+
+What changed (all execution indexes, rebuilt from routes; nothing persistent):
+- `_physical_incidences`: per relation, its non-covered incidences grouped by member in
+  first-appearance order (rows and dict order unchanged; edges with only covered incidences are left
+  out, they have g = 0). With top-only 6,060 of 6,907 incidences are covered.
+- `_canonical_source_event`: stored patterns' sorted values and norms cached.
+- `_compile_interval`: directed incidences and co-supplier pairs built with numpy in the same
+  per-receiver order; pair codes handed to `update_residuals`.
+- `closure`: route uses per member with route-use ids; the event projection is skipped for routes
+  that hold only unqualified evidence (a non-empty projection cannot match).
+- frontier halo neighbours cached per Nethra.
+- evidence change: prior flow, tension and both evidence terms computed with numpy over the
+  conducting incidences in `physical` order (np.bincount adds each bin in array order from 0.0).
+- Not done: the evidence Counters are still dicts (the writes remain a Python loop). Remaining time
+  is mostly exact integration; faster integration would change rounding.
+
+Checks: `bitcheck_cores.py` against the previous commit after each change (checkpoint, activations
+and conducting incidences equal; symbolic and graded streams, 2 seeds, default / frontier 1e-2 /
+frontier_min / rk4 + 0.9 / whole joining / evidence change off, top-only on and off, checkpoint round
+trip except frontier_min whose `_tol` is not checkpointed); `exec_prof.py` hashes on the two-object
+stream (both conduction modes); `context_partwise.py` and `human.py 14` outputs identical.
+
+## 0. Third session (2026-09-25): per-part subtraction decided and moved into the core
+
+The user's answer to §9.1: test (b) structural per-part subtraction for vision, or an alternative;
+use whichever is better. Result: an alternative, now the core default.
+
+**Rule (`join_on_recurrence=True`, default):** a transition of pushed Nethra (the Nethra pushed in
+interval t-1, the Nethra pushed in t) seen for the first time is subtracted per part
+(`_admit_by_parts`, the `PartwiseField` logic of §6.2): constructed Nethra with a route complete on
+each side account for the pushed Nethra in those routes; nothing is built for accounted parts, the
+unaccounted remainder is joined on its own. When the same transition of pushed Nethra recurs, the
+whole interval is joined as before (`_admit_whole_support`). A co-presence that recurs becomes
+structure (one occurrence later than before); one that happens once does not.
+`join_on_recurrence=False` is the previous core, bit-identical. Old checkpoints load with False.
+Bookkeeping: `witnessed_transitions` (set of pushed-member pairs, checkpointed; grows with the
+number of distinct transitions).
+
+Checks: `False` = previous core, identical checkpoints and activations on a symbolic and a graded
+stream, each with default, frontier 1e-2, rk4 + threshold 0.9; `True` = the scratch prototype
+bit-identical on the same; checkpoint round trip mid-stream bit-identical.
+`source_support="product"` could not be compared: **the previous core itself gives a different
+checkpoint on every run in that mode** (3 runs, 3 hashes; graded stream). Not investigated.
+
+Recurrence criteria tried (scratch prototypes; two objects, 0.8, jitter ±10, R=16, `binocular_multi.py`):
+
+| gate | eyes joined (mono first) | context conjunctions | 40/37 loops, 400 together: whole-joined intervals, built |
+|---|---|---|---|
+| canonical pattern recurs (cosine) | yes | yes | 126, 151; cost 76 → 624 ms |
+| pushed member set recurs | yes | yes | 52, 97 |
+| canonical pattern pair recurs | yes | yes | 52, 90 |
+| **pushed member-set pair recurs (adopted)** | yes | yes | **18, 68**; 73 → 169 ms |
+| none (per-part always, option b) | **no** | **no** | 0, 51; 15 → 29 ms |
+
+At cosine 0.8 joint patterns of independent objects "recur" approximately, so a cosine gate still
+joins them. The adopted gate uses the exact set of pushed Nethra, independent of the threshold.
+
+Measurements, adopted rule vs previous core vs (b), `16 0.8 10 3 160 40` (loops 40 and 30):
+
+| | built together 0-119 | ms/interval together | 3D located obj0 / obj1 per 40 |
+|---|---|---|---|
+| previous core, monocular first | 120 | 107 → 305 (0-79; 400-800 later, §6.1) | 35/27, 36/31 |
+| (b) per-part, monocular first | 23 | 16-20 | 4/6, 8/5, 6/3 |
+| **adopted, monocular first** | **24** (4 in 120-159) | **63-81** | **34/27, 35/31, 34/30, 34/27** |
+| previous core, both eyes first | 120 | 47 → 165 | 31/31, 36/30, 27/34, 32/30 |
+| adopted, both eyes first | 59 | 32-56 (parallel runs) | same as core |
+
+Longer, joint never repeating (loops 40/37, 400 together, adopted): built 22/12/9/14/11 per 80
+(47 of 68 from unaccounted single-object remainders, i.e. jittered positions not seen alone yet;
+18 on recurrence); frontier 239 → 358, cost 73 → 169 ms, still rising. The rise is frontier size
+(integrated Nethra), not construction; that is the execution item (§8).
+
+Other streams, adopted vs previous core:
+- `context_partwise.py`: the 8 conjunction Nethra are built (one block later); P right/wrong
+  0.0458/0.0424 vs 0.0467/0.0428. (b) builds nothing there.
+- `consequence_reach.py 8 0.95 10 40 10 0`: 263 vs 281 constructed, 31 vs 35 ms; P toward F on
+  contact 2.4e-3 ... 4.3e-2 vs 2.3e-3 ... 4.2e-2; misses 0 in both.
+- `focus_symbolic.py`: share 0.495 / 0.482 vs 0.495 / 0.481.
+
+Open from this: rising frontier cost with two objects (§8); `product` mode nondeterminism; the
+witnessed-transition set grows without bound on a never-repeating stream.
+
+## 0b. Third session, part 2: why cost rises, participation threshold, top-only conduction, GPU
+
+User: cost must not keep rising; expected ~10 Nethra participating with two objects; "the top Nethra
+is computed, not every leaf"; maybe a dynamic participation threshold that rises with confidence;
+look at what humans do; use the Fedora runner for CUDA.
+
+**Who participates** (two objects together, interval 240, current core): pushed 16; |a| >= 0.1:
+0-2, >= 0.03: 10-19, >= 0.01: ~130 (100+ constructed), >= 0.001: ~300-390 of 864. Frontier (one-hop
+halo) 256-355, 3.7k-5.7k incidences. So ~10-19 carry real activation, but the ~110 thin ones
+(0.01-0.03) together hold more activation than the top ones. Cause: a route has ~23 members, 93% of
+them leaves already inside another member's route (§6.1), and **each member is a conducting
+incidence**. 6,909 of 7,799 incidences are such leaf duplicates. Every constructed Nethra touching an
+active cell draws flow from the leaves directly.
+
+**Participation threshold** (frontier tolerance; from interval 240, 80 intervals, error vs exact for
+the 13.5 Nethra/interval with exact |a| >= 0.03). Structure reads (built, refound, 3D located, state
+distance) are identical at every tolerance, including exact.
+
+| current core | ms | relative error | top-10 same as exact |
+|---|---|---|---|
+| exact | 484 | 0 | 1 |
+| 0.01 | 137 (rising) | 3.0% | 0.99 |
+| 0.03 | 57 | 13.5% | 0.96 |
+| 0.05 | 53 | 19.5% | 0.95 |
+| dynamic 0.01 / 0.05 | 65 | 18% | 0.95 |
+
+Dynamic = next interval's tolerance high when every pushed Nethra was accounted for (by parts or
+whole), low otherwise; 66/80 intervals were accounted. Dynamic gives the same trade as a fixed
+tolerance at its high value. No gain found.
+
+**Top-only conduction (`nethra/tests/top_conduction_prototype.py`, prototype, not core):** routes
+stay whole (closure unchanged); at construction a member that lies in a complete route of another
+member of the same route (covered) earns no incidence evidence, so g = 0 there. Only the top members
+conduct; leaves reach the relation through the top member's own routes. Frontier halo through
+conducting incidences only. Construction and every structure read are identical to the core.
+
+| two objects, 40/37 loops | current core (join_on_recurrence) | top-only |
+|---|---|---|
+| ms/interval together, 0-79 ... 320-399 (tol .01) | 73, 97, 113, 130, 169 | **13, 17, 18, 21, 19** |
+| frontier | 239 → 358 | 114 → 136 (levels off) |
+| exact integration, whole field (866 Nethra), local | 484 ms | 79 ms |
+| error of important Nethra at tol .01 / .03 | 3.0% / 13.5% | 1.7% / 4.2% |
+
+Behaviour on the other streams, current core vs top-only:
+- `context_partwise.py` small factors first, P right/wrong: 0.0458/0.0424 vs **0.0432/0.0014**. **(Fourth session: this is only the C1 row; in the C2 row top-only primes the wrong continuation, §0e.2.)**
+  Context only: C1 0.104/0.054 vs 0.069/0.060, C2 0.103/0.055 vs 0.109/0.019 (depends on build order:
+  a path through more hops is weaker).
+- `consequence_reach.py 8 0.95 10 40 10 0`: P toward F starts at k=8 and peaks 4.3e-2 vs starts at
+  k=6 and peaks 1.3e-2. The earlier reach was receptive overlap through leaf cells (§7.1); with leaves
+  not conducting, anticipation needs the top Nethra itself to activate. 7.9 vs 31.7 ms.
+- `focus_symbolic.py`: F tilt of the gaze share +0.013 vs ~0.
+
+Not moved into the core: which incidences conduct is a field-law question (CLAUDE.md §2.1:
+"all earned incidences conduct"; here the leaves are never earned). **User's decision.**
+
+**What humans do** (for the threshold question): only ~1-4% of cortical neurons are strongly active
+at once and the energy cost is at active synapses (Lennie 2003, Curr Biol 13:493); expected input
+gives lower overall V1 activity with a sharper representation (Kok, Jehee, de Lange 2012, Neuron
+75:265); gain shifts between a focused mode when the task is predictable and a broad mode when it is
+not (Aston-Jones & Cohen 2005, Annu Rev Neurosci 28:403). Sparse activity with a hierarchy of
+convergent connections matches top-only conduction better than a moving threshold.
+
+**GPU (Fedora runner, RTX 5070, cupy; `nethra/tests/gpu_field.py`, `gpu_bench.py`, workflow
+`nethra-gpu-bench.yml`, run 36103291516).** ETD integration on the device; equals CPU ETD to 3e-16
+(numpy fallback bit-identical). Two objects, 866 Nethra, 40 intervals after 240 together, one CPU
+thread:
+
+| | CPU exact | GPU exact | CPU tol .01 | GPU tol .01 |
+|---|---|---|---|---|
+| current core | 258 (integration 199) | 130 (66) | 65 (25) | 65 (23) |
+| top-only | **36 (2.6)** | 101 (67) | **15.7 (2.3)** | 64 (52) |
+
+The GPU halves exact integration for the current core. With top-only conduction integration is
+2.6 ms for the whole field; the rest is per-incidence Python bookkeeping (evidence change, incidence
+compilation, closure, pattern cosine), which a GPU integrator does not touch. Next for speed: array
+storage of incidences (roadmap item 7), bit-identical.
+
+## 0c. Third session, part 3: focus = fine fovea at the gaze, top-only background (first test)
+
+User: top-only for the background, more detail around focus. Understood as: detail comes from what
+is pushed at the gaze (a fine fovea per eye + gaze Nethra over the 3D fixation point), background
+from coarse periphery cells; top-only conduction everywhere. A gaze-dependent switch of which
+incidences conduct would be a gate on g (CLAUDE.md §2.1), so it was not tried.
+
+Script `nethra/tests/focus_fovea.py`. Per eye: periphery 8x8 tent cells over the whole image, fovea
+8x8 tent cells over +-0.2 image units around the image of the fixation point; gaze 6^3 tent cells
+over the box (8 pushed). Pursuit device outside the core: fixation(t) = focused object at t-1, so
+the fovea sees the object's step. Stream: object 0 alone tracked (3 laps of 40), object 1 alone
+tracked (3 laps of 37), then both, gaze on object 0. 0.8, jitter ±10, tolerance 0.01. Reads: P
+toward fovea cells as a centroid = expected next offset of the focused object; P toward the
+periphery cells within 2 spacings of the background object = its expected next image point; both
+against "staying put" (image units; fovea spacing 0.057, periphery 0.286).
+
+| both objects, 160 intervals | ms/interval | frontier (210 constructed) | focused, expected next offset | background, expected next point |
+|---|---|---|---|---|
+| current core | 232 → 627 | 404 → 474 | 0.060-0.071 (staying put 0.036-0.043) | 0.19-0.21 (0.048-0.055) |
+| top-only | 105 → 132 | 376 → 442 | 0.060-0.068 | 0.17-0.20 |
+| top-only, no fovea | 25 → 43 | 180 → 239 (117 constructed) | | |
+| top-only, no gaze | 55 → 78 | 234 → 288 (193 constructed) | | |
+
+Built during both: 17-28 per 40, not settling within 160 intervals.
+
+Measured cause of the frontier (1 lap alone + 40 both, top-only): 65 of 76 constructed Nethra above
+tolerance, 53 of 216 gaze cells (8 pushed per interval), 31 fovea, 32 periphery. With pursuit the
+focused object's fovea pattern is nearly the same every interval (its step), so the same few fovea
+cells are pushed every interval and are members of nearly every Nethra built for that object; its
+whole structure stays lit and conducts hop to hop along the chain, top-only or not.
+
+Both expectation reads are worse than staying put in every variant (as §5.3 found for P as a 3D point).
+
+Human reference: an image held still on the retina fades (adaptation), and much of the retinal
+output signals change (transient cells). In Nethra a constant push is constant presence (like
+holding). Options, not started (input design, CLAUDE.md §4 says input goes in as the notes say; user's call):
+1. Fovea through change-signalling receptive Nethra (pushed with the positive part of the change of
+   a cell's input), beside or instead of sustained ones.
+2. Coarser gaze grid / fewer gaze cells.
+3. First find out why P as an expected next point is worse than staying put (open since §5.3)
+   before building more input channels on it.
+
+## 0d. Third session, part 4: the three options and charge vs drain (`focus_fovea.py`)
+
+All top-only, tolerance 0.01, 2 laps alone per object, both objects together with gaze on object 0.
+Reads added: coarse periphery expectation for the focused object as well (same resolution as the
+background); share of P toward previous-only / current / next-only cells; a structural read (cells in
+the after routes of constructed Nethra whose first (before) route is complete in this interval's
+closure). Image units; staying put ≈ 0.04-0.07.
+
+| setting, both objects 0-79 | frontier | ms (parallel runs) | focused fovea offset / staying | focused coarse point / staying | background / staying |
+|---|---|---|---|---|---|
+| sustained fovea (base) | 345-379 | 87-120 | 0.073 / 0.048 | 0.19-0.22 / 0.065 | 0.20 / 0.05 |
+| 1. change-signalling fovea only | 355-398 | 99-119 | - | 0.17-0.20 / 0.064 | 0.21-0.22 / 0.05 |
+| 1. sustained + change-signalling | 452-494 | 137-202 | 0.068-0.071 | 0.19-0.21 | 0.19-0.21 |
+| 2. gaze grid 4 (instead of 6) | 267-295 | 76-93 | 0.075 | 0.20-0.22 | 0.20-0.21 |
+| leakage 2 | 291-322 | 74-95 | 0.072 | 0.18-0.21 | 0.19-0.20 |
+| leakage 4 | 192-207 | 47-59 | 0.078-0.080 | 0.20-0.22 | 0.20 |
+| leakage 4 + gaze 4, 160 intervals | 174 → 208 | 40 → 68 (alone) | 0.078-0.082 | 0.19-0.22 | 0.20-0.22 |
+
+Change-signalling cells are pushed with max(0, input now - input last interval) per fovea cell.
+
+3. Why expectation reads are worse than staying put:
+- Share of P (base): toward previous-only / current / next-only cells: fovea 0.05-0.06 / 0.06-0.09 /
+  0.07-0.09; background periphery 0.07 / 0.12-0.14 / 0.06-0.07. Previous ≈ next (conduction is
+  symmetric; the only forward bias is leftover in the previous cells), and the three together get
+  only 20-30% of P; the rest goes to cells of other positions along the loop.
+- Structural read: focused 0.113-0.152 (staying put 0.059-0.072), background 0.18-0.34 (0.043-0.046);
+  available in only 26-72 of 80 intervals.
+
+Charge vs drain (the user's question): leakage sets the leftover (e^-leak per interval at C=1,
+dt=1) and the per-hop spread (about g/(g+leak) per hop). Leakage 4 halves the frontier; it does not
+change the reads. Construction counts at leakage 2/4 equal those at 1 in these runs (27/24/...), but
+admission-seed balance, M/P and the other streams were not measured.
 
 ## 1. Goal (the user's words, condensed)
 
@@ -46,6 +750,7 @@ subclass file (`nethra/tests/partwise_prototype.py`, not core), and measurements
 ## 3. Core facts checked in code this session (use them in predictions)
 
 - Construction: `_admit_whole_support` joins the complete closure of consecutive intervals.
+  (Since §0: only when the transition of pushed Nethra recurs; otherwise `_admit_by_parts`.)
   Reuse happens only through the source-pair index (`_existing_temporal_support_relations`) or
   `_accounted`, and `_accounted` **skips** handles already indexed to a different source pair.
   So subtraction before construction is per whole interval, not per part.
@@ -246,7 +951,7 @@ Nethra at the food location.
   (a) step(1) always, (b) step(Δt), (c) step(Δt) plus Δt receptive Nethra; read construction count
   and P toward the next image point split by Δt. Predict first (CLAUDE.md section 0).
 
-## 8. Execution / CUDA (not started)
+## 8. Execution / CUDA (second session's plan; see §0b for what was done)
 
 - Fedora runner: `runs-on: self-hosted`. Earlier sessions triggered it with a workflow whose
   `on: push: paths:` matches the pushed files (see `.github/workflows/nethra-online-hotfield-cuda.yml`)
@@ -265,7 +970,7 @@ Nethra at the food location.
 
 ## 9. Open decisions for the user and proposed next steps (do not start unasked)
 
-1. **Per part vs per interval.** Options: (a) numeric residual per pushed Nethra (Nethra-native,
+1. **Per part vs per interval.** Decided in §0 (recurrence-gated per-part subtraction, core default). Former options: (a) numeric residual per pushed Nethra (Nethra-native,
    separates objects from contexts in principle, but needs P comparable to M: residual scale or
    parameters, the user's call); (b) structural per-part subtraction for vision only (works for
    objects, loses eye joining unless each object is seen binocularly first, loses context
