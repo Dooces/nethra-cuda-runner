@@ -9,7 +9,7 @@ because the opposite was assumed at some point and cost days of work.
   relation are the same type and obey the same equations. There is no input layer, output layer,
   hidden state, label, target, or decoder.
 - A **field**: every Nethra has an activation `a`. Every earned incidence conducts in both
-  directions with conductance `g(e) = g_max (1 - exp(-e / tau))`, where `e` is that incidence's
+  directions (with `top_only_conduction`, covered route members never earn evidence, section 4) with conductance `g(e) = g_max (1 - exp(-e / tau))`, where `e` is that incidence's
   evidence. Contributions add. Leakage is the only sink.
 
       C da_i/dt = J_i - leak * a_i + sum_j g_ij (a_j - a_i) + Gamma_i
@@ -66,6 +66,7 @@ because the opposite was assumed at some point and cost days of work.
 | `source_similarity_threshold` | 0.999 (default) | Structural recurrence of graded source patterns: a new pattern refinds the stored pattern with the highest cosine above this (earliest among equals); otherwise it is stored. Physical current stays exact. Cosine ignores overall size, so one Nethra pushed 1.0 and 1.25 is the same structural event. Without this, graded input never recurs exactly and construction adds a Nethra every interval (a nested chain while the pushed members stay the same). |
 | `leakage`, `capacitance` | 1, 1 | Field timescale. One interval of `dt = 1` per observation. |
 | `join_on_recurrence` | True (default) | Construction per part on first sight of a transition of pushed Nethra, whole-interval joining once the same transition recurs. Independent objects then no longer build a Nethra per joint state; eyes of one object and contexts that recur are still joined (one occurrence later). False = whole-interval joining every interval (previous behaviour, bit-identical; old checkpoints load with False). Keeps a set of witnessed transitions (bookkeeping, grows with distinct transitions). See docs/HANDOFF.md section 0. |
+| `top_only_conduction` | True (default, provisional, user decision 2026-09-25) | When a route is registered, a member lying in a complete route of another member of the same route (covered) earns no incidence evidence and keeps g = 0; only the top members conduct. Routes stay whole, so closure and construction are unchanged. Covered incidences are checkpointed. False = every member conducts (previous behaviour, bit-identical; old checkpoints load with False). Measured effects (docs/HANDOFF.md §0e): cost flat on two objects; a continuation built second is several hops further than the first, so context tests fail to select it (`context_partwise.py`, `cue_capacity.py`). |
 | `integrator` | `auto` | Runtime only. ETD (exact passive part, eigendecomposition) up to 400 Nethra, RK4 with stiffness subdivision above that. Both integrate the same equation. |
 
 ## 5. How to read it

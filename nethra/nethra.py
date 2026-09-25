@@ -1419,21 +1419,31 @@ class NethraField:
 
         if physical is None:
             physical = self._physical_incidences(self.current_event)
-        prior_flow = defaultdict(float)
-        outgoing = defaultdict(dict)
-        incoming = defaultdict(dict)
 
+        # Array form of the per-incidence arithmetic below (execution only).  Every sum runs over
+        # the conducting incidences in `physical` order, which is the order the scalar loops used,
+        # and np.bincount adds each bin's terms in array order starting from 0.0, so every value
+        # is the same float.
         A = self.current_interval_integral
-        for (relation, member), row in physical.items():
-            g = float(row["g"])
-            if g <= 0.0:
-                continue
-            q = g * (float(A.get(relation, 0.0)) - float(A.get(member, 0.0)))
-            if q > 0.0:
-                prior_flow[member] += q
-                outgoing[relation][member] = q
-            elif q < 0.0:
-                incoming[relation][member] = -q
+        order = self._order
+        rows = [(relation, member, row) for (relation, member), row in physical.items() if row["g"] > 0.0]
+        R = len(rows)
+        nodes = self.nethra
+        size = len(nodes)
+        rel_i = np.fromiter((order[r] for r, _m, _row in rows), dtype=np.intp, count=R)
+        mem_i = np.fromiter((order[m] for _r, m, _row in rows), dtype=np.intp, count=R)
+        g_arr = np.fromiter((float(row["g"]) for _r, _m, row in rows), dtype=float, count=R)
+        a_rel = np.fromiter((float(A.get(r, 0.0)) for r, _m, _row in rows), dtype=float, count=R)
+        a_mem = np.fromiter((float(A.get(m, 0.0)) for _r, m, _row in rows), dtype=float, count=R)
+        q = g_arr * (a_rel - a_mem)
+        out_pos = np.flatnonzero(q > 0.0)
+        in_pos = np.flatnonzero(q < 0.0)
+
+        prior_sum = np.bincount(mem_i[out_pos], weights=q[out_pos], minlength=size)
+        # members receiving prior flow, in order of first appearance
+        _u, first = np.unique(mem_i[out_pos], return_index=True)
+        flow_members = [nodes[i] for i in mem_i[out_pos][np.sort(first)].tolist()]
+        prior_flow = {n: float(prior_sum[order[n]]) for n in flow_members}
 
         # Every Nethra outside the interval has manifestation 0 and prior flow 0; its residual is
         # 0, which update_residuals treats as absent.
@@ -1449,27 +1459,21 @@ class NethraField:
         # fabricated historical independence evidence.
         self.update_residuals(manifest_minus_prior, neighbors=residual_neighbors, compiled=compiled)
 
-        tension = {}
-        for relation, row in outgoing.items():
-            tension[relation] = sum(
-                p * manifest_minus_prior.get(member, 0.0)
-                for member, p in row.items()
-            )
-
-        updates = defaultdict(float)
-        for relation, row in outgoing.items():
-            for member, p in row.items():
-                updates[(relation, member)] += (
-                    self.outgoing_evidence_per_flow * p * manifest_minus_prior.get(member, 0.0)
-                )
-
-        for relation, row in incoming.items():
-            total = sum(row.values())
-            if total <= 0.0:
-                continue
-            t = float(tension.get(relation, 0.0))
-            for member, q in row.items():
-                updates[(relation, member)] += self.incoming_evidence_per_tension * t * (q / total)
+        mmp_arr = np.zeros(size)
+        for n, value in manifest_minus_prior.items():
+            mmp_arr[order[n]] = value
+        p_out = q[out_pos]
+        mmp_out = mmp_arr[mem_i[out_pos]]
+        # T_R = sum_m p_Rm (M - P)_m, and the outgoing and incoming evidence terms
+        tension = np.bincount(rel_i[out_pos], weights=p_out * mmp_out, minlength=size)
+        delta = np.zeros(R)
+        delta[out_pos] = 0.0 + self.outgoing_evidence_per_flow * p_out * mmp_out
+        q_in = -q[in_pos]
+        total_in = np.bincount(rel_i[in_pos], weights=q_in, minlength=size)
+        rel_in = rel_i[in_pos]
+        delta[in_pos] = 0.0 + self.incoming_evidence_per_tension * tension[rel_in] * (q_in / total_in[rel_in])
+        moved = np.sort(np.concatenate((out_pos, in_pos)))
+        updates = {(rows[k][0], rows[k][1]): d for k, d in zip(moved.tolist(), delta[moved].tolist())}
 
         touched = {}
         for edge, delta in updates.items():

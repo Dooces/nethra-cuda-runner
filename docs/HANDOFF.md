@@ -2,15 +2,96 @@
 
 ## START HERE
 
-Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0-§0d
-below, then `nethra/nethra.py`. Older sections (§1-§10) are the second session's state and are still
-valid unless a §0 section says otherwise.
+Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0e (fourth
+session), §0-§0d (third session), then `nethra/nethra.py`. Older sections (§1-§10) are the second
+session's state and are still valid unless a §0 section says otherwise.
 
-**Branch:** `claude/zen-cerf-mqrlxe` (Dooces/nethra-cuda-runner). It contains everything from
-`claude/sharp-thompson-wmszc5` (PR Dooces/nethra-cuda-runner#1) plus this session. No PR opened for
-it. Scratchpad files are gone after a session; every script used is in `nethra/tests/`.
+**Branch:** `claude/tender-cray-bk3jq6` (Dooces/nethra-cuda-runner). It contains everything from
+`claude/zen-cerf-mqrlxe` (third session) plus the fourth session. No PR opened. Scratchpad files are
+gone after a session; every script used is in `nethra/tests/`.
 
-### What changed in the core this session
+### What changed in the core in the fourth session
+
+- `top_only_conduction=True` (default, **provisional**, user decision): the `TopField` prototype moved
+  into the core. A route member that lies in a complete route of another member of the same route is
+  covered: its incidence earns no evidence (g = 0). Routes stay whole, so closure and construction
+  are unchanged. Covered incidences are checkpointed. `False` = previous core, bit-identical; old
+  checkpoints load with `False`. `True` = the prototype, bit-identical. **Measured regressions: §0e.2.**
+- Execution only, bit-identical (checkpoints, activations and conducting incidences equal on
+  symbolic and graded streams; default, frontier, frontier_min, rk4 + 0.9, whole joining, no
+  evidence change; top-only on and off; checkpoint round trip; two-object binocular stream; user
+  scripts `context_partwise.py`, `human.py` give identical output): per-relation incidence plan,
+  cached pattern norms, vectorized interval compile and evidence-change arithmetic, closure
+  route-use index, frontier halo cache. Numbers §0e.5.
+
+### State of the user's goals
+
+| goal | state |
+|---|---|
+| several objects without combination growth | solved for construction (§0) |
+| cost must not keep rising | top-only now in core: flat on two objects (§0b). Execution now 12.3 ms/interval on the two-object stream (was 27.0); ETD integration is 45% of that (§0e.5) |
+| one object tracked in detail, rest rough | input design tested (§0c); reads not good yet (§0d) |
+| expectation of where things go next | **cause found on a tiny exact loop (§0e.1)**: structure carries next exactly; the field carries it weakly (symmetric conduction, hops at g ≈ 0.2 against leak 1), and the P read cannot point at cells that are already active. Delta input makes the structural next exact (§0e.3) |
+| CUDA on the Fedora runner | unchanged (§0b) |
+
+### Decisions waiting for the user
+
+1. **Top-only stays default?** It fails the context tests: the continuation built second is 2 hops
+   further than the first, and context doesn't select it (`context_partwise.py`: C2+X primes Y 0.042
+   vs Z 0.0014; `cue_capacity.py`: cue 4 still selects B). Also loses blocking and changes
+   interference and spacing (§0e.2). Cost: flat vs rising (§0b). `top_only_conduction=False` restores
+   the previous core.
+2. Leakage: measured on seven streams (§0e.4). No setting better everywhere; leakage 2 helped
+   `cue_capacity` 15 regimes (0.70 → 0.93) and hurt magnitudes elsewhere (P and activation 10-100x
+   smaller at 4). Kept at 1.
+3. Delta input (§0e.3): makes the structural next exact with one Nethra per position; with coarse
+   position cells it helps at one speed and not at three. Whether to use it is an input-design
+   decision (CLAUDE.md §4).
+4. `_admit_by_parts` direction-blind accounting (§0e.3): a Nethra whose after route is complete on
+   the before side and before route on the after side accounts for the reverse transition. Observed,
+   not changed.
+
+### Suggested next steps (do not start unasked)
+
+1. Decide 1 above. If top-only stays, the context failure needs a look (open problem, observed
+   failure): the second continuation is reached through the first one's Nethra.
+2. Where next: the structural read (after routes of Nethra refound by their before route) works on
+   exact loops (§0e.1, §0e.3); the fovea stream's structural read was worse than staying put (§0d).
+   Find which of the differences (cosine 0.8 substitution, jitter, several objects) breaks it, on a
+   stream one step bigger than the ring.
+3. Execution: remaining cost is ETD integration (exact); anything faster changes rounding. The
+   evidence dicts themselves are still dicts (writes 1-2 ms/interval); moving them to arrays is the
+   rest of roadmap item 7.
+
+### How to run things
+
+- Local container: 4 cores, `pip install numpy` if missing. One numeric thread, `timeout` on every
+  run, runs under 2-3 minutes.
+- Fourth-session scripts (all in `nethra/tests/`, each under a minute):
+
+  | script | what |
+  |---|---|
+  | `ring_symbolic.py` | env K, LAPS, TOP, LEAK, V=1 prints conductances. One Nethra per ring position; closure, structural next, P toward p(k-2..k+2) |
+  | `ring_graded.py` | env L, NC, STEP, LAPS, TOP, LEAK. Tent cells on a ring; structural next and P as a point vs staying put |
+  | `ring_split.py` | same env; share of P behind / at / ahead; input-free continuation |
+  | `ring_trace.py` | same env + X: routes, integrals and every conducting incidence's flow at position X |
+  | `delta_input.py` | env L, NC, DELTA, ND, VMAX, SPEEDS, PASSES, TOP, LEAK, TH, TOL, DUMP. Bouncing object with displacement Nethra |
+  | `delta_runlength.py` | env as delta_input (ND=3, VMAX=1 default): d+ activation along a run; Nethra refound across a run |
+  | `context_trace.py` | env TOP: `context_partwise.py` stream; conducting incidences of X, Y, Z, C1, C2 and every constructed Nethra |
+  | `with_params.py` | `LEAK=2 TOP=0 python3 with_params.py script.py args`: runs a user script with other defaults |
+  | `bitcheck_cores.py` | `bitcheck_cores.py OLD.py NEW.py`: bit-identity of two core files (see §0e.5) |
+  | `exec_stream.py`, `exec_prof.py`, `exec_parts.py` | two-object checkpoint (`exec_stream.py 120 80 out.json`, env TOP), then ms/interval + hashes (`exec_prof.py CORE.py out.json [profile]`), ms by part (`exec_parts.py CORE.py out.json`) |
+
+- Third-session scripts and runner: see §0-§0d and the old "How to run things" notes in §4 and §8.
+  Example runtimes there were for the core before top-only; most are faster now.
+- Bit-identity check pattern: keep the old core (`git show <commit>:nethra/nethra.py > old.py`),
+  `bitcheck_cores.py old.py nethra/nethra.py`, plus `exec_prof.py` on both for the two-object stream.
+- Known: `source_support="product"` and `"min"` give a different checkpoint on every run (pre-existing);
+  the adaptive `_tol` (frontier_min) is not checkpointed, so a round trip in that mode diverges.
+
+### Third session's start-here (kept for reference; its top-only and runner notes still apply)
+
+#### What changed in the core this session
 
 - `join_on_recurrence=True` (default) in `nethra/nethra.py`: a transition of pushed Nethra seen for
   the first time is subtracted per part (`_admit_by_parts`); only the unaccounted remainder is
@@ -19,7 +100,7 @@ it. Scratchpad files are gone after a session; every script used is in `nethra/t
   Details and measurements: §0.
 - Nothing else in the core. `_admit_graded` gained a `before_description` argument (refactor only).
 
-### Prototypes and harness added (not core)
+#### Prototypes and harness added (not core)
 
 | file | what |
 |---|---|
@@ -30,7 +111,7 @@ it. Scratchpad files are gone after a session; every script used is in `nethra/t
 | `nethra/tests/binocular_multi.py` | now also `WHOLE=1` (join_on_recurrence False) and `PER2` (second loop period) |
 | `nethra/tests/partwise_prototype.py` | pinned to `join_on_recurrence=False` so its earlier numbers reproduce |
 
-### State of the user's goals (§1)
+#### State of the user's goals (§1)
 
 | goal | state |
 |---|---|
@@ -40,7 +121,7 @@ it. Scratchpad files are gone after a session; every script used is in `nethra/t
 | expectation of where things go next | **open, main problem**: neither P nor a structural read gives a next position better than "staying put" (§0d) |
 | CUDA on the Fedora runner | works (RTX 5070, cupy); only useful for the current core's exact integration; with top-only, CPU is faster (§0b). Bottleneck is per-incidence Python bookkeeping |
 
-### Decisions waiting for the user
+#### Decisions waiting for the user
 
 1. Top-only conduction into the core? (changes which incidences conduct; CLAUDE.md §2.1). Gains:
    flat cost, sharper context. Losses: consequence reach through shared leaf cells, focus tilt (§0b).
@@ -50,7 +131,7 @@ it. Scratchpad files are gone after a session; every script used is in `nethra/t
    quality or the other streams.
 3. Input design for focus (change-signalling cells, grids): no option tried so far helped (§0d).
 
-### Suggested next steps (in order; do not start unasked)
+#### Suggested next steps (in order; do not start unasked)
 
 1. **Why the field carries no usable "where next"** (§0d). Measured: P goes ~equally to previous and
    next cells and 70-80% to cells of other loop positions (the object's whole structure is lit and
@@ -80,7 +161,7 @@ it. Scratchpad files are gone after a session; every script used is in `nethra/t
 4. Only after 1: fovea/gaze design again; multi-scale reach; Δt (§7.4, which is the same kind of
    graded input).
 
-### How to run things
+#### How to run things
 
 - Local container: 4 cores, `pip install numpy` if missing. One numeric thread, `timeout` on every
   run, runs under 2-3 minutes. Examples: `binocular_multi.py 16 0.8 10 3 160 40` (~25 s);
@@ -98,6 +179,8 @@ it. Scratchpad files are gone after a session; every script used is in `nethra/t
   streams, compare a hash of `checkpoint_dict()` and of all activations; include frontier, rk4 and a
   checkpoint round trip mid-stream.
 - Known: `source_support="product"` gives a different checkpoint on every run (pre-existing).
+
+@@SECTION0E@@
 
 ## 0. Third session (2026-09-25): per-part subtraction decided and moved into the core
 

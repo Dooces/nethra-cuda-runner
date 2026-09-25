@@ -19,6 +19,10 @@ Every rule here exists because it was broken before.
      closure of consecutive intervals). So co-presence becomes structure on its second occurrence.
    - Every co-present Nethra enters the route. No subsets are enumerated.
    - Existing structure is reused before anything new is built.
+   - Conduction (`top_only_conduction=True`, default, provisional): a route member that lies in a
+     complete route of another member of the same route is covered and never earns evidence
+     (g = 0). So a constructed Nethra conducts only with its top members; a Nethra built later on
+     the same member is reached through the earlier one, one hop further per layer.
 2. **Run it tiny** (tens of intervals).
 3. **Compare.** If the numbers differ from the prediction, stop and find out why in the code
    before running anything larger or on the runner.
@@ -55,7 +59,7 @@ closure. Never declare it in the harness.
 ## 2. Hard rules
 
 1. **Do not change the field law.**
-   - All earned incidences conduct.
+   - All earned incidences conduct (covered members under `top_only_conduction` never earn).
    - No gate or multiplier on `g`.
    - No selector or winner.
    - No new participant type.
