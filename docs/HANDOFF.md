@@ -7,6 +7,9 @@ session: direction, action loop), §0f and §0e (fourth session), §0-§0d (thir
 `nethra/nethra.py`. Older sections (§1-§10) are the second session's state and are still valid unless
 a §0 section says otherwise.
 
+**Sixth session (§0h):** branch `claude/modest-bohr-avn2ng` = the fifth session plus operator tags and a drain
+prototype (not core). Core unchanged.
+
 **Branch:** `claude/pensive-davinci-zla3pj` (Dooces/nethra-cuda-runner). It contains everything from
 `claude/tender-cray-bk3jq6` (fourth session) plus the fifth session. No PR opened. Scratchpad files are
 gone after a session; every script used is in `nethra/tests/`.
@@ -206,6 +209,88 @@ remove it; shared vs split in the loop is not consistent (0g.3). Split direction
   streams, compare a hash of `checkpoint_dict()` and of all activations; include frontier, rk4 and a
   checkpoint round trip mid-stream.
 - Known: `source_support="product"` gives a different checkpoint on every run (pre-existing).
+
+## 0h. Sixth session: operator tags, and drain incidences (prototype, not core)
+
+User: "is there a straightforward way to use the field to abstract operators"; then "what if Nethra
+of Nethra or their leaves could have a negation instead of excitation, or drain instead of source";
+then "check on many tiny streams, a few hundred cycles each, to see what settles".
+
+### 0h.1 Operator tags (no core change)
+
+Stream: 6 symbols cycled forward 8 laps, then trials [c_i, O+] -> c(i+1), [c_i, O-] -> c(i-1),
+O+ held out on c3. Share of P toward c(x+1) against c(x-1), frozen copy:
+
+| operand | tag | shared, 6 / 20 per (operand, op) | split, 6 |
+|---|---|---|---|
+| trained c1 | O+ / O- / none | 0.49-0.51 / 0.51-0.52 / 0.49-0.52; 20: 0.495 / 0.494 / 0.488 | 0.67-0.68 / 0.70-0.71 / 0.78 |
+| held-out c3 | O+ / none | 0.42-0.43 / 0.38-0.39; 20: 0.34 / 0.33 | 0.58-0.61 / 0.68-0.71 |
+
+- The tag does not select even on trained operands. The Nethra {c1, O+, ...} | {c2, ...} is built
+  but stays at seed-level g (~0.2); tag-free sequence Nethra carry the flow (the §0f.2 weak spot).
+- A tag is a hub (as d+/d- in §0f.3). Closure is membership only; nothing is shared across
+  operands but the tag, so no transfer to a held-out operand.
+- Per trial, M - P at the neighbour that did not come is -0.03 (negative in 72/72 trials); at the
+  result +0.16 to +0.24. Evidence change clamps at 0, so this is discarded today.
+
+### 0h.2 Drain incidences (`tests/drain_prototype.py`, `tests/drain_streams.py`)
+
+- Negative g in the conduction term is anti-diffusion (a pair's difference grows once g < -leak/2):
+  not used. Law used: s -| m adds `- h_sm max(0, a_s) a_m` to leaf m (shunt). It never pushes, never
+  makes m negative, adds charge nowhere; bilinear, so RK4. Targets are leaves only; closure and
+  construction are unchanged (drains are field only, not route members).
+- Drain evidence: `delta d_sm = rate A_s A_m ((P_m - D_m) - M_m)`, clamped at 0, s != m, with
+  D_m the charge the drains took from m (product of interval integrals: declared approximation).
+  The drain's own effect is counted in what the field carried, so it stops growing once it cancels
+  the over-carry. Rate = outgoing_evidence_per_flow. h = the conductance map (h(0) = 0), ceiling
+  g_max. Sources: pushed Nethra of the prior interval (`leaves`), constructed Nethra refound in it
+  (`built`), or `both`.
+- Drain off is bit-identical to the core with integrator="rk4" (checkpoint hash, 200 intervals).
+- Streams (300 trials each, probed every 50; predictions in the `drain_streams.py` docstring):
+  negfeature (A -> X, AB -> silent, C -> X), negpattern (A -> X, B -> X, AB -> silent), operator
+  (0h.1), prob (X -> B 75% / C 25%), ring (6 positions, 50 laps), extinction (A -> X 100, A -> silent
+  100, A -> X 100). Seed 0. Last block:
+
+| stream, read | off | leaves / built / both, stated rate | x100 rate (h at g_max) | x100 rate, ceiling 10 g_max (diagnostic) |
+|---|---|---|---|---|
+| negfeature X after AB / A | 1.16 | 1.14 / 1.16 / 1.13 | 1.05 / 1.12 / 1.03 | **0.62** / 1.06 / **0.63** |
+| negfeature X after CB / C | 1.09 | 1.07 / 1.09 / 1.07 | 0.93 / 1.06 / 0.91 | **0.48** / 0.98 / **0.50** |
+| negpattern X after AB / A | 1.85 | 1.83 / 1.85 / 1.84 | 1.76 / 1.80 / 1.75 | 1.61 / 1.70 / 1.64 |
+| operator trained share O+ / O- | 0.493 / 0.481 | same to 3 decimals | 0.493 / 0.482 | 0.496 / 0.487 (leaves) |
+| prob share B | 0.587 | 0.587 | 0.60-0.61 | 0.63-0.64 (0.64-0.68 at 250) |
+| ring share ahead | 0.500 | 0.501 | 0.502-0.504 | 0.507-0.513 |
+| extinction X after A, end of extinction (start 0.019) | 0.016 | 0.016 | 0.011-0.014 | **0.002-0.004** |
+| extinction, 20 trials into reacquisition / end | 0.018 / 0.020 | same | 0.016 / 0.019 | 0.011-0.013 / 0.016 |
+
+- At the stated rate nothing changes (every read within 2% of off): drain evidence grows linearly
+  and is far from settling (negfeature, B -| X: d 0 -> 21 over 100 AB trials; D 0.002 vs P 0.045).
+- It cannot settle either: to cancel P = 0.045 needs h A_B A_X = 0.045, h ~ 7.5 against a ceiling
+  of 1.5. A leaf's activation away from pushes is 0.01-0.02 and it loses charge through leak plus
+  all its conductances, so a shunt capped at g_max removes at most ~10-15% of it.
+- Only with the ceiling raised (diagnostic, not a proposal) does something emerge, and only from
+  leaf sources: B inhibits X after A and after C (summation transfer, as in conditioned inhibition;
+  Rescorla 1969, animals); extinction goes near zero and relearns at about the first-learning speed
+  (no savings; people and animals show savings and spontaneous recovery, Pavlov 1927, Bouton 2004);
+  probability shares sharpen a little, no winner.
+- Constructed-Nethra sources stay weak at every setting: a constructed Nethra's activation comes only
+  by conduction (§0e.1) and is small, so both its drain learning (A_s) and its drain (a_s) are small.
+  So configural inhibition (negpattern, operator selection) did not appear.
+- Stability: lowest activation 0 in every run; settled blocks equal to 4 digits (ring); no
+  oscillation. Shunting only adds dissipation. Cost up to 2.5x off (operator 10 -> 27 ms, x100 rate, ceiling 10).
+- Side effect: with strong drains construction changed (extinction 31 -> 39 Nethra): drains change
+  M, and M - P feeds construction.
+- Closure-level negation (routes with a negated member) was not built. Negation on leaves is
+  evaluated against the pushed pattern; negation on constructed Nethra would be evaluated once
+  against the finished positive closure, so it cannot feed back into itself (same settled rule as
+  "a description containing itself is skipped", old ledger 2026-09-23).
+
+### 0h.3 Decisions waiting for the user
+
+1. Drain ceiling: a shunt at g_max is too weak to matter. Options: its own ceiling (a parameter),
+   a drain sized relative to the target's own outflow (leak + sum g), or a sink form (charge removed
+   at a rate set by s, stopping at zero). Not chosen.
+2. Configural drains (from constructed Nethra) are weak because constructed Nethra carry little
+   activation; same root as the conjunction weak spot (§0f.2, §0h.1).
 
 ## 0g. Fifth session: direction from timing, and an action loop
 
