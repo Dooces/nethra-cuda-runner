@@ -332,6 +332,12 @@ class NethraField:
         # Derived execution indexes over source_patterns (rebuilt when out of step with it).
         self._pattern_index = {}
         self._route_order = {}                            # route -> members in creation order
+        # relation -> its incidences grouped by member, members in first-appearance order over its
+        # routes (route insertion order, members in creation order), covered incidences left out
+        # (they hold no evidence); rebuilt when the relation gains a route.  Execution only.
+        self._incidence_plan = {}
+        # stored source pattern -> (members -> value in creation order, sum of squares)
+        self._pattern_prepared = {}
         self._pattern_members = defaultdict(list)
 
         # Transient source/closure coordinates. Independent external source support earns
@@ -404,6 +410,7 @@ class NethraField:
         avoid global scans during closure and exact-route refinding.
         """
         self._order = {n: i for i, n in enumerate(self.nethra)}
+        self._incidence_plan = {}
         self.member_to_routeuses = defaultdict(set)
         self.route_to_relations = defaultdict(set)
         for relation in self.nethra:
@@ -468,6 +475,7 @@ class NethraField:
         route = frozenset(members)
         if not route or nethra in route:
             raise ValueError("support route must contain existing Nethra other than the Nethra it supports")
+        self._incidence_plan.pop(nethra, None)
         if any(m not in self._order for m in route):
             raise ValueError("support route references unknown Nethra")
         signature = frozenset(signature)
@@ -749,16 +757,25 @@ class NethraField:
         incidence_evidence = self.incidence_evidence
         route_order = self._route_order
         g_min, g_span, tau = self.g_min, self.g_max - self.g_min, self.tau
+        # Each edge's row depends only on its own incidences, visited in the same (route) order,
+        # and edges are inserted in the same first-appearance order, so the result is the same as
+        # visiting every route member in turn.  An edge all of whose incidences are covered (g = 0,
+        # no evidence) is left out: a row with g = 0 conducts nothing and moves no evidence.
+        plans = self._incidence_plan
         for relation in self.nethra:
-            for route in relation.routes:
-                members = route_order.get(route)
-                if members is None:
-                    members = route_order[route] = tuple(self._ordered(route))
-                for member in members:
-                    conditions = incidence_evidence.get((relation, route, member))
+            if not relation.routes:
+                continue
+            plan = plans.get(relation)
+            if plan is None:
+                plan = plans[relation] = self._build_incidence_plan(relation)
+            routes = relation.routes
+            for member, incidences in plan:
+                row = None
+                for route, ikey in incidences:
+                    conditions = incidence_evidence.get(ikey)
                     if conditions is None:
                         key = empty
-                        evidence = relation.routes[route].get(key, 0.0)
+                        evidence = routes[route].get(key, 0.0)
                     else:
                         if not conditions or (len(conditions) == 1 and empty in conditions):
                             key = empty
@@ -767,14 +784,29 @@ class NethraField:
                         evidence = conditions.get(key, 0.0)
                     e = max(0.0, float(evidence))
                     g = 0.0 if e <= 0.0 else g_min + g_span * (1.0 - exp(-e / tau))
-                    edge = (relation, member)
-                    row = physical.get(edge)
                     receipt = (route, key)
                     if row is None or g > row["g"]:
-                        physical[edge] = {"g": g, "receipts": [receipt]}
+                        row = {"g": g, "receipts": [receipt]}
                     elif g == row["g"]:
                         row["receipts"].append(receipt)
+                physical[(relation, member)] = row
         return physical
+
+    def _build_incidence_plan(self, relation):
+        """Incidences of one relation grouped by member (see _incidence_plan)."""
+        route_order = self._route_order
+        covered = self.covered_incidences
+        grouped = {}
+        for route in relation.routes:
+            members = route_order.get(route)
+            if members is None:
+                members = route_order[route] = tuple(self._ordered(route))
+            for member in members:
+                ikey = (relation, route, member)
+                slot = grouped.setdefault(member, [])
+                if ikey not in covered:
+                    slot.append((route, ikey))
+        return tuple((member, tuple(incidences)) for member, incidences in grouped.items() if incidences)
 
     def _set_incidence_evidence(self, relation, route, member, signature, value):
         """Set one continuous incidence-evidence coordinate and refresh route activity evidence.
@@ -815,6 +847,11 @@ class NethraField:
         if aa <= 0.0 or bb <= 0.0:
             return 0.0
         return max(-1.0, min(1.0, dot / sqrt(aa * bb)))
+
+    def _prepare_pattern(self, pattern):
+        """A pattern as members -> value in creation order and its sum of squares (as _source_cosine)."""
+        a = dict(sorted(pattern, key=lambda item: self._order[item[0]]))
+        return a, sum(value * value for value in a.values())
 
     def _source_distance(self, left, right):
         """Euclidean distance between two sparse graded source-current patterns (stable order)."""
@@ -868,9 +905,20 @@ class NethraField:
             positions.update(by_member.get(n, ()))
         best = None
         best_similarity = -1.0
+        a, aa = self._prepare_pattern(pattern)
+        prepared = self._pattern_prepared
         for position in sorted(positions):
             existing = self.source_patterns[position]
-            similarity = self._source_cosine(pattern, existing)
+            b_aa = prepared.get(existing)
+            if b_aa is None:
+                b_aa = prepared[existing] = self._prepare_pattern(existing)
+            # same arithmetic, in the same order, as _source_cosine(pattern, existing)
+            b, bb = b_aa
+            dot = sum(value * b.get(n, 0.0) for n, value in a.items())
+            if aa <= 0.0 or bb <= 0.0:
+                similarity = 0.0
+            else:
+                similarity = max(-1.0, min(1.0, dot / sqrt(aa * bb)))
             if similarity > self.source_similarity_threshold and similarity > best_similarity:
                 best = existing
                 best_similarity = similarity
