@@ -3,7 +3,7 @@
 ## START HERE
 
 Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0g (fifth
-session: direction, action loop), §0f and §0e (fourth session), §0-§0d (third session), then
+session: direction, action loop; §0h the context trace), §0f and §0e (fourth session), §0-§0d (third session), then
 `nethra/nethra.py`. Older sections (§1-§10) are the second session's state and are still valid unless
 a §0 section says otherwise.
 
@@ -206,6 +206,82 @@ remove it; shared vs split in the loop is not consistent (0g.3). Split direction
   streams, compare a hash of `checkpoint_dict()` and of all activations; include frontier, rk4 and a
   checkpoint round trip mid-stream.
 - Known: `source_support="product"` gives a different checkpoint on every run (pre-existing).
+
+## 0h. Fifth session, part 2: why split direction loses context (traced), and what was tried
+
+User: "trace why split loses context, then fix it"; reference is human-like (CLAUDE.md §2.10).
+
+### 0h.1 Trace (`regimes.py`, `regime_trace.py`, `regime_flow.py`; the `cue_capacity` regime stream)
+
+Smallest streams that show it: 4 features / all 6 pairs as contexts (shared 1.00, split 0.73);
+5 features / all 10 pairs (shared 1.00, split 0.78). Read after the ctx+B interval.
+
+Wrong read, 4 features, block 191 (context f1,f3 -> O0; split reads O3):
+
+| flow into | shared | split |
+|---|---|---|
+| O0 from N13 = {B,N12,f1,f3} \| {O0,f1,f3} | 0.0374 (g 1.26) | 0.0315 (g 0.68) |
+| O0 from N14 = {N13,O0,f1,f3} \| {A,f0,f2} | **0.0109** (g 1.00) | 0.0019 (g 0.05) |
+| O3 from N29 = {B,N28,f1,f2} \| {O3,f1,f2} | 0.0304 | 0.0316 |
+| into N29 from B (shared by every context) | g 1.25 | g 1.28 |
+| into N14 from f0 (next block's random feature) | g 0.00 | g 1.07 |
+
+- In shared, O0 is ahead because N14 (the Nethra of "O0 then next block", whose before route holds
+  O0 with f1, f3) completes O0 from the co-present context. Without it O0 and O3 tie.
+- In split, relation -> member conductances that are often followed by nothing drop (N14 -> O0
+  0.05), and member -> relation conductances of members that do not discriminate stay high (f0 -> N14
+  1.07; shared drives the same incidence to 0.00). In shared, the one number of an incidence takes both
+  terms: a failed relation -> member flow also removes the member -> relation conduction.
+- Evidence vs flow law (`regime_probe.py`): the split field's evidence read with symmetric conduction
+  and the relation -> member evidence for both directions gives 0.95 (5 features; directed 0.78) and
+  0.82 (4 features; directed 0.73). The weak part is the member -> relation evidence (the incoming,
+  tension-share term).
+
+### 0h.2 Variants tried (prototype `direction_variants.py`, env VAR; not in the core)
+
+Which terms of the evidence change also move the other direction. Shared = all four; split = none.
+
+| variant | ring forward intervals /24; fwd:back gain | 5 feat / 10 ctx | 15 regimes | 8 regimes 61% | robust clean | spacing at delay spaced > massed | focus tilt (F - no F) | consequence P at k=8 |
+|---|---|---|---|---|---|---|---|---|
+| shared | 8; 1.4:1 | 1.00 | 0.93 | 0.94 | 0.83 | no (0.027 < 0.039) | +0.004 | 8.9e-4 |
+| split (none) | 24; 4.3:1 | 0.78 | 0.59 | 0.86 | 0.58 | yes (0.035 > 0.021) | -0.078 | 5.6e-3 |
+| op | 21; 2.1:1 | 0.90 | **0.84** | 0.82 | 0.67 | no (0.029 < 0.035) | -0.035 | 5.7e-3 |
+| on+in (neg) | 24; 5.3:1 | 0.76 | 0.62 | 0.94 | 0.58 | yes (0.04 > 0.014) | -0.149 | 1.7e-3 |
+| on+in+ip | 18; 3.3:1 | 0.95 | 0.56 | 0.90 | 0.67 | yes (0.041 > 0.039) | -0.021 | 1.6e-3 |
+| op+ip | 10; 1.6:1 | 0.99 | 0.76 | 0.89 | 0.83 | no (0.029 < 0.039) | -0.011 | 5.5e-3 |
+
+Also tried: `persist` (members present on both sides of a relation get both terms): 5 features 0.78,
+ring 24/24; `persist+on+in` 0.82. `UNI=1` (member -> relation evidence from the relation's own
+manifestation minus member inflow): member -> relation conduction collapses (regimes 0.10-0.22, ring
+gain 0.0006). Blocking ratio 0.17-0.26 in every variant; `context_partwise` activation right in both
+rows in every variant.
+
+### 0h.3 Against people (sources in the reply of this session; abstracts only)
+
+- Temporal order: people recall the next item of a studied sequence about twice as often forward as
+  backward (lag-CRP, Kahana 1996). Co-studied pairs: forward and backward recall nearly equal
+  (associative symmetry, Kahana 2002). So people are partly directional for sequences and symmetric
+  for co-present pairs. Ring fwd:back gain: shared 1.4:1, op 2.1:1, split 4.3:1 (the ring gain is
+  not a recall probability; direction and order of magnitude only).
+- Spacing at a delay: people retain spaced better. Split, neg, on+in+ip show it; shared, op, op+ip
+  do not.
+- Focus toward the consequential location: people's gaze goes toward reward/consequence-linked
+  locations. Only shared tilts that way, and only by +0.004.
+- 15 regimes, robust probes: no human data for these exact tasks known here.
+
+### 0h.4 State
+
+Not fixed. No variant keeps split's direction and shared's co-present context together; the
+variants trade one against the other. `op` (a confirmed relation -> member flow also strengthens the
+member -> relation direction) is the closest to both: 15 regimes 0.84 (shared 0.93, split 0.59) with
+a 2.1:1 forward bias on the ring, but 8 regimes 0.82, robust 0.67, no spacing effect. The core is
+unchanged (`direction="split"` is still the no-crossing rule).
+
+Decision for the user: adopt `op` as the split rule, keep the trade-off as it is, or keep looking.
+Where to look next: the member -> relation evidence of members that are present in every context
+(B here); in people a cue present on every trial gains little associative strength of its own
+(cue competition). What makes B -> N_j stay at 1.3 in split while shared also keeps it at 0.7-1.1
+was not measured (evidence trajectories of B -> N_j per block would show it).
 
 ## 0g. Fifth session: direction from timing, and an action loop
 
