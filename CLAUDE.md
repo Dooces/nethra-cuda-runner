@@ -98,6 +98,9 @@ closure. Never declare it in the harness.
     - Read the completed interval under current topology instead:
       `f.closure(f.previous_explicit, f.current_source_event)`, as `_admit_whole_support` does.
   - topology (routes, incidence evidence).
+  - **Weak expectations need `frontier_tolerance=0`.** With a frontier, a Nethra whose activation
+    stays below the tolerance (and outside the one-hop halo) only decays: flow toward it is never
+    integrated, even though a P read computed from the incidences says it exists.
 - **Probe without disturbing the field:** copy it and turn evidence change and construction off on the copy.
 
       g = NethraField.from_checkpoint_dict(f.checkpoint_dict())
@@ -125,8 +128,9 @@ closure. Never declare it in the harness.
 
 - **Container:** 4 cores.
 - **Runs:** small and short. Write the prediction first (§0), run the smallest thing that answers
-  it, stop when it has answered. No run of more than a few minutes without a stated question it
-  alone can answer. Never edit a script while a run is using it.
+  it, stop when it has answered. A test run over 2-3 minutes means something is wrong: stop it
+  (wrap runs in `timeout`). Go bigger only when a divergence from the short run is expected and
+  stated. Never edit a script while a run is using it.
 - **Timing:** wall clock (`time.perf_counter`), one numeric thread
   (`OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`), nothing else running.
 - **Processes:** never use `pkill -f` or `pgrep -f <pattern>`, not even to wait. The pattern
