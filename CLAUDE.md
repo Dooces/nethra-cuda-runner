@@ -64,7 +64,11 @@ closure. Never declare it in the harness.
 - **Co-present context:** push it in the same interval as what it accompanies.
 - **Read:**
   - live activation right after an interval (that is the expectation);
-  - closure (`previous_closure`: which constructed Nethra are refound);
+  - closure: which constructed Nethra are refound.
+    - `previous_closure` after `step` was computed **before** that interval's construction, so it
+      misses Nethra built at that boundary (a t-1 read).
+    - Read the completed interval under current topology instead:
+      `f.closure(f.previous_explicit, f.current_source_event)`, as `_admit_whole_support` does.
   - topology (routes, incidence evidence).
 - **Probe without disturbing the field:** copy it and turn plasticity off on the copy.
 
