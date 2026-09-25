@@ -10,8 +10,9 @@ numbers written "log §x" point there.
    log section only when this file points to it. Read the parts of `nethra/nethra.py` you will make
    predictions about or change (CLAUDE.md §0, §2.7).
 2. Branch: `claude/pensive-davinci-zla3pj` (Dooces/nethra-cuda-runner) holds all five sessions; `main`
-   and the older `claude/*` branches are its ancestors. No PR exists. If the session names another
-   branch, start that branch from this one.
+   and the older `claude/*` branches are its ancestors. Open PR: https://github.com/Dooces/nethra-cuda-runner/pull/3
+   (pushing to the branch updates it). If the session names another branch, start that branch from
+   this one.
 3. Setup: `pip install numpy` if missing; one numeric thread
    (`OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`); `timeout` on every run; a run over 2-3
    minutes means something is wrong. Scratch scripts go in the scratchpad.
