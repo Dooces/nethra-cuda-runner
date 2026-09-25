@@ -1,0 +1,50 @@
+name: Nethra cycles
+
+on:
+  push:
+    branches:
+      - claude/beautiful-noether-86pm14
+    paths:
+      - '.github/workflows/nethra-cycles.yml'
+      - 'nethra/tests/cycles.py'
+  workflow_dispatch:
+
+concurrency:
+  group: nethra-cycles
+  cancel-in-progress: true
+
+jobs:
+  cycles:
+    runs-on: self-hosted
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host
+        shell: bash
+        run: |
+          set -euxo pipefail
+          hostname; nproc; free -h
+          /usr/bin/python3 --version
+          /usr/bin/python3 -c "import numpy; print('numpy', numpy.__version__)"
+          sha256sum nethra/nethra.py nethra/tests/cycles.py
+      - name: Cycle streams in parallel (1000 intervals x 3 passes each)
+        shell: bash
+        run: |
+          set -uxo pipefail
+          mkdir -p out
+          cd nethra/tests
+          for periods in 3,5,7 2,3,5 3,4,6 5,7,11; do
+            /usr/bin/time -f "elapsed=%e maxrss_kb=%M" /usr/bin/python3 cycles.py 3 1000 "$periods" 100 \
+              > "../../out/cycles_${periods//,/_}.txt" 2>&1 &
+          done
+          wait
+          cd ../..
+          for f in out/*.txt; do echo "=== $f"; cat "$f"; done
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nethra-cycles
+          path: out
+          if-no-files-found: warn
+          retention-days: 7
