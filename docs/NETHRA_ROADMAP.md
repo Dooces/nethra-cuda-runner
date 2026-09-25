@@ -105,7 +105,7 @@ instead of a harness.
   in clean and partial conditions. Record result in the notes either way.
 
 ### 1.3 Admission-seed map
-- **What:** sweep `admission_seed` in {3, 5, 8, 14, 25, 50} over the full harness.
+- **What:** sweep `admission_seed` in {3, 5, 8, 14, 25, 50} over the available capability scripts.
 - **Why:** seed trades switching speed (5) for retention (14–50); blocking appears at 14, spacing at
   5. `g(5) = 0.07`, `g(14) = 0.20`, `g(50) = 0.59` vs leak 1. Later tasks need a declared default
   per world type, and the tradeoff should be one chart, not folklore.
@@ -113,14 +113,14 @@ instead of a harness.
   No mechanism change.
 
 ### 1.4 Graded source recurrence evaluation
-- **What:** `source_support="min"` and `"product"` exist but are marked experimental. Run the full
-  harness on both vs `"exact"`, plus `robust.py` partial/noisy probes and a real-valued world
+- **What:** `source_support="min"` and `"product"` exist but are marked experimental. Run the available
+  capability scripts on both vs `"exact"`, plus `robust.py` partial/noisy probes and a real-valued world
   (receptive-field encoded values with noise).
 - **Why:** real inputs never recur bit-exactly; with `"exact"` construction grows by one Nethra
   per interval under 10% amplitude noise (Phase 0). Also the only path to better partial/noisy robustness
   (currently 0.38 / 0.50, same as linear learners).
 - **Test:** Nethra count per 10k intervals (bounded?), accuracy on robust probes, noisy real-valued
-  world. Promote one mode to default only if it matches `"exact"` on the clean harness.
+  world. Promote one mode to default only if it matches `"exact"` on the clean scripts.
 
 ## Phase 2 — Bounded cost
 
