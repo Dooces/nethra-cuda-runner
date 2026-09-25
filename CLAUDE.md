@@ -89,6 +89,12 @@ closure. Never declare it in the harness.
    `nethra.py` must not change code: compare the AST without docstrings before committing.
 9. **`nethra/NETHRA_MISTAKE_LEDGER.md` is an old copy, for reference only.** Do not append to it.
 
+10. **Benchmark against people, not against an ideal.** The reference for every result is what
+    humans do on the same task in the combination of their capabilities (latency, lag, errors,
+    how many exposures they need), with a source. Humans lag and err; "anywhere close to human" is
+    the goal. Never judge a result against a perfect or optimal solution, and never set a bar above
+    what humans do. If no human data for the task is known, say so instead of inventing a bar.
+
 ## 3. How to feed and read (short form; details in the notes)
 
 - **Feed:** push a number onto each input Nethra (one bound to a source) whose source is present

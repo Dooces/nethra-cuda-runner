@@ -22,8 +22,9 @@ forward (ring: 24/24 intervals vs 8/24 shared; shuffled stream: chance). New act
 (`gaze_loop.py`): an innate lagged reflex drives the eye while the field watches; then the reflex is
 switched off and an actuator reads only the motor Nethra's activation, which nothing pushes any more.
 With split direction the field-driven eye follows a bouncing object better than its teacher and
-sometimes turns at the wall before the object does; lesioned structure, shuffled training, no
-eye-position input or shared direction each remove it. Split direction costs context capacity
+roughly halves its teacher's reversal lag (people reverse before the target after 1-2 cycles;
+the field does not reach that); lesioned structure, shuffled training or no eye-position input
+remove it; shared vs split in the loop is not consistent (0g.3). Split direction costs context capacity
 (`cue_capacity` 15 regimes 0.93 -> 0.59, `robust` clean 0.83 -> 0.58): not made default. §0g.
 
 ### What changed in the core in the fourth session
@@ -298,7 +299,7 @@ Ablations at L=10 (mean |o|, trained):
 
 | | result |
 |---|---|
-| shared direction | 4.62 (moves 0.79, with object 0.48: drives into a wall) |
+| shared direction | 4.62 (moves 0.79, with object 0.48: drives into a wall); but 1.94 after 288 intervals (see exposure table) |
 | no eye-position Nethra (`PROP=0`), split | 3.79 (reversal lags 2-15) |
 | no construction during learning | 4.64, moves 0.09 |
 | LAT 1 (teacher 2.58) | split 2.86, shared 4.67 |
@@ -311,10 +312,33 @@ Ablations at L=10 (mean |o|, trained):
   eye-position pattern, and drives it with the reflex gone. It acts on the latest pattern, not the
   one the reflex used, so it is earlier than its teacher; reversal lag 0 means the eye turned in the
   same interval as the object (it uses the eye-position Nethra: without them the lags are 2-15).
-- What it does not do: it is not better than the best fixed eye at L=8, and far from one-step
-  anticipation (mean |o| 1.0 for a perfect expectation with this actuator). Shuffled training
+- What it does not do: it is not better than the best fixed eye at L=8. Shuffled training
   sometimes moves (L=8: 1.79 with 15% moving intervals, parked near the middle).
 - One run per configuration (deterministic world); the configurations are the replications.
+
+**Human reference (user rule, CLAUDE.md §2.10: judge against what people do, not an ideal).**
+People: smooth pursuit starts ~100-130 ms after target motion, saccades ~200-250 ms; on a periodic
+target the eye often begins to reverse before the target after one or two cycles (anticipation of
+the reversal), with residual position error and catch-up saccades. (Sources from search:
+Barnes & Asselman 1991, J Physiol, "The mechanism of prediction in human smooth pursuit"; J Neurosci
+29(42):13302, 2009; Frontiers Syst Neurosci 2013, 7:4. Full texts were not reachable from the
+container; numbers are from their abstracts/snippets.) The lagged reflex (LAT 2, reversal lag 4)
+stands for the unpracticed latency.
+
+Exposure needed (L=10, LAT 2, split; test 72 intervals, reflex off; one cycle = 18 intervals):
+
+| learning cycles | 1 | 2 | 3 | 5 | 8 | 16 |
+|---|---|---|---|---|---|---|
+| split: eye reversal lags | 3,4,1,3,3,4,1,3 | 2,4,1,2,6,6,3,2 | 2,5,4,2,2,5,4,2 | 2,4,2,2,3,4,2,2 | 2,4,2,4,2,4,2,4 | 2,2,3,2,1,2,3,2 |
+| split: mean abs(o) | 2.74 | 2.86 | 2.11 | 2.03 | 1.99 | 2.10 |
+| shared: mean abs(o) | 2.71 | 2.67 | 3.18 | 3.14 | 3.58 | **1.94** |
+
+- Against people: the field roughly halves its teacher's reversal lag (4 -> ~2) from the first
+  cycles on, but it does not reverse before the object as people do after 1-2 cycles; lag 0 shows
+  up only in some runs (300 intervals: 2 of 8 reversals). Below the human reference.
+- **Correction:** shared direction is not a consistent failure in this loop: 4.62 at 300 learning
+  intervals but 1.94 at 288. The split vs shared difference in the action loop depends on where
+  learning stops; not established.
 
 ### 0g.4 Split direction on the user scripts (`DIR=split python3 with_params.py ...`)
 
@@ -335,6 +359,15 @@ Ablations at L=10 (mean |o|, trained):
 
 Split carries sequences further ahead (consequence reach, ring, action loop) and loses on
 co-present context (regimes, robust clean, XOR, focus). Not investigated why.
+
+Against what people do (CLAUDE.md §2.10), qualitative direction only:
+- Spacing: people retain spaced exposure better than massed at a delayed test. Split: after 200
+  unrelated intervals spaced 0.0345 vs massed 0.0213 (people's direction); shared: massed 0.0392 vs
+  spaced 0.0269 (opposite).
+- Blocking, retroactive interference (recent answer dominates, old kept), combination-only (XOR)
+  learned slower than simple: both modes show the direction people show.
+- 15 overlapping regimes from 6 features, `robust` probes: no human data for these exact tasks
+  known here; no human bar stated.
 
 ### 0g.5 Decisions waiting for the user
 
