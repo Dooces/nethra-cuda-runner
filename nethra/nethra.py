@@ -1,6 +1,6 @@
 """Nethra one-file core.
 
-Nethra is an online self-constructing recursive predictive field whose persistent topology is built from unresolved temporal experience and whose connection strengths continuously adapt according to whether the field's prior expectations actually manifest.
+Nethra is an online self-constructing recursive field whose persistent topology is built from unresolved temporal experience and whose incidence evidence continuously changes according to whether what the field was already carrying actually manifests.
 
 READ NETHRA_OPERATING_NOTES.md FIRST.  It states what Nethra is and is not, how to feed it, how to
 read it, what each parameter does, the tested capabilities and limits, and the list of mistakes that
@@ -14,8 +14,8 @@ semantic change here. Do not repeat a ledgered mistake under another name.
 Persistent ontology: one type, Nethra.
 Everything else in this file is transient evidence, indexing, or execution of Nethra dynamics.
 A helper is allowed to influence future behavior only by changing Nethra topology/evidence; it has
-no activation of its own. Learning first refinds existing recursive structure, subtracts its
-prospective field contribution, permissively admits an ordinary weak Nethra only from unresolved
+no activation of its own. Each completed interval first refinds existing recursive structure, subtracts its
+prior field flow, permissively admits an ordinary weak Nethra only from unresolved
 whole support, then changes route-member incidence evidence continuously. The field itself remains
 bidirectional; temporal direction comes from ordered completed intervals.
 
@@ -588,7 +588,7 @@ class NethraField:
 
         This is the per-incidence analogue of _route_evidence().  Existing routes are mirrored
         into these counters when registered, so the representation change is behaviour-preserving
-        until an experimental learner deliberately differentiates member evidence.
+        until per-incidence plasticity differentiates member evidence.
         """
         conditions = self.incidence_evidence.get((relation, route, member))
         if conditions is None:
@@ -890,7 +890,7 @@ class NethraField:
     def _admit_whole_support(self, current_closed, current_description, unresolved, current_source_event):
         """Admit or refind weak ordinary Nethra from complete temporal-side support.
 
-        Existing recursive closure and prior field prediction have already been subtracted.  No
+        Existing recursive closure and prior field flow have already been subtracted.  No
         proper subsets are enumerated.  Before/current recursive supports remain separate routes of
         the same handle.  If several already-earned handles account for the same observation, all
         remain live explanations and all are returned; admission never selects a winner.
@@ -1058,11 +1058,11 @@ class NethraField:
 
             Q_ij = g_ij (A_i - A_j).
 
-        These prior flows are the prospective prediction:
+        These prior flows are what the field was already carrying toward each Nethra:
 
             P_m = sum_R max(0, Q_Rm).
 
-        The CURRENT consequence target is not external-source charge. It is the already-established
+        The CURRENT manifestation is not external-source charge. It is the already-established
         source-provenance-safe manifestation coordinate obtained from identical replays of this
         interval with and without its external source:
 
@@ -1107,8 +1107,8 @@ class NethraField:
             for n in self.nethra
         }
 
-        # Frozen V61 semantics: rho receives each Nethra's own predictive/consequence
-        # residual. Do this before admitting new topology so newly relevant pairs begin without
+        # Frozen V61 semantics: rho receives each Nethra's own manifestation residual
+        # (M - P). Do this before admitting new topology so newly relevant pairs begin without
         # fabricated historical independence evidence.
         self.update_residuals(epsilon, neighbors=residual_neighbors)
 
@@ -1620,7 +1620,7 @@ class NethraField:
     def update_residuals(self, residual, neighbors=None):
         """Update F61 residual traces and local supplier-independence statistics.
 
-        residual must already be each Nethra's own predictive/consequence residual. Native
+        residual must already be each Nethra's own manifestation residual (M - P). Native
         whole-support plasticity does not manufacture a substitute F61 residual from a common
         downstream error. Each Nethra receives a decaying signed trace rho.
         Pair statistics are maintained only for Nethra that currently converge on a common
@@ -2017,7 +2017,7 @@ class NethraField:
             delta[n] = actual[n] - old
             target[n] = max(0.0, self.capacitance * (actual[n] - baseline[n]))
 
-        # The current outcome is now known; update evidence/construction using predictions carried
+        # The current outcome is now known; update evidence/construction using the flow carried
         # by the previous completed interval. Topology/evidence changed here cannot alter the outcome
         # that produced this target.
         epsilon = None
