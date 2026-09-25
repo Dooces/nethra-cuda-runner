@@ -95,7 +95,6 @@ One-off checks on the current core. Measurements only, no conclusions drawn.
 | Checkpoint, reload, continue | bit-identical to the run without reload |
 | `d(sum a)/dt = sum J - leak sum a` | holds: ETD 1e-14, RK4 1e-8 (Gamma sums to zero) |
 | ETD vs RK4, one interval, 191 Nethra | max abs diff 1.1e-5; default ETD (2 pieces) 3.1e-5 vs 64 pieces |
-| Constructed Nethra, 180 intervals, `"exact"` support | constant amplitudes 24; amplitudes varying by 10% 179 |
 | X then B (75%) or C (25%), then D; B share of B+C after X, seed 14, 3 world seeds | 0.66 / 0.62 / 0.61 / 0.52 / 0.51 / 0.52 after 5 / 10 / 20 / 50 / 100 / 200 blocks |
 | Checkpoint contents | adaptive frontier tolerance `_tol` not saved |
 

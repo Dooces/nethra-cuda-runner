@@ -71,31 +71,22 @@ closure. Never declare it in the harness.
       g = NethraField.from_checkpoint_dict(f.checkpoint_dict())
       g.native_learning = False
 
-## 4. How structure builds (measured 2026-09-25 with disposable scripts; design streams around this)
+## 4. How structure builds
 
-- **Construction only joins what closure refinds.**
-  - The larger factor over Q R S can form only after the smaller ones (Q→R, R→S) exist and are
-    refound.
+- **Small factors first.** Construction only joins what closure refinds.
+  - Build the small factors first; larger structure then builds up from them.
   - Only then can later experience factor the small ones back out.
-  - A stream too short to build the base factors never tests recursion.
-  - Q R S between random fillers, no context, admission seed 14: structure stopped growing after
-    about 20 repetitions. At that point 7 constructed Nethra were refound at S, recursive depth 16.
-- **Co-present context becomes part of every route** (whole support).
-  - Q R S experienced only inside C1/C2: in a new context C3, 0 constructed Nethra are refound
-    at S; in C1, 7.
-  - 50 repetitions without context, then 150 inside C1/C2: 7 refound at S in C3 or with no
-    context, 14 in C1.
-  - So reuse in a new context needs the base factors built without that context first.
-- **Varying amplitudes under `source_support="exact"` build a new Nethra almost every interval.**
-  - 180 intervals, 12 inputs: 24 Nethra with constant amplitudes, 179 with ±10% amplitudes.
-  - Graded input is meant to go through overlapping receptive Nethra (notes §3).
+- **Design every stream so the small factors are learned first.**
+  - A stream that skips them is not a test of Nethra.
+  - Its results are not properties of Nethra. Don't record them as facts.
+- **Input goes in as the notes say** (notes §3; graded values through overlapping receptive
+  Nethra). Results from input fed any other way are also not properties of Nethra.
 
 ## 5. Current work
 
 - **Roadmap:** `docs/NETHRA_ROADMAP.md`.
 - **Current item:** sub-pattern transfer (`nethra/tests/transfer.py`).
-  - Its phase 1 does not yet include exposure without context, so as written it can't show reuse
-    in a new context (see §4).
+  - Its stream does not build the small factors first (see §4).
   - Fix the stream before reading anything from it.
 
 ## 6. Practical
