@@ -9,7 +9,9 @@ refinds for the short cycles exist.
 The stream is STREAM intervals long and is fed PASSES times back to back (the phases restart at
 the start of each pass).  Every REPORT intervals, measured over the intervals since the last report:
   Nethra      total Nethra and how many construction added
-  refound     mean number of constructed Nethra refound by closure after an interval
+  refound     mean number of constructed Nethra refound by closure of the interval's own source,
+              re-closed under the topology that exists after the interval (previous_closure was
+              computed before this interval's construction and misses what it built)
   depth       deepest relation-of-relation among the Nethra refound at the report interval
   next share  per cycle: live activation after the interval, over that cycle's phase Nethra that
               were not pushed this interval; the share on the phase pushed in the next interval
@@ -49,14 +51,15 @@ def run(periods):
         for t in range(STREAM):
             for k, p in enumerate(periods): phase_nethra[k][t % p].push(1.0)
             f.step(1.0)
-            refound.append(sum(1 for n in f.previous_closure if n.routes))
+            closed = f.closure(f.previous_explicit, f.current_source_event)
+            refound.append(sum(1 for n in closed if n.routes))
             for k, p in enumerate(periods):
                 acts = {q: max(0.0, phase_nethra[k][q].activation) for q in range(p) if q != t % p}
                 total = sum(acts.values())
                 share[k].append(acts[(t + 1) % p] / total if total > 0 else 0.0)
             if (t + 1) % REPORT == 0:
                 now = time.process_time(); memo = {}
-                d = max((depth(n, memo) for n in f.previous_closure if n.routes), default=0)
+                d = max((depth(n, memo) for n in closed if n.routes), default=0)
                 shares = "  ".join(f"p{p} {sum(s) / len(s):.2f}" for p, s in zip(periods, share))
                 print(f"[{tag}] pass {p_i + 1} t {t + 1:5d}: Nethra {len(f.nethra):5d} (+{len(f.nethra) - last_n:4d})  "
                       f"refound {sum(refound) / len(refound):6.1f}  depth {d:3d}  next share {shares}  "
