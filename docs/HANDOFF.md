@@ -252,7 +252,7 @@ User scripts, leakage 1, full conduction (False) vs top-only (True):
 | same, C2+X P toward Z (right) / Y | 0.0456 / 0.0419 | **0.0014 / 0.0418 (wrong)** |
 | `cue_capacity.py` A->B then A->C, no cue: B / C | 0.052 / 0.069 (recent) | 0.0034 / 0.0011 (first) |
 | same with differentiating cues: cue1 B / C; cue2 B / C | 0.102 / 0.065; 0.065 / **0.101** | 0.086 / 0.0008; **0.043 / 0.003 (wrong)** |
-| `cue_capacity.py` 8 regimes at 11/39/61% overlap; 15 regimes | 1.00 / 1.00 / 0.94; (still running at handoff, >15 min) | 1.00 / 0.94 / 0.88; 0.70 |
+| `cue_capacity.py` 8 regimes at 11/39/61% overlap; 15 regimes | 1.00 / 1.00 / 0.94; 0.83 (234 s) | 1.00 / 0.94 / 0.88; 0.70 |
 | `human.py 14` blocking ratio | 0.38 | 0.89 (no blocking) |
 | same, interference after A: B / C; after 150 unrelated | 0.018 / 0.040; 0.015 / 0.036 | 0.0016 / 0.0024; 0.0011 / 0.0001 |
 | same, spacing: massed / spaced, immediately | 0.037 / 0.025 | 0.0017 / 0.046 |
