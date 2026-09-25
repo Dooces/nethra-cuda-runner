@@ -8,7 +8,7 @@ C = [0, 1, 2, 3, 4]
 def smear(v): return [max(0.0, 1 - abs(v - c) / 1.5) for c in C]
 out = {}
 for learn in (True, False):
-    f = core.NethraField(g_min=0.0, admission_seed=SEED, native_learning=learn); R = [f.new() for _ in range(5)]
+    f = core.NethraField(g_min=0.0, admission_seed=SEED, topology_and_evidence_change=learn); R = [f.new() for _ in range(5)]
     seq = [0, 1, 2, 3, 4] * 80; ratios = {v: [] for v in (1, 2, 3)}
     for i, v in enumerate(seq):
         for k, j in enumerate(smear(v)):

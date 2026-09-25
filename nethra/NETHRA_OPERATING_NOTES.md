@@ -8,7 +8,7 @@ because the opposite was assumed at some point and cost days of work.
 - One population of ordinary **Nethra**. Sensory inputs, actuator bindings and every constructed
   relation are the same type and obey the same equations. There is no input layer, output layer,
   hidden state, label, target, or decoder.
-- A **field**: every Nethra has an activation `a`. Every learned incidence conducts in both
+- A **field**: every Nethra has an activation `a`. Every earned incidence conducts in both
   directions with conductance `g(e) = g_max (1 - exp(-e / tau))`, where `e` is that incidence's
   evidence. Contributions add. Leakage is the only sink.
 
@@ -24,7 +24,7 @@ because the opposite was assumed at some point and cost days of work.
     existing Nethra, and admits one weak new Nethra only when existing structure does not account
     for the experience. The new Nethra's before side (the previous interval's closure) and after
     side (this interval's closure) are separate routes.
-- **Learning**: after each interval the field is integrated twice from the same start, with the
+- **Evidence change**: after each interval the field is integrated twice from the same start, with the
   real input and with zero input. The difference is what the input actually caused (`M`).
   - Prior incidence flows `P` are what the field was already carrying toward each Nethra.
   - Each incidence's evidence moves by the mismatch `epsilon = M - P`: an outgoing term plus a
@@ -37,10 +37,10 @@ because the opposite was assumed at some point and cost days of work.
 |---|---|
 | It predicts a next token; score it with accuracy, argmax, or C-vs-D | There is no output. The live field is the expectation. Equal priming of two continuations that were equally experienced is the correct state. |
 | Context is a hidden state; the field should keep a symbol whose support is gone | Context lives in Nethra whose support is present. If the support left, 50/50 is right. |
-| Leftover activation is noise; subtract a never-learned field | Leftover activity is the current regime and part of the expectation. A never-learned field is only a reference for how much learning added. |
-| Recognition may gate conduction (only refound Nethra conduct) | Changes the field law. All learned incidences conduct. |
+| Leftover activation is noise; subtract a never-learned field | Leftover activity is the current regime and part of the expectation. A field with no earned structure is only a reference for how much construction and evidence added. |
+| Recognition may gate conduction (only refound Nethra conduct) | Changes the field law. All earned incidences conduct. |
 | A multiplier on `g` from co-activation or "resonance" | Changes the field law and adds an overlap detector. |
-| Signed {-1, 0, +1} presence-change events in the learning description | Destroys magnitude; the contract keeps exact graded evidence. |
+| Signed {-1, 0, +1} presence-change events in the construction description | Destroys magnitude; the contract keeps exact graded evidence. |
 | Push -1 on a symbol when it leaves (delta feed) | That is a real negative current. It drags the leaving Nethra and everything it touches negative. Departure is simply not pushing; leakage handles it. |
 | Evidence is stuck, so add a conductance floor (`g_min > 0`) | Adds a second conduction law. The real cause was the admission seed (section 4). |
 | Other models' claims about the code | Several were wrong (for example, "refound only through X"). Check every claim in code before using it. |
@@ -59,7 +59,7 @@ because the opposite was assumed at some point and cost days of work.
 
 | Parameter | Tested value | Effect |
 |---|---|---|
-| `admission_seed` | 14 (default) | Starting evidence of a new Nethra. At 0.01 the equations sit at a fixed point: a new Nethra's conductance is about 1.5e-4, its activation never exceeds its members, all flow runs member-to-relation, and both plasticity terms stay zero forever (measured over 15,000 intervals). It must be large enough that `g(seed)` is comparable to the leak. Lower values (about 5) follow recent regimes and switch fast; higher values (14 to 50) keep accumulated structure and resist switching. |
+| `admission_seed` | 14 (default) | Starting evidence of a new Nethra. At 0.01 the equations sit at a fixed point: a new Nethra's conductance is about 1.5e-4, its activation never exceeds its members, all flow runs member-to-relation, and both evidence-change terms stay zero forever (measured over 15,000 intervals). It must be large enough that `g(seed)` is comparable to the leak. Lower values (about 5) follow recent regimes and switch fast; higher values (14 to 50) keep accumulated structure and resist switching. |
 | `g_min` | 0 (default) | Keep 0. `g(0) = 0`. |
 | `leakage`, `capacitance` | 1, 1 | Field timescale. One interval of `dt = 1` per observation. |
 | `integrator` | `auto` | Runtime only. ETD (exact passive part, eigendecomposition) up to 400 Nethra, RK4 with stiffness subdivision above that. Both integrate the same equation. |
@@ -71,7 +71,7 @@ because the opposite was assumed at some point and cost days of work.
   call the rest wrong unless the world is deterministic.
 - **Closure** (`previous_closure`) shows which constructed Nethra are refound, and therefore which
   regimes are structurally present.
-- **Topology**: every learned Nethra and its routes can be listed directly (see `strengths.py`).
+- **Topology**: every constructed Nethra and its routes can be listed directly (see `strengths.py`).
 
 ## 6. Tested capabilities (numbers from the test scripts)
 
@@ -83,11 +83,11 @@ because the opposite was assumed at some point and cost days of work.
 | Overlapping contexts | 8 regimes from shared features: 1.00 / 1.00 / 0.94 at 11% / 39% / 61% overlap; 15 regimes at 57% overlap: 0.83 | `cue_capacity.py` |
 | Same cue, new answer, **with** a differentiating cue | Both answers kept; each cue selects its own (about 1.6 to 1) | `cue_capacity.py` |
 | Same cue, new answer, **no** cue | Recent answer dominates (retroactive interference, as in people) | `human.py` |
-| Continual learning | Old regimes 100% after 400 blocks of only new ones | `strengths.py` |
+| Old regimes kept | Old regimes 100% after 400 blocks of only new ones | `strengths.py` |
 | Few-shot | New regime top after 2 exposures, old regimes unaffected | `strengths.py` |
 | Pattern completion | A partial group primes its missing member first | `explore.py` |
 | Blocking / spacing | Blocking at seed 14; spacing effect at seed 5 | `human.py` |
-| Simple vs combination-only context | Simple learned fast; XOR slow and unstable | `human.py` |
+| Simple vs combination-only context | Simple built fast; XOR slow and unstable | `human.py` |
 | Bounded construction | One Nethra per distinct experienced transition, then reuse | `scale.py` |
 | Exact checkpoint continuation | Bit-identical after reload | fix tests |
 
@@ -96,7 +96,7 @@ because the opposite was assumed at some point and cost days of work.
 - Setup: 12 regimes, each context a pair from 10 features. Probes use the full context, one
   feature only, the context plus a distractor, or one feature plus two distractors.
 
-  | Learner | Clean | Partial | Noisy | Noisy2 |
+  | Method | Clean | Partial | Noisy | Noisy2 |
   |---|---|---|---|---|
   | Nethra | 0.83 | 0.38 | 0.50 | 0.04 |
   | Count table | 0.75 | 0.38 | 0.58 | 0.08 |
@@ -106,9 +106,9 @@ because the opposite was assumed at some point and cost days of work.
   Nethra degrades gracefully, like the linear learners, where configural lookup collapses. It is not
   more robust than them.
 
-- **Structural recognition** comes from closure: the learned Nethra refound at the decision.
+- **Structural recognition** comes from closure: the constructed Nethra refound at the moment of reading.
 
-  | Probe | Learned Nethra refound |
+  | Probe | Constructed Nethra refound |
   |---|---|
   | Complete known context | 2 |
   | Partial context | 0 |
@@ -130,7 +130,7 @@ because the opposite was assumed at some point and cost days of work.
 
 - **Relation to textbook learners (`tests/baselines.py`):**
 
-  | Learner | 15 overlapping regimes | Old set kept after 400 new-only blocks | Blocking ratio | XOR |
+  | Method | 15 overlapping regimes | Old set kept after 400 new-only blocks | Blocking ratio | XOR |
   |---|---|---|---|---|
   | Count table | 0.83 | 0.00 | 1.00 | 0.51 |
   | Rescorla-Wagner | 0.49 | 1.00 | 0.00 | 0.50 |
@@ -144,7 +144,7 @@ because the opposite was assumed at some point and cost days of work.
 
 - **Frontier (optional, declared approximation):** `frontier_tolerance > 0` integrates only Nethra
   with |a| >= tolerance or source current, plus their one-hop incidence halo. Everything else decays
-  by leakage alone for that interval and takes no part in learning. Binocular world, 66 inputs,
+  by leakage alone for that interval and takes no part in evidence change or construction. Binocular world, 66 inputs,
   277 Nethra (`tests/frontier_test.py`):
 
   | Setting | ms/interval | Nethra integrated | mean abs(a - exact) | Next position hit | 8 regimes correct |
@@ -157,7 +157,7 @@ because the opposite was assumed at some point and cost days of work.
   unexplained. It currently stays near its low end, because raw manifestation is almost always far
   larger than prior flow, so "unexplained" is near 1. A usable effort signal needs a better
   surprise measure first.
-- **Without the frontier, cost is not bounded by the active set.** Every interval integrates and learns over the
+- **Without the frontier, cost is not bounded by the active set.** Every interval integrates and moves evidence over the
   whole Nethra population.
   - Activation never becomes exactly zero, so the active set cannot be cut exactly.
   - In the binocular world (66 inputs, `binocular.py`) about 125 Nethra are active above 1e-3,
@@ -171,7 +171,7 @@ because the opposite was assumed at some point and cost days of work.
   - Nothing in the field law sustains activity, and construction only joins consecutive intervals.
   - A cue therefore gets linked to an outcome several intervals later only if its support is still
     present when the outcome arrives: rehearsal.
-  - Result, learning off, 4 random fillers between cue and outcome:
+  - Result, `topology_and_evidence_change` off, 4 random fillers between cue and outcome:
 
     | Condition | Cue's own outcome primed more | Nethra joining cue and outcome | ms/interval |
     |---|---|---|---|
@@ -183,4 +183,4 @@ because the opposite was assumed at some point and cost days of work.
     The loop-back fails because its amplitude changes every interval, so the source never recurs
     exactly. With exact reuse that creates a new Nethra every interval; with graded support it gives
     0.45, no better than chance.
-  - The harness currently decides what to rehearse; a native policy for that is open.
+  - The harness currently decides what to rehearse; a native way to do that is open.

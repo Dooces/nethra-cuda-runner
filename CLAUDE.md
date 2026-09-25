@@ -51,7 +51,7 @@ closure. Never declare it in the harness.
 ## 2. Hard rules
 
 1. **Do not change the field law.**
-   - All learned incidences conduct.
+   - All earned incidences conduct.
    - No gate or multiplier on `g`.
    - No selector or winner.
    - No new participant type.
@@ -61,7 +61,7 @@ closure. Never declare it in the harness.
    - A number looking low is not a failure.
    - Do not invent a fix, a metric or a mechanism.
 3. **Do not tune parameters to move a number.**
-   - `g_max`, `tau`, `eta_*`, `admission_seed` etc. change only with an explicit request.
+   - `g_max`, `tau`, `outgoing_evidence_per_flow`, `incoming_evidence_per_tension`, `admission_seed` etc. change only with an explicit request.
 4. **Do not rerun the user's test scripts** (`nethra/tests/*.py`) unless asked.
    - When unsure how something works, write your own small script in the scratchpad.
    - Measure the specific thing.
@@ -90,17 +90,17 @@ closure. Never declare it in the harness.
     - Read the completed interval under current topology instead:
       `f.closure(f.previous_explicit, f.current_source_event)`, as `_admit_whole_support` does.
   - topology (routes, incidence evidence).
-- **Probe without disturbing the field:** copy it and turn plasticity off on the copy.
+- **Probe without disturbing the field:** copy it and turn evidence change and construction off on the copy.
 
       g = NethraField.from_checkpoint_dict(f.checkpoint_dict())
-      g.native_learning = False
+      g.topology_and_evidence_change = False
 
 ## 4. How structure builds
 
 - **Small factors first.** Construction only joins what closure refinds.
   - Build the small factors first; larger structure then builds up from them.
   - Only then can later experience factor the small ones back out.
-- **Design every stream so the small factors are learned first.**
+- **Design every stream so the small factors are built first.**
   - A stream that skips them is not a test of Nethra.
   - Its results are not properties of Nethra. Don't record them as facts.
 - **Input goes in as the notes say** (notes §3; graded values through overlapping receptive

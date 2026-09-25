@@ -4,7 +4,7 @@ Nethra is an online self-constructing recursive field whose persistent topology 
 
 READ NETHRA_OPERATING_NOTES.md FIRST.  It states what Nethra is and is not, how to feed it, how to
 read it, what each parameter does, the tested capabilities and limits, and the list of mistakes that
-were made by treating it as a predictor/network.  Do not add mechanisms before re-reading it.
+were made by mapping it onto machine-learning ideas.  Do not add mechanisms before re-reading it.
 
 MAINTENANCE INSTRUCTION — READ BEFORE INTERPRETING OR MODIFYING THIS FILE:
 Read NETHRA_MISTAKE_LEDGER.md from this repository first. Append every newly discovered mistake,
@@ -20,24 +20,24 @@ whole support, then changes route-member incidence evidence continuously. The fi
 bidirectional; temporal direction comes from ordered completed intervals.
 
 CURRENT ONE-FILE INTEGRATION CONTRACT:
-- preserve all structurally compatible/refound Nethra; never choose one ambiguity winner;
+- preserve all structurally compatible/refound Nethra; never pick one of several ambiguous Nethra;
 - keep each support route and each route's provenance domain separate;
 - canonical primitive factorization is a reuse coordinate only, never persistent identity;
 - keep before/current temporal supports as separately refindable routes;
 - keep exact physical source current and graded source-pattern recurrence separate;
-- keep native manifestation-residual/per-incidence plasticity and F61 residual traces live;
+- keep per-incidence evidence change from the residual (M - P) and F61 residual traces live;
 - keep indexed closure and live-state checkpoint/resume as execution/persistence, not ontology.
 
 CURRENT WORKING/PROVISIONAL IMPLEMENTATION THAT MUST NOT BE SILENTLY DELETED:
-- graded source recurrence uses cosine exemplar matching with source_similarity_threshold;
-- native per-incidence plasticity retains the current route-level activity summary until a concrete
+- graded source recurrence uses cosine matching against stored patterns with source_similarity_threshold;
+- per-incidence evidence change retains the current route-level activity summary until a concrete
   observed failure establishes a replacement;
 - RK4 subdivides internally whenever the passive conductance operator is stiff
-  ((leakage + 2*max_weighted_degree)*h/C <= 2), with or without F61 convergence enabled.
+  ((leakage + 2*max_conductance_degree)*h/C <= 2), with or without F61 convergence enabled.
 
 REJECTED/RETIRED MACHINERY IS DELIBERATELY ABSENT: probability/subset scanners, Candidate or
-ResourceCloud objects, winner/selector layers, checkpoint construction thresholds, semantic input
-whitelists, and the retired provisional history learner.
+ResourceCloud objects, anything that picks one Nethra over others, checkpoint construction
+thresholds, semantic input whitelists, and the retired provisional history-counting machinery.
 """
 
 from collections import Counter, defaultdict
@@ -53,13 +53,20 @@ import numpy as np
 
 CHECKPOINT_SCHEMA = "NETHRA_ONEFILE_LIVE_STATE_1"
 
+# Old parameter key -> current parameter name, for loading checkpoints saved before the renames.
+_RENAMED_CHECKPOINT_PARAMETERS = {
+    "native_learning": "topology_and_evidence_change",
+    "eta_out": "outgoing_evidence_per_flow",
+    "eta_in": "incoming_evidence_per_tension",
+}
+
 
 class Nethra:
     """The only persistent participant.
 
     A Nethra is deliberately ignorant of whether an external experiment calls it sensory,
     motor, contextual, temporal, structural, or anything else. Those are perspectives on the
-    same object, never subclasses. Persistent learned meaning can therefore reside only in
+    same object, never subclasses. Persistent meaning can therefore reside only in
     ordinary Nethra and their earned support routes.
     """
     __slots__ = ("routes", "activation", "external")
@@ -67,10 +74,10 @@ class Nethra:
     def __init__(self):
         """Create one persistent Nethra with no predeclared semantic role.
 
-        routes stores only learned ways in which other existing Nethra have supported this
+        routes stores only earned ways in which other existing Nethra have supported this
         Nethra. activation is the current field quantity. external is current injected by the
-        outside world for the next integration interval. No candidate/evaluator state lives
-        here, so a persistent Nethra cannot secretly carry task labels or privileged types.
+        outside world for the next integration interval. No side state lives here, so a
+        persistent Nethra cannot secretly carry task tags or privileged types.
         """
         self.routes = {}
         self.activation = 0.0
@@ -88,8 +95,8 @@ class Nethra:
     def read(self):
         """Return this Nethra's current field activation.
 
-        Outputs require no separate node species or selector: a physical actuator may read any
-        Nethra. The core supplies the activation and does not decide what an external device does
+        Driving the outside world needs no separate node species or selector: a physical actuator
+        may read any Nethra. The core supplies the activation and does not decide what an external device does
         with it.
         """
         return self.activation
@@ -99,16 +106,16 @@ class NethraField:
     """One Nethra substrate: field dynamics, transient evidence, refinding, and construction.
 
     Only Nethra are persistent participants. The dictionaries and counters owned by this class
-    are bookkeeping over observations; none has activation or a path to an output. Their only
+    are bookkeeping over observations; none has activation or any path outside the field. Their only
     lasting authority is to justify a change to Nethra routes/evidence or the creation of an
     ordinary Nethra.
     """
 
     def __init__(self, *, g_min=0.0, g_max=1.50, tau=100.0,
                  capacitance=1.0, leakage=1.0, trace_decay=.90,
-                 convergence_gain=1.0, native_learning=True,
+                 convergence_gain=1.0, topology_and_evidence_change=True,
                  admission_threshold=1e-12, admission_seed=14.0,
-                 eta_out=1200.0, eta_in=2400.0,
+                 outgoing_evidence_per_flow=1200.0, incoming_evidence_per_tension=2400.0,
                  source_similarity_threshold=.999, source_support="exact",
                  integrator="auto", etd_pieces=2,
                  frontier_tolerance=0.0, frontier_min=None):
@@ -117,11 +124,12 @@ class NethraField:
         g_min/g_max/tau map earned incidence evidence to conductance; the native default gives
         g(0)=0. capacitance and leakage belong to the field equation. trace_decay and
         convergence_gain belong to the F61 residual-independence/convergence term. Admission uses
-        one permissive residual threshold and a weak seed only at construction; eta_out/eta_in set
-        the continuous signed local plasticity rates afterward.
+        one permissive residual threshold and a weak seed only at construction;
+        outgoing_evidence_per_flow/incoming_evidence_per_tension set the continuous signed local
+        evidence-change rates afterward.
 
-        Nothing here declares relation arity, input/output classes, object labels, directions,
-        candidate budgets, or an externally preferred consequence.
+        Nothing here declares relation arity, input/actuator classes, object tags, directions,
+        construction budgets, or an externally preferred consequence.
         """
         self.g_min = float(g_min)
         self.g_max = float(g_max)
@@ -130,11 +138,11 @@ class NethraField:
         self.leakage = float(leakage)
         self.trace_decay = float(trace_decay)
         self.convergence_gain = float(convergence_gain)
-        self.native_learning = bool(native_learning)
+        self.topology_and_evidence_change = bool(topology_and_evidence_change)
         self.admission_threshold = float(admission_threshold)
         self.admission_seed = float(admission_seed)
-        self.eta_out = float(eta_out)
-        self.eta_in = float(eta_in)
+        self.outgoing_evidence_per_flow = float(outgoing_evidence_per_flow)
+        self.incoming_evidence_per_tension = float(incoming_evidence_per_tension)
         self.source_similarity_threshold = float(source_similarity_threshold)
         # How existing Nethra are refound for a new temporal source transition:
         #   "exact":   reuse gated by identical source events (previous behaviour)
@@ -161,8 +169,8 @@ class NethraField:
         # source current, plus every Nethra sharing an incidence with them (one-hop halo, so
         # frontier activity still drains/flows correctly at its edge).  Every other Nethra is
         # treated as isolated for this interval: its activation decays exactly by leakage alone
-        # (conduction among sub-tolerance Nethra is dropped; the error is of order tolerance * g * dt)
-        # and it takes no part in learning this interval.
+        # (conduction among sub-tolerance Nethra is dropped; the discrepancy is of order tolerance * g * dt)
+        # and takes no part in evidence change or construction this interval.
         # Variable tolerance: if frontier_min is given, the tolerance for the next interval moves
         # between frontier_tolerance (everything already accounted for: act on the near field only)
         # and frontier_min (the source was unexplained: spread computation wider), geometrically,
@@ -179,7 +187,7 @@ class NethraField:
 
         # These are mathematical domain checks inherited from the frozen field/structure bases.
         # They reject parameter sets for which the stated equations are undefined or violate the
-        # nonnegative passive-field contract.  They do not introduce a learning criterion.
+        # nonnegative passive-field contract.  They do not introduce any construction or evidence criterion.
         numeric = {
             "g_min": self.g_min,
             "g_max": self.g_max,
@@ -190,8 +198,8 @@ class NethraField:
             "convergence_gain": self.convergence_gain,
             "admission_threshold": self.admission_threshold,
             "admission_seed": self.admission_seed,
-            "eta_out": self.eta_out,
-            "eta_in": self.eta_in,
+            "outgoing_evidence_per_flow": self.outgoing_evidence_per_flow,
+            "incoming_evidence_per_tension": self.incoming_evidence_per_tension,
             "source_similarity_threshold": self.source_similarity_threshold,
         }
         if any(not isfinite(v) for v in numeric.values()):
@@ -239,7 +247,7 @@ class NethraField:
 
         # Derived execution index only: for each persistent Nethra, record the already-stored
         # relation routes that mention it.  This is rebuildable from Nethra.routes and carries no
-        # activation, evidence, semantic identity, learning authority, or persistence of its own.
+        # activation, evidence, semantic identity, authority to change evidence or topology, or persistence of its own.
         # It exists solely so recursive closure can visit topology touched by active/event members
         # instead of scanning every relation in the field.
         self.member_to_routeuses = defaultdict(set)
@@ -263,7 +271,7 @@ class NethraField:
         self.source_pair_to_relations = defaultdict(set)
 
         # Graded source-current patterns are evidence/indexing only.  Exact external current stays
-        # physical; source_patterns retains canonical smeared-current exemplars so structural
+        # physical; source_patterns retains canonical smeared-current patterns so structural
         # recurrence can be refound by cosine similarity without exact float or nonzero-set identity.
         self.source_patterns = []
         self.relation_source_events = defaultdict(set)
@@ -281,8 +289,8 @@ class NethraField:
         self.rho = {}
         # F61 pair statistics, stored as arrays keyed by an oriented pair code
         #   code = earlier_index * 2**32 + later_index   (creation indices, sorted codes)
-        # rows (xy, xx, yy) with xx belonging to the earlier-created Nethra, plus sample counts.
-        # `pair_stats` exposes the same content as {frozenset: (xy, xx, yy, samples)}.
+        # rows (xy, xx, yy) with xx belonging to the earlier-created Nethra, plus counts of intervals.
+        # `pair_stats` exposes the same content as {frozenset: (xy, xx, yy, intervals_counted)}.
         self._ps_codes = np.zeros(0, dtype=np.int64)
         self._ps_vals = np.zeros((0, 3))
         self._ps_n = np.zeros(0, dtype=np.int64)
@@ -294,8 +302,8 @@ class NethraField:
         """Create and register one otherwise undifferentiated Nethra.
 
         This performs allocation only. It is used both for physically bound starting Nethra and
-        for learned Nethra after evidence has justified construction. Because both paths call the
-        same function, learned/internal structure does not become a second ontology.
+        for constructed Nethra after evidence has justified construction. Because both paths call the
+        same function, constructed/internal structure does not become a second ontology.
         """
         n = Nethra()
         self._order[n] = len(self.nethra)
@@ -310,7 +318,7 @@ class NethraField:
     def _rebuild_indexes(self):
         """Rebuild every derived topology index from authoritative persistent routes.
 
-        This carries no learning authority and is safe after checkpoint restore.  The route objects,
+        This carries no authority over evidence or topology and is safe after checkpoint restore.  The route objects,
         route evidence, incidence evidence and Nethra handles remain authoritative; indexes merely
         avoid global scans during closure and exact-route refinding.
         """
@@ -374,11 +382,11 @@ class NethraField:
 
         This function is intentionally dumb allocation/bookkeeping: it may only attach evidence
         already earned elsewhere. It cannot decide that a route is true, choose a semantic type,
-        force pairwise decomposition, or create a path to behavior outside the target Nethra.
+        force pairwise decomposition, or create a path to behavior outside the Nethra it supports.
         """
         route = frozenset(members)
         if not route or nethra in route:
-            raise ValueError("support route must contain existing Nethra other than its target")
+            raise ValueError("support route must contain existing Nethra other than the Nethra it supports")
         if any(m not in self.nethra for m in route):
             raise ValueError("support route references unknown Nethra")
         signature = frozenset(signature)
@@ -396,8 +404,8 @@ class NethraField:
 
         # Lossless lift of the existing route evidence into per-incidence storage.  At creation
         # every member receives the same evidence, preserving historical field behaviour exactly.
-        # Later experimental plasticity may differentiate these counters independently; the frozen
-        # core itself grants no learning authority to do so.
+        # Later per-incidence evidence change may differentiate these counters independently; this
+        # function itself grants no authority to do so.
         for member in route:
             self.member_to_routeuses[member].add((nethra, route))
             ibucket = self.incidence_evidence.setdefault(
@@ -411,7 +419,7 @@ class NethraField:
 
         Exact state-qualified signatures and unqualified structural support are checked independently
         for each persistent route.  Several routes of one relation may match the same observation;
-        preserving all of them is evidence provenance, not winner selection.
+        preserving all of them is evidence provenance; none is picked over another.
         """
         event_members = self._event_members(event)
         matches = []
@@ -431,7 +439,7 @@ class NethraField:
         This is structural subtraction before construction.  Ambiguity is preserved deliberately:
         if several persistent Nethra already have earned support for both manifestations, every one
         is returned.  No creation order, evidence strength, numeric id, or arbitrary traversal order
-        is allowed to choose a winner.
+        is allowed to pick one over the others.
         """
         accounted = []
         # A route can only match an event if it contains one of the event's members (a matching
@@ -524,7 +532,7 @@ class NethraField:
         preserves original-source provenance, endpoint change, and the interval field trajectory
         needed to reconstruct incidence potential Phi_ij=A_i-A_j when conductance is fixed.
 
-        This operation has no learning authority. It does not discretize, classify, round, match,
+        This operation has no authority over evidence or topology. It does not discretize, sort into kinds, round, match,
         compare for equality, estimate recurrence or probability, fabricate residuals, refind or
         choose structure, alter conductance, or construct Nethra. It only advances the exact
         transient completed-interval record.
@@ -563,7 +571,7 @@ class NethraField:
         """Map earned incidence evidence to bounded field conductance with g(0)=0.
 
         Zero evidence is exactly field-inert. Positive evidence changes conductance continuously;
-        there is no second plasticity threshold after admission. g_min is retained only as the
+        there is no second evidence threshold after admission. g_min is retained only as the
         positive-evidence floor coordinate for explicit experiments; the native default is zero.
         """
         e = max(0.0, float(evidence))
@@ -588,7 +596,7 @@ class NethraField:
 
         This is the per-incidence analogue of _route_evidence().  Existing routes are mirrored
         into these counters when registered, so the representation change is behaviour-preserving
-        until per-incidence plasticity differentiates member evidence.
+        until per-incidence evidence change differentiates member evidence.
         """
         conditions = self.incidence_evidence.get((relation, route, member))
         if conditions is None:
@@ -704,7 +712,7 @@ class NethraField:
         """Return the structural source event for this finite interval: the ACTUAL graded pattern.
 
         The current interval's graded source evidence is preserved exactly; it is never replaced
-        by a previously stored exemplar.  Stored patterns are an index of observed evidence:
+        by a previously stored pattern.  Stored patterns are an index of observed evidence:
         an exactly recurring pattern returns the stored object (identity of identical evidence),
         anything else is recorded as observed.  Graded similarity to stored patterns is not used
         to substitute evidence.
@@ -893,7 +901,7 @@ class NethraField:
         Existing recursive closure and prior field flow have already been subtracted.  No
         proper subsets are enumerated.  Before/current recursive supports remain separate routes of
         the same handle.  If several already-earned handles account for the same observation, all
-        remain live explanations and all are returned; admission never selects a winner.
+        remain live and all are returned; admission never picks one.
         """
         if unresolved <= self.admission_threshold or not self.previous_closure:
             return ()
@@ -901,7 +909,7 @@ class NethraField:
         # The before-side is the t-1 source support re-closed under the topology that exists now.
         # The stored previous_closure was computed before the t-1 boundary's own admission, so it
         # misses a Nethra constructed at that boundary; interpreting t-1 with stale topology is the
-        # same class of error as interpreting t with t-1 state.
+        # same class of mistake as interpreting t with t-1 state.
         before_route = frozenset(self.closure(self.previous_explicit, self.current_source_event))
         after_route = frozenset(current_closed)
         participants = before_route | after_route
@@ -922,18 +930,18 @@ class NethraField:
         # compatible handle.  A handle already indexed to a different source transition is not
         # silently conflated with this one.
         if self.current_event and current_description:
-            for candidate, _left, _right in self._accounted(
+            for accounting_nethra, _left, _right in self._accounted(
                 self.current_event, current_description
             ):
-                if candidate in known:
+                if accounting_nethra in known:
                     continue
-                indexed = self.relation_source_events.get(candidate)
-                if indexed and not self._source_pair_matches(candidate, source_pair):
+                indexed = self.relation_source_events.get(accounting_nethra)
+                if indexed and not self._source_pair_matches(accounting_nethra, source_pair):
                     continue
                 if not indexed:
-                    self._index_source_pair(candidate, source_pair)
-                relations.append(candidate)
-                known.add(candidate)
+                    self._index_source_pair(accounting_nethra, source_pair)
+                relations.append(accounting_nethra)
+                known.add(accounting_nethra)
 
         if not relations:
             relation = self.new()
@@ -999,11 +1007,11 @@ class NethraField:
                 best = value
         return best
 
-    def _give_side_support(self, relation, route, weight):
+    def _give_side_support(self, relation, route, support_share):
         """Register or refresh one temporal side on an existing handle with graded seed evidence."""
         if not route or relation in route:
             return
-        seed = self.admission_seed * weight
+        seed = self.admission_seed * support_share
         if route not in relation.routes:
             self._route(relation, route, frozenset(), seed)
             return
@@ -1021,15 +1029,15 @@ class NethraField:
         s; only the residual unresolved * prod(1 - s) can construct a new handle."""
         routes = tuple(dict.fromkeys((before_route, after_route)))
         owner_sets = [set(self.route_to_relations.get(r, ())) for r in routes]
-        candidates = set.intersection(*owner_sets) if owner_sets else set()
+        compatible = set.intersection(*owner_sets) if owner_sets else set()
         with_b = {r for r, _ in self.domain_to_routeuses.get(self._route_leaf_domain(before_route), ())}
         with_a = {r for r, _ in self.domain_to_routeuses.get(self._route_leaf_domain(after_route), ())}
-        candidates |= with_b & with_a
+        compatible |= with_b & with_a
         if self.current_event and current_description:
-            candidates |= {c for c, _l, _r in self._accounted(self.current_event, current_description)}
+            compatible |= {c for c, _l, _r in self._accounted(self.current_event, current_description)}
         supported = []
         remaining = float(unresolved)
-        for relation in self._ordered(candidates):
+        for relation in self._ordered(compatible):
             s = self._transition_support(relation, source_pair)
             if s > 0.0:
                 supported.append((relation, s))
@@ -1048,11 +1056,13 @@ class NethraField:
             out.append(relation)
         return tuple(out)
 
-    def _native_learn(
-        self, source_current, target, current_closed, current_description,
+    def _move_evidence_and_construct(
+        self, source_current, manifestation, current_closed, current_description,
         current_source_event, residual_neighbors=None, physical=None,
     ):
-        """Apply settled whole-support prospective plasticity after the current outcome manifests.
+        """Move incidence evidence by M - P, then construct from what is still unresolved.
+
+        Runs after the current outcome has manifested.
 
         From the PRIOR completed interval activation integrals, each physical incidence has exact
 
@@ -1066,18 +1076,18 @@ class NethraField:
         source-provenance-safe manifestation coordinate obtained from identical replays of this
         interval with and without its external source:
 
-            M_m = C * max(0, a_actual(m) - a_zero_input(m)).
+            M_m = C * max(0, a_actual(m) - a_zero_source(m)).
 
         Thus an internally manifested recursive Nethra may be a real consequence even when it had
         zero external source. Original external source remains separately available only as the
         provenance/admission coordinate.
 
-            epsilon_m = M_m - P_m
-            T_R = sum_m p_Rm epsilon_m.
+            (M - P)_m = M_m - P_m
+            T_R = sum_m p_Rm (M - P)_m.
 
-        Outgoing relation-to-member evidence receives eta_out * p_Rm * epsilon_m. Incoming
-        member-to-relation incidences share eta_in * T_R in proportion to their actual positive
-        incoming charge. Evidence is clamped only at zero. Admission remains grounded: only positive
+        Outgoing relation-to-member evidence receives outgoing_evidence_per_flow * p_Rm * (M - P)_m.
+        Incoming member-to-relation incidences share incoming_evidence_per_tension * T_R in
+        proportion to their actual positive incoming charge. Evidence is clamped only at zero. Admission remains grounded: only positive
         unresolved residual on independently sourced current support can trigger a weak ordinary
         whole-support Nethra. No subset scanner or probability ledger participates.
         """
@@ -1086,7 +1096,7 @@ class NethraField:
 
         if physical is None:
             physical = self._physical_incidences(self.current_event)
-        predicted = defaultdict(float)
+        prior_flow = defaultdict(float)
         outgoing = defaultdict(dict)
         incoming = defaultdict(dict)
 
@@ -1097,32 +1107,34 @@ class NethraField:
                 continue
             q = g * (float(A.get(relation, 0.0)) - float(A.get(member, 0.0)))
             if q > 0.0:
-                predicted[member] += q
+                prior_flow[member] += q
                 outgoing[relation][member] = q
             elif q < 0.0:
                 incoming[relation][member] = -q
 
-        epsilon = {
-            n: float(target.get(n, 0.0)) - float(predicted.get(n, 0.0))
+        manifest_minus_prior = {
+            n: float(manifestation.get(n, 0.0)) - float(prior_flow.get(n, 0.0))
             for n in self.nethra
         }
 
         # Frozen V61 semantics: rho receives each Nethra's own manifestation residual
         # (M - P). Do this before admitting new topology so newly relevant pairs begin without
         # fabricated historical independence evidence.
-        self.update_residuals(epsilon, neighbors=residual_neighbors)
+        self.update_residuals(manifest_minus_prior, neighbors=residual_neighbors)
 
         tension = {}
         for relation, row in outgoing.items():
             tension[relation] = sum(
-                p * epsilon.get(member, 0.0)
+                p * manifest_minus_prior.get(member, 0.0)
                 for member, p in row.items()
             )
 
         updates = defaultdict(float)
         for relation, row in outgoing.items():
             for member, p in row.items():
-                updates[(relation, member)] += self.eta_out * p * epsilon.get(member, 0.0)
+                updates[(relation, member)] += (
+                    self.outgoing_evidence_per_flow * p * manifest_minus_prior.get(member, 0.0)
+                )
 
         for relation, row in incoming.items():
             total = sum(row.values())
@@ -1130,7 +1142,7 @@ class NethraField:
                 continue
             t = float(tension.get(relation, 0.0))
             for member, q in row.items():
-                updates[(relation, member)] += self.eta_in * t * (q / total)
+                updates[(relation, member)] += self.incoming_evidence_per_tension * t * (q / total)
 
         touched = {}
         for edge, delta in updates.items():
@@ -1160,13 +1172,13 @@ class NethraField:
             relation.routes[route][signature] = max(values, default=0.0)
 
         unresolved = sum(
-            max(0.0, epsilon.get(n, 0.0))
+            max(0.0, manifest_minus_prior.get(n, 0.0))
             for n in source_current
         )
         self._admit_whole_support(
             current_closed, current_description, unresolved, current_source_event
         )
-        return epsilon
+        return manifest_minus_prior
 
     @staticmethod
     def _checkpoint_event_row(event, index):
@@ -1246,7 +1258,7 @@ class NethraField:
 
         Only authoritative persistent/transient state is serialized.  Derived indexes are rebuilt on
         load.  Route insertion order is preserved because the first route is historical construction
-        provenance; source-pattern exemplar order is preserved because it is part of the current
+        provenance; source-pattern order is preserved because it is part of the current
         provisional similarity-refinding implementation.
         """
         index = {n: i for i, n in enumerate(self.nethra)}
@@ -1301,8 +1313,8 @@ class NethraField:
             ids = sorted(index[n] for n in key)
             if len(ids) != 2:
                 raise ValueError("pair_stats key must contain exactly two Nethra")
-            xy, xx, yy, samples = values
-            row = [ids[0], ids[1], float(xy), float(xx), float(yy), int(samples)]
+            xy, xx, yy, intervals_counted = values
+            row = [ids[0], ids[1], float(xy), float(xx), float(yy), int(intervals_counted)]
             if not all(isfinite(v) for v in row[2:5]):
                 raise ValueError("pair_stats contains non-finite value")
             pair_stats.append(row)
@@ -1325,11 +1337,11 @@ class NethraField:
                 "leakage": self.leakage,
                 "trace_decay": self.trace_decay,
                 "convergence_gain": self.convergence_gain,
-                "native_learning": self.native_learning,
+                "topology_and_evidence_change": self.topology_and_evidence_change,
                 "admission_threshold": self.admission_threshold,
                 "admission_seed": self.admission_seed,
-                "eta_out": self.eta_out,
-                "eta_in": self.eta_in,
+                "outgoing_evidence_per_flow": self.outgoing_evidence_per_flow,
+                "incoming_evidence_per_tension": self.incoming_evidence_per_tension,
                 "source_similarity_threshold": self.source_similarity_threshold,
                 "source_support": self.source_support,
                 "integrator": self.integrator,
@@ -1366,6 +1378,10 @@ class NethraField:
         if payload.get("schema") != CHECKPOINT_SCHEMA:
             raise RuntimeError(f"unsupported checkpoint schema: {payload.get('schema')}")
         params = dict(payload["parameters"])
+        # Checkpoints written before the parameter renames use the old key names.
+        for old, new in _RENAMED_CHECKPOINT_PARAMETERS.items():
+            if old in params:
+                params[new] = params.pop(old)
         field = cls(**params)
         node_rows = list(payload["nodes"])
         nodes = [field.new() for _ in node_rows]
@@ -1405,7 +1421,7 @@ class NethraField:
             )
 
         # Every stored route-member incidence must have authoritative incidence evidence.  This is
-        # required by the current native per-incidence plasticity representation.
+        # required by the current per-incidence evidence representation.
         for relation in nodes:
             for route, route_conditions in relation.routes.items():
                 for member in route:
@@ -1478,11 +1494,11 @@ class NethraField:
             field.rho[n] = value
 
         restored_pairs = {}
-        for a, b, xy, xx, yy, samples in payload.get("pair_stats", ()):
+        for a, b, xy, xx, yy, intervals_counted in payload.get("pair_stats", ()):
             a = int(a); b = int(b)
             if not 0 <= a < len(nodes) or not 0 <= b < len(nodes) or a == b:
                 raise RuntimeError("checkpoint pair_stats references invalid Nethra pair")
-            vals = (float(xy), float(xx), float(yy), int(samples))
+            vals = (float(xy), float(xx), float(yy), int(intervals_counted))
             if not all(isfinite(v) for v in vals[:3]):
                 raise RuntimeError("checkpoint pair_stats contains non-finite value")
             restored_pairs[frozenset((nodes[a], nodes[b]))] = vals
@@ -1506,14 +1522,14 @@ class NethraField:
         payload = self.checkpoint_dict()
         digest = hashlib.sha256(self._checkpoint_canonical_bytes(payload)).hexdigest()
         wrapped = {"checkpoint_hash": digest, "payload": payload}
-        target = Path(path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        tmp = target.with_name(target.name + ".tmp")
+        destination = Path(path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        tmp = destination.with_name(destination.name + ".tmp")
         tmp.write_text(
             json.dumps(wrapped, sort_keys=True, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
             encoding="utf-8",
         )
-        os.replace(tmp, target)
+        os.replace(tmp, destination)
         return digest
 
     @classmethod
@@ -1531,11 +1547,11 @@ class NethraField:
         """Compile persistent support routes into symmetric Nethra-to-Nethra incidences.
 
         A relation with N members produces N incidences between that relation Nethra and its
-        participating Nethra; this is not pairwise relation learning. If several earned routes
+        participating Nethra; this does not break a relation into pairs. If several earned routes
         imply the same physical incidence, only the strongest current conductance is needed for
         the field calculation.
 
-        Derived from _physical_incidences() so field execution and plasticity read one single
+        Derived from _physical_incidences() so field execution and evidence change read one single
         compilation of the same conductances (they were previously computed twice, identically).
         Each unordered endpoint pair is oriented by stable creation order.
 
@@ -1580,7 +1596,7 @@ class NethraField:
 
     @property
     def pair_stats(self):
-        """F61 pair statistics as {frozenset((a, b)): (xy, xx, yy, samples)} (xx owned by earlier a)."""
+        """F61 pair statistics as {frozenset((a, b)): (xy, xx, yy, intervals_counted)} (xx owned by earlier a)."""
         nodes = self.nethra
         M = self._PAIR_CODE
         out = {}
@@ -1620,13 +1636,12 @@ class NethraField:
     def update_residuals(self, residual, neighbors=None):
         """Update F61 residual traces and local supplier-independence statistics.
 
-        residual must already be each Nethra's own manifestation residual (M - P). Native
-        whole-support plasticity does not manufacture a substitute F61 residual from a common
-        downstream error. Each Nethra receives a decaying signed trace rho.
+        residual must already be each Nethra's own manifestation residual (M - P). Evidence change
+        does not manufacture a substitute F61 residual from a common downstream mismatch. Each Nethra receives a decaying signed trace rho.
         Pair statistics are maintained only for Nethra that currently converge on a common
         receiver, because only those cross-terms are needed by the convergence equation.
 
-        These pair terms are mathematics over simultaneous suppliers, not candidate relations:
+        These pair terms are mathematics over simultaneous suppliers, not relations waiting to be constructed:
         they never create Nethra, never become topology, and disappear when no current incidence
         requires them.  Each pair is updated independently with the same elementwise arithmetic
         (xy + x*y, xx + x*x, yy + y*y), oriented by creation order.
@@ -1673,8 +1688,8 @@ class NethraField:
     @staticmethod
     def _independence_of(row):
         """Residual-history independence from one pair-statistics row (F61 definition)."""
-        xy, xx, yy, samples = row
-        if samples <= 0 or xx <= 0.0 or yy <= 0.0:
+        xy, xx, yy, intervals_counted = row
+        if intervals_counted <= 0 or xx <= 0.0 or yy <= 0.0:
             return 0.0
         resonance = max(-1.0, min(1.0, xy / sqrt(xx * yy)))
         return 1.0 - abs(resonance)
@@ -1794,15 +1809,15 @@ class NethraField:
         return current / self.capacitance
 
     def _derivative_at(self, activation, edges=None, neighbors=None):
-        """Evaluate the F61 field derivative for one complete activation state.
+        """Compute the F61 field derivative for one complete activation state.
 
         First apply external current, leakage, and ordinary symmetric conductive flow on every
         earned incidence. Then, when multiple neighbors independently supply positive current to
         the same receiver, add the bounded F61 convergence bonus and subtract exactly that bonus
         back from the suppliers in proportion to their contribution.
 
-        Delegates to the same compiled evaluation used by integration, so diagnostics cannot
-        acquire a second set of dynamics.  No semantic class, prediction target, action selector,
+        Delegates to the same compiled computation used by integration, so diagnostics cannot
+        acquire a second set of dynamics.  No semantic class, externally supplied answer, action selector,
         or graph direction is consulted.
         """
         if edges is None:
@@ -1831,10 +1846,10 @@ class NethraField:
         """Return the numerical subdivision for one fixed-topology interval.
 
         The historical stepwise audit demonstrated that a single RK4 step becomes numerically
-        unstable on a high weighted-degree field even though the Nethra field is dissipative.  The
+        unstable on a high conductance-degree field even though the Nethra field is dissipative.  The
         stiff part is the passive conductance operator (leakage + symmetric incidence flow), and
         that operator is present whether or not F61 convergence is enabled.  So always subdivide
-        until `(leakage + 2*max_weighted_degree) * h / C <= 2`.
+        until `(leakage + 2*max_conductance_degree) * h / C <= 2`.
 
         No additional bound is claimed for the nonlinear convergence term; none has been
         established.  This is a runtime safeguard, not Nethra semantics.
@@ -1903,7 +1918,7 @@ class NethraField:
             Nd = Nl(c)
             nxt = d["E"] @ a + h * (d["f1"] @ Na + d["f2"] @ (Nb + Nc) + d["f3"] @ Nd)
             # integral of a over the step, from a' = A a + N:  int a = A^-1 (a(h) - a(0) - int N)
-            # (exact for the passive part; the smooth N = (J + Gamma)/C uses RK4 stage weights)
+            # (exact for the passive part; the smooth N = (J + Gamma)/C uses RK4 stage coefficients)
             intN = h * (Na + 2 * Nb + 2 * Nc + Nd) / 6.0
             area += d["Ainv"] @ (nxt - a - intN)
             a = nxt
@@ -1953,15 +1968,15 @@ class NethraField:
         )
 
     def step(self, dt=.1):
-        """Advance one finite interval with native whole-support learning at its causal boundary.
+        """Advance one finite interval; evidence change and construction happen at its causal boundary.
 
-        Recursive closure of current independent source support is fixed before learning. The same
+        Recursive closure of current independent source support is fixed before evidence changes. The same
         pre-outcome field is then integrated twice: once with zero new external source and once with
-        the actual source. Their difference is the established manifestation target, so internally
+        the actual source. Their difference is the manifestation M, so internally
         manifested recursive Nethra are consequences without becoming independent source facts.
 
         Existing structure's PRIOR completed-interval flow is compared with that manifestation;
-        signed per-incidence plasticity and grounded whole-support admission occur only after the
+        signed per-incidence evidence change and grounded whole-support admission occur only after the
         current outcome has physically completed. _complete_interval() then stores the actual source,
         activation delta, and activation integral A_i. External current is consumed afterward.
         """
@@ -1975,7 +1990,7 @@ class NethraField:
 
         # Current-outcome manifestation uses the previously established source-provenance split:
         # compare the same pre-outcome field under the actual external source and under zero source.
-        # Internal/refound Nethra may therefore manifest as consequences without being relabelled as
+        # Internal/refound Nethra may therefore manifest as consequences without being recast as
         # independent source facts.
         frontier = None
         if self._tol > 0.0:
@@ -1988,7 +2003,7 @@ class NethraField:
 
         # Topology, evidence, and current_event are fixed throughout both RK4 integrations.
         # Compile the exact same physical edges and neighbor incidence list once for this causal
-        # interval and reuse them through all eight derivative evaluations and residual pairing.
+        # interval and reuse them through all eight derivative computations and residual pairing.
         step_physical = (self._physical_incidences(self.current_event) if frontier is None
                          else self._physical_incidences(self.current_event, within=frontier))
         step_edges = self._edges(step_physical)
@@ -1997,7 +2012,7 @@ class NethraField:
 
         for n in interval_nodes:
             n.external = 0.0
-        baseline, _baseline_integral = self._rk4_interval(
+        zero_source, _zero_source_integral = self._rk4_interval(
             a0, dt, step_edges, step_neighbors, interval_nodes, step_compiled
         )
 
@@ -2011,24 +2026,24 @@ class NethraField:
         )
 
         delta = {}
-        target = {}
+        manifestation = {}
         for n in interval_nodes:
             old = a0[n]
             delta[n] = actual[n] - old
-            target[n] = max(0.0, self.capacitance * (actual[n] - baseline[n]))
+            manifestation[n] = max(0.0, self.capacitance * (actual[n] - zero_source[n]))
 
         # The current outcome is now known; update evidence/construction using the flow carried
         # by the previous completed interval. Topology/evidence changed here cannot alter the outcome
-        # that produced this target.
-        epsilon = None
-        if self.native_learning and self.current_interval_integral:
-            epsilon = self._native_learn(
-                source_current, target, closed, description_event, source_event,
+        # that produced this manifestation.
+        manifest_minus_prior = None
+        if self.topology_and_evidence_change and self.current_interval_integral:
+            manifest_minus_prior = self._move_evidence_and_construct(
+                source_current, manifestation, closed, description_event, source_event,
                 residual_neighbors=step_neighbors, physical=step_physical,
             )
         if self.frontier_min is not None and self.frontier_tolerance > 0.0:
-            caused = sum(target.get(n, 0.0) for n in source_current)
-            unexplained = sum(max(0.0, (epsilon or {}).get(n, target.get(n, 0.0))) for n in source_current)
+            caused = sum(manifestation.get(n, 0.0) for n in source_current)
+            unexplained = sum(max(0.0, (manifest_minus_prior or {}).get(n, manifestation.get(n, 0.0))) for n in source_current)
             s = min(1.0, unexplained / caused) if caused > 0.0 else 0.0
             lo = max(self.frontier_min, 1e-300)
             self._tol = self.frontier_tolerance ** (1.0 - s) * lo ** s

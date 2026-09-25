@@ -27,7 +27,7 @@ def run_nethra():
         for s in (A, B, T[c]):
             for x in ctx[c] + (s,): L[x].push(1.0)
             f.step(1.0)
-    f.native_learning = False; out = {}
+    f.topology_and_evidence_change = False; out = {}
     for cond in CONDS:
         rows = []
         for rep in range(4):

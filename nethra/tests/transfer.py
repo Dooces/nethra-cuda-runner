@@ -49,7 +49,7 @@ def show(f, L, xs):
     f.step(1.0)
 
 def probe_nethra(f):
-    g = core.NethraField.from_checkpoint_dict(f.checkpoint_dict()); g.native_learning = False
+    g = core.NethraField.from_checkpoint_dict(f.checkpoint_dict()); g.topology_and_evidence_change = False
     L = g.nethra[:K]; row = {}
     for name, (a, b, c, t) in SEQS.items():
         for _ in range(3): g.step(1.0)

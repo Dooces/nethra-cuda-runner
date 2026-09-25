@@ -12,7 +12,7 @@ for cued in (False, True):
     c1 = [3] if cued else []; c2 = [4] if cued else []
     for _ in range(40): show(f, L, [0] + c1); show(f, L, [1] + c1); show(f, L, [5])
     for _ in range(40): show(f, L, [0] + c2); show(f, L, [2] + c2); show(f, L, [5])
-    f.native_learning = False; res = []
+    f.topology_and_evidence_change = False; res = []
     for cue in ([], [3], [4]) if cued else ([],):
         for _ in range(4): show(f, L, [5])
         show(f, L, [0] + cue); res.append(f"cue {cue or 'none'}: B {L[1].activation:.4f} C {L[2].activation:.4f}")

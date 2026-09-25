@@ -13,7 +13,7 @@ def show(f, L, items):
     for x in items: L[x].push(1.0)
     f.step(1.0)
 def probe(f, L, cue, read, quiet=3):
-    f.native_learning = False
+    f.topology_and_evidence_change = False
     for _ in range(quiet): f.step(1.0)
     show(f, L, cue)
     return [L[r].activation for r in read]
@@ -34,7 +34,7 @@ f = F(); L = [f.new() for _ in range(8)]
 for _ in range(40): show(f, L, [0]); show(f, L, [1]); show(f, L, [3])
 for _ in range(40): show(f, L, [0]); show(f, L, [2]); show(f, L, [3])
 b, c = probe(f, L, [0], [1, 2])
-rng = random.Random(3); f.native_learning = True
+rng = random.Random(3); f.topology_and_evidence_change = True
 for _ in range(150): show(f, L, [rng.randrange(4, 8)])
 b2, c2 = probe(f, L, [0], [1, 2])
 print(f"seed {SEED} interference A->B then A->C: after A  B {b:.4f}  C {c:.4f}  | after 150 unrelated intervals  B {b2:.4f}  C {c2:.4f}")
@@ -50,7 +50,7 @@ for slot in timeline:
     elif slot[0] == "P": show(f, L, [0]); show(f, L, [1]); show(f, L, [4])
     else: show(f, L, [rng.randrange(5, 10)])
 q_now, = probe(f, L, [0], [1]); s_now, = probe(f, L, [2], [3])
-f.native_learning = True
+f.topology_and_evidence_change = True
 for _ in range(200): show(f, L, [rng.randrange(5, 10)])
 q_late, = probe(f, L, [0], [1]); s_late, = probe(f, L, [2], [3])
 print(f"seed {SEED} spacing (27 spaced R->S vs 30 massed P->Q, ending together): immediately  massed {q_now:.4f} spaced {s_now:.4f}"

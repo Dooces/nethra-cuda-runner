@@ -12,7 +12,7 @@ Source of truth: `nethra/nethra.py` and `nethra/NETHRA_OPERATING_NOTES.md`. Read
   - live activation right after an interval;
   - closure (which constructed Nethra are refound);
   - topology and incidence evidence.
-- The field law does not change. All learned incidences conduct. No gate or multiplier on `g`,
+- The field law does not change. All earned incidences conduct. No gate or multiplier on `g`,
   no selector or winner, no new participant type, departure is not a negative push.
 - No problem is opened without an observed failure, a contradiction or a request.
 - Textbook methods (count table, Rescorla–Wagner, configural lookup in `tests/baselines.py`) are
@@ -22,13 +22,13 @@ Source of truth: `nethra/nethra.py` and `nethra/NETHRA_OPERATING_NOTES.md`. Read
 ## Next work, in order
 
 ### 1. Sub-pattern transfer
-- **Question:** does recursive structure let a learned chunk be reused in a new context, which
+- **Question:** does recursive structure let a constructed chunk be reused in a new context, which
   flat pairwise associations can't do?
 - **Design constraint:** flat pairwise associations must not be able to pass it.
   - A completed Q R S is followed by T.
   - Q R X is followed by U.
   - The deciding part is present in the input, not held across a gap.
-  - Then check whether a new context takes up the learned chunk faster than a novel chunk.
+  - Then check whether a new context takes up the constructed chunk faster than a novel chunk.
 - **Read:**
   - live activation of T and U after the chunk;
   - whether the chunk's constructed Nethra is refound (closure) in the new context.
@@ -37,7 +37,7 @@ Source of truth: `nethra/nethra.py` and `nethra/NETHRA_OPERATING_NOTES.md`. Read
 
 ### 2. Structural recognition
 Structural recognition is already derivable from closure, with no new code:
-- a complete known context refinds its learned Nethra;
+- a complete known context refinds its constructed Nethra;
 - partial or never-seen input refinds none;
 - extra refinds show overlap with other known configurations.
 
@@ -78,7 +78,7 @@ outputs.
 - Not gradient descent, a loss, batches or a fixed parameter vector.
 - **Acceptance:** checkpoint hashes and every test in `tests/` match the current code to rounding.
 - Other execution-only work falls under the same acceptance rule, for example the per-interval
-  loops over all Nethra in `step`, `_native_learn` and `update_residuals`.
+  loops over all Nethra in `step`, `_move_evidence_and_construct` and `update_residuals`.
 
 ### Frontier
 Fixed tolerance stays as a declared approximation until item 6 gives the adaptive tolerance a
