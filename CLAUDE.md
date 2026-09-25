@@ -24,6 +24,10 @@ Every rule here exists because it was broken before.
      (g = 0). Primitive members (no routes) always conduct. So a constructed Nethra conducts with
      its top members and directly with the pushed Nethra of its routes. `"top"` (covers primitive
      members too) and `"all"` remain as options; see docs/HANDOFF.md §0f for why.
+   - Direction (`direction="shared"`, default): one conductance per incidence, both ways.
+     `"split"` (option, user request 2026-09-25): two conductances per incidence, one per flow
+     direction, each earning evidence from its own term of the existing evidence change. This is
+     a field-law option; the default is unchanged. See docs/HANDOFF.md §0g.
 2. **Run it tiny** (tens of intervals).
 3. **Compare.** If the numbers differ from the prediction, stop and find out why in the code
    before running anything larger or on the runner.

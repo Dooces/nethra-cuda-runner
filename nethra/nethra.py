@@ -153,7 +153,7 @@ class NethraField:
                  source_similarity_threshold=.999, source_support="exact",
                  integrator="auto", etd_pieces=2,
                  frontier_tolerance=0.0, frontier_min=None, join_on_recurrence=True,
-                 conduction="top_and_leaves", top_only_conduction=None):
+                 conduction="top_and_leaves", top_only_conduction=None, direction="shared"):
         """Initialize one field without creating semantic structure.
 
         g_min/g_max/tau map earned incidence evidence to conductance; the native default gives
@@ -218,6 +218,20 @@ class NethraField:
         if conduction not in ("top_and_leaves", "top", "all"):
             raise ValueError("conduction must be 'top_and_leaves', 'top' or 'all'")
         self.conduction = conduction
+        # Direction of conduction along each incidence (user request 2026-09-25: direction and timing):
+        #   "shared" (default): one conductance per incidence, used both ways (the field law as it was).
+        #   "split": each incidence has two conductances, relation -> member and member -> relation,
+        #          each with its own evidence.  Flow runs downhill only, through the conductance of the
+        #          direction it runs in:  flow j -> i = g_ji max(0, a_j - a_i).  With g_ji = g_ij this is
+        #          exactly the shared law.  Both start at the admission seed; which one grows is decided
+        #          by the existing evidence change, whose two terms are already directional: the
+        #          outgoing term (flow relation -> member, then that member manifests or not) moves the
+        #          relation -> member evidence, the incoming term (tension shared among members that fed
+        #          the relation) moves the member -> relation evidence.  Timing of flow before
+        #          manifestation therefore decides direction; nothing about before/after routes is used.
+        if direction not in ("shared", "split"):
+            raise ValueError("direction must be 'shared' or 'split'")
+        self.direction = direction
         # Runtime integrator for one fixed-topology interval (same field equation either way):
         #   "rk4": explicit RK4 with passive-stiffness subdivision
         #   "etd": exponential time differencing (Cox-Matthews ETDRK4).  The passive operator
@@ -310,6 +324,9 @@ class NethraField:
         # coordinate allows members of one arbitrary-size route to carry different earned field
         # strengths without introducing another persistent participant type.
         self.incidence_evidence = {}
+        # direction="split": member -> relation evidence of the same incidences (incidence_evidence
+        # then holds relation -> member).  Empty and unused with direction="shared".
+        self.incidence_evidence_in = {}
 
         # Derived execution index only: for each persistent Nethra, record the already-stored
         # relation routes that mention it.  This is rebuildable from Nethra.routes and carries no
@@ -536,6 +553,11 @@ class NethraField:
             if ibucket is None:
                 ibucket = self.incidence_evidence[(nethra, route, member)] = Counter()
             ibucket[signature] += float(evidence)
+            if self.direction == "split":
+                ibucket = self.incidence_evidence_in.get((nethra, route, member))
+                if ibucket is None:
+                    ibucket = self.incidence_evidence_in[(nethra, route, member)] = Counter()
+                ibucket[signature] += float(evidence)
 
         if self.top_only_conduction and is_new_route and len(route) > 1:
             covered = self._covered_by[nethra]
@@ -564,13 +586,15 @@ class NethraField:
     def _clear_covered(self, relations):
         """Covered incidences of these relations hold no evidence (construction may have re-seeded
         a retained route whole)."""
-        evidence = self.incidence_evidence
-        for relation in relations:
-            for key in self._covered_by.get(relation, ()):
-                bucket = evidence.get(key)
-                if bucket:
-                    for signature in bucket:
-                        bucket[signature] = 0.0
+        stores = (self.incidence_evidence, self.incidence_evidence_in) if self.direction == "split" \
+            else (self.incidence_evidence,)
+        for evidence in stores:
+            for relation in relations:
+                for key in self._covered_by.get(relation, ()):
+                    bucket = evidence.get(key)
+                    if bucket:
+                        for signature in bucket:
+                            bucket[signature] = 0.0
 
     def _matching_routes(self, relation, event):
         """Return every already-earned route of relation supported by this transient event.
@@ -817,6 +841,8 @@ class NethraField:
         physical = {}
         if within is not None:
             return self._physical_within(event, within)
+        if self.direction == "split":
+            return self._physical_split(event)
         # Same computation as _incidence_active_key() + conductance(), with the common case (only
         # unqualified evidence) taken without a call, and each route's member order cached.
         empty = frozenset()
@@ -860,6 +886,63 @@ class NethraField:
                         row["receipts"].append(receipt)
                 physical[(relation, member)] = row
         return physical
+
+    def _physical_split(self, event):
+        """direction="split": as _physical_incidences, each row with the relation -> member
+        conductance ("g", "receipts") and the member -> relation one ("g_in", "receipts_in")."""
+        if self._plan_top != self.top_only_conduction:
+            self._incidence_plan = {}
+            self._plan_top = self.top_only_conduction
+        plans = self._incidence_plan
+        physical = {}
+        stores = (("g", "receipts", self.incidence_evidence), ("g_in", "receipts_in", self.incidence_evidence_in))
+        for relation in self.nethra:
+            if not relation.routes:
+                continue
+            plan = plans.get(relation)
+            if plan is None:
+                plan = plans[relation] = self._build_incidence_plan(relation)
+            for member, incidences in plan:
+                row = {"g": 0.0, "receipts": [], "g_in": 0.0, "receipts_in": []}
+                for gk, rk, store in stores:
+                    best = None
+                    for route, ikey in incidences:
+                        conditions = store.get(ikey)
+                        if conditions is None:
+                            conditions = relation.routes[route]
+                        key = self._active_key_in(conditions, route, event)
+                        g = self.conductance(conditions.get(key, 0.0))
+                        if best is None or g > best:
+                            best = g
+                            row[rk] = [(route, key)]
+                        elif g == best:
+                            row[rk].append((route, key))
+                    row[gk] = best or 0.0
+                physical[(relation, member)] = row
+        return physical
+
+    def _active_key_in(self, conditions, route, event):
+        """_incidence_active_key on a given evidence Counter."""
+        if not conditions or (len(conditions) == 1 and frozenset() in conditions):
+            return frozenset()
+        projected = self._project(event, route)
+        unqualified = float(conditions.get(frozenset(), 0.0))
+        if projected:
+            qualified = float(conditions.get(projected, 0.0))
+            if qualified >= unqualified and qualified > 0.0:
+                return projected
+        return frozenset()
+
+    def _route_summary(self, relation, route, signature=frozenset()):
+        """Route activity summary: strongest member evidence (both directions with "split")."""
+        stores = (self.incidence_evidence, self.incidence_evidence_in) if self.direction == "split" \
+            else (self.incidence_evidence,)
+        values = []
+        for store in stores:
+            for m in route:
+                c = store.get((relation, route, m))
+                values.append(float(c.get(signature, 0.0)) if c is not None else 0.0)
+        relation.routes[route][signature] = max(values, default=0.0)
 
     def _build_incidence_plan(self, relation):
         """Incidences of one relation grouped by member (see _incidence_plan)."""
@@ -1310,6 +1393,16 @@ class NethraField:
                     continue
 
                 # A retained but presently field-inert route is reused rather than duplicated.
+                if self.direction == "split":
+                    for store in (self.incidence_evidence, self.incidence_evidence_in):
+                        for member in route:
+                            bucket = store.get((relation, route, member))
+                            if bucket is None:
+                                bucket = store[(relation, route, member)] = Counter()
+                            if float(bucket.get(frozenset(), 0.0)) <= 0.0:
+                                bucket[frozenset()] = self.admission_seed
+                    self._route_summary(relation, route)
+                    continue
                 for member in route:
                     bucket = self.incidence_evidence.get((relation, route, member))
                     if bucket is None:
@@ -1365,6 +1458,16 @@ class NethraField:
         seed = self.admission_seed * support_share
         if route not in relation.routes:
             self._route(relation, route, frozenset(), seed)
+            return
+        if self.direction == "split":
+            for store in (self.incidence_evidence, self.incidence_evidence_in):
+                for member in route:
+                    bucket = store.get((relation, route, member))
+                    if bucket is None:
+                        bucket = store[(relation, route, member)] = Counter()
+                    if float(bucket.get(frozenset(), 0.0)) < seed:
+                        bucket[frozenset()] = seed
+            self._route_summary(relation, route)
             return
         for member in route:
             bucket = self.incidence_evidence.get((relation, route, member))
@@ -1452,6 +1555,10 @@ class NethraField:
 
         if physical is None:
             physical = self._physical_incidences(self.current_event)
+        if self.direction == "split":
+            return self._move_evidence_split(
+                source_current, manifestation, current_closed, current_description,
+                current_source_event, residual_neighbors, physical, compiled)
 
         # Array form of the per-incidence arithmetic below (execution only).  Every sum runs over
         # the conducting incidences in `physical` order, which is the order the scalar loops used,
@@ -1534,6 +1641,12 @@ class NethraField:
                 values.append(float(c.get(signature, 0.0)) if c is not None else 0.0)
             relation.routes[route][signature] = max(values, default=0.0)
 
+        self._construct(source_current, manifest_minus_prior, current_closed, current_description,
+                        current_source_event)
+        return manifest_minus_prior
+
+    def _construct(self, source_current, manifest_minus_prior, current_closed, current_description,
+                   current_source_event):
         unresolved = sum(
             max(0.0, manifest_minus_prior.get(n, 0.0))
             for n in source_current
@@ -1551,6 +1664,70 @@ class NethraField:
             self._admit_by_parts(
                 current_closed, current_description, unresolved, current_source_event
             )
+
+    def _move_evidence_split(self, source_current, manifestation, current_closed, current_description,
+                             current_source_event, residual_neighbors, physical, compiled):
+        """direction="split": the same evidence change, each term on its own direction.
+
+        Prior flow along an incidence ran relation -> member when A_rel > A_mem (through g) and
+        member -> relation otherwise (through g_in).  The outgoing term moves the relation -> member
+        evidence, the incoming term the member -> relation evidence, with the same formulas."""
+        A = self.current_interval_integral
+        order = self._order
+        rows = [(r, m, row) for (r, m), row in physical.items() if row["g"] > 0.0 or row["g_in"] > 0.0]
+        R = len(rows)
+        nodes = self.nethra
+        size = len(nodes)
+        rel_i = np.fromiter((order[r] for r, _m, _row in rows), dtype=np.intp, count=R)
+        mem_i = np.fromiter((order[m] for _r, m, _row in rows), dtype=np.intp, count=R)
+        g_out = np.fromiter((float(row["g"]) for _r, _m, row in rows), dtype=float, count=R)
+        g_in = np.fromiter((float(row["g_in"]) for _r, _m, row in rows), dtype=float, count=R)
+        a_rel = np.fromiter((float(A.get(r, 0.0)) for r, _m, _row in rows), dtype=float, count=R)
+        a_mem = np.fromiter((float(A.get(m, 0.0)) for _r, m, _row in rows), dtype=float, count=R)
+        d = a_rel - a_mem
+        q = np.where(d > 0.0, g_out, g_in) * d
+        out_pos = np.flatnonzero(q > 0.0)
+        in_pos = np.flatnonzero(q < 0.0)
+        prior_sum = np.bincount(mem_i[out_pos], weights=q[out_pos], minlength=size)
+        _u, first = np.unique(mem_i[out_pos], return_index=True)
+        flow_members = [nodes[i] for i in mem_i[out_pos][np.sort(first)].tolist()]
+        prior_flow = {n: float(prior_sum[order[n]]) for n in flow_members}
+        keys = list(manifestation)
+        keys += [n for n in prior_flow if n not in manifestation]
+        manifest_minus_prior = {
+            n: float(manifestation.get(n, 0.0)) - float(prior_flow.get(n, 0.0)) for n in keys
+        }
+        self.update_residuals(manifest_minus_prior, neighbors=residual_neighbors, compiled=compiled)
+        mmp_arr = np.zeros(size)
+        for n, value in manifest_minus_prior.items():
+            mmp_arr[order[n]] = value
+        p_out = q[out_pos]
+        mmp_out = mmp_arr[mem_i[out_pos]]
+        tension = np.bincount(rel_i[out_pos], weights=p_out * mmp_out, minlength=size)
+        q_in = -q[in_pos]
+        total_in = np.bincount(rel_i[in_pos], weights=q_in, minlength=size)
+        rel_in = rel_i[in_pos]
+        d_out = self.outgoing_evidence_per_flow * p_out * mmp_out
+        d_in = self.incoming_evidence_per_tension * tension[rel_in] * (q_in / total_in[rel_in])
+        touched = {}
+        for positions, deltas, rk, store in ((out_pos, d_out, "receipts", self.incidence_evidence),
+                                             (in_pos, d_in, "receipts_in", self.incidence_evidence_in)):
+            for k, delta in zip(positions.tolist(), deltas.tolist()):
+                relation, member, row = rows[k]
+                receipts = row[rk]
+                if not receipts:
+                    continue
+                share = float(delta) / len(receipts)
+                for route, signature in receipts:
+                    bucket = store.get((relation, route, member))
+                    if bucket is None:
+                        bucket = store[(relation, route, member)] = Counter()
+                    bucket[signature] = max(0.0, float(bucket.get(signature, 0.0)) + share)
+                    touched[(relation, route, signature)] = None
+        for relation, route, signature in touched:
+            self._route_summary(relation, route, signature)
+        self._construct(source_current, manifest_minus_prior, current_closed, current_description,
+                        current_source_event)
         return manifest_minus_prior
 
     @staticmethod
@@ -1663,6 +1840,15 @@ class NethraField:
                 "conditions": self._checkpoint_condition_rows(conditions, index),
             })
         incidence.sort(key=lambda row: (row["relation"], row["route"], row["member"]))
+        incidence_in = []
+        for (relation, route, member), conditions in self.incidence_evidence_in.items():
+            incidence_in.append({
+                "relation": index[relation],
+                "route": sorted(index[m] for m in route),
+                "member": index[member],
+                "conditions": self._checkpoint_condition_rows(conditions, index),
+            })
+        incidence_in.sort(key=lambda row: (row["relation"], row["route"], row["member"]))
 
         source_patterns = [
             self._checkpoint_event_row(pattern, index)
@@ -1724,6 +1910,7 @@ class NethraField:
                 "frontier_min": self.frontier_min,
                 "join_on_recurrence": self.join_on_recurrence,
                 "conduction": self.conduction,
+                "direction": self.direction,
             },
             "nodes": nodes,
             "incidence_evidence": incidence,
@@ -1752,6 +1939,10 @@ class NethraField:
                 for relation, route, member in self.covered_incidences
             ),
         }
+        if self.direction == "split":
+            payload["incidence_evidence_in"] = incidence_in
+        else:
+            del payload["parameters"]["direction"]
         # Refuse JSON NaN/Infinity rather than silently persisting invalid field state.
         json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
         return payload
@@ -1772,6 +1963,7 @@ class NethraField:
         if "top_only_conduction" in params:
             params["conduction"] = "top" if params.pop("top_only_conduction") else "all"
         params.setdefault("conduction", "all")
+        params.setdefault("direction", "shared")
         field = cls(**params)
         node_rows = list(payload["nodes"])
         nodes = [field.new() for _ in node_rows]
@@ -1818,6 +2010,17 @@ class NethraField:
                     key = (relation, route, member)
                     if key not in field.incidence_evidence:
                         field.incidence_evidence[key] = Counter(route_conditions)
+
+        field.incidence_evidence_in = {}
+        for row in payload.get("incidence_evidence_in", ()):
+            relation = nodes[int(row["relation"])]
+            route = frozenset(nodes[int(i)] for i in row["route"])
+            field.incidence_evidence_in[(relation, route, nodes[int(row["member"])])] = \
+                cls._checkpoint_condition_counter(row.get("conditions", ()), nodes)
+        if field.direction == "split":
+            for key, conditions in field.incidence_evidence.items():
+                if key not in field.incidence_evidence_in:
+                    field.incidence_evidence_in[key] = Counter(conditions)
 
         field._rebuild_indexes()
 
@@ -1974,6 +2177,18 @@ class NethraField:
             physical = self._physical_incidences(self.current_event)
         edges = {}
         order = self._order
+        if self.direction == "split":
+            # (a, b, g a -> b, g b -> a), a before b in creation order
+            for (relation, member), row in physical.items():
+                g_rm, g_mr = row["g"], row["g_in"]
+                if order[relation] < order[member]:
+                    key, gf, gb = (relation, member), g_rm, g_mr
+                else:
+                    key, gf, gb = (member, relation), g_mr, g_rm
+                old = edges.get(key, (0.0, 0.0))
+                if gf > old[0] or gb > old[1]:
+                    edges[key] = (max(gf, old[0]), max(gb, old[1]))
+            return tuple((a, b, gf, gb) for (a, b), (gf, gb) in edges.items())
         for (relation, member), row in physical.items():
             g = row["g"]
             # the unordered pair, written in creation order
@@ -1986,7 +2201,8 @@ class NethraField:
     def _neighbors_from_edges(edges):
         """Build the symmetric neighbor index for one already-compiled edge tuple."""
         out = defaultdict(list)
-        for a, b, g in edges:
+        for e in edges:
+            a, b, g = e[0], e[1], max(e[2:])
             out[a].append((b, g))
             out[b].append((a, g))
         return out
@@ -2189,9 +2405,11 @@ class NethraField:
         idx = {n: i for i, n in enumerate(nodes)}
         N = len(nodes)
         E = len(edges)
-        ei = np.fromiter((idx[a] for a, _b, _g in edges), dtype=np.intp, count=E)
-        ej = np.fromiter((idx[b] for _a, b, _g in edges), dtype=np.intp, count=E)
-        eg = np.fromiter((g for _a, _b, g in edges), dtype=float, count=E)
+        ei = np.fromiter((idx[e[0]] for e in edges), dtype=np.intp, count=E)
+        ej = np.fromiter((idx[e[1]] for e in edges), dtype=np.intp, count=E)
+        eg = np.fromiter((e[2] for e in edges), dtype=float, count=E)
+        split = self.direction == "split"
+        eg_b = np.fromiter((e[3] for e in edges), dtype=float, count=E) if split else eg
 
         # Directed incidences: edge k gives (a receives from b) then (b receives from a).
         recv = np.empty(2 * E, dtype=np.intp)
@@ -2200,7 +2418,13 @@ class NethraField:
         other = np.empty(2 * E, dtype=np.intp)
         other[0::2] = ej
         other[1::2] = ei
-        both_g = np.repeat(eg, 2)
+        if split:
+            # a (ei) receives from b (ej) through g b -> a; b receives from a through g a -> b
+            both_g = np.empty(2 * E)
+            both_g[0::2] = eg_b
+            both_g[1::2] = eg
+        else:
+            both_g = np.repeat(eg, 2)
         first = np.full(N, 2 * E, dtype=np.intp)
         np.minimum.at(first, recv, np.arange(2 * E, dtype=np.intp))
         perm = np.argsort(first[recv], kind="stable")
@@ -2235,12 +2459,15 @@ class NethraField:
                         pv.append(self._pi_vals[pos[found]])
         cat = lambda xs, dt: np.concatenate(xs).astype(dt) if xs else np.zeros(0, dtype=dt)
         pair_r, pair_1, pair_2, pair_i = cat(pr, np.intp), cat(p1, np.intp), cat(p2, np.intp), cat(pv, float)
-        return {
+        out = {
             "N": N, "ei": ei, "ej": ej, "eg": eg,
             "inc_r": inc_r, "inc_n": inc_n, "inc_g": inc_g,
             "pair_r": pair_r, "pair_1": pair_1, "pair_2": pair_2, "pair_i": pair_i,
             "pair_codes": cat(codes_all, np.int64),
         }
+        if split:
+            out["eg_b"] = eg_b
+        return out
 
     def _derivative_compiled(self, c, activation, external):
         """F61 derivative on a compiled interval; activation/external are arrays in node order.
@@ -2254,7 +2481,12 @@ class NethraField:
         a = activation
         current = external - self.leakage * a
         if c["eg"].size:
-            flow = c["eg"] * (a[c["ei"]] - a[c["ej"]])
+            if "eg_b" in c:
+                # flow runs downhill through the conductance of its own direction
+                d = a[c["ei"]] - a[c["ej"]]
+                flow = np.where(d > 0.0, c["eg"], c["eg_b"]) * d
+            else:
+                flow = c["eg"] * (a[c["ei"]] - a[c["ej"]])
             current -= np.bincount(c["ei"], weights=flow, minlength=N)
             current += np.bincount(c["ej"], weights=flow, minlength=N)
 
@@ -2329,7 +2561,8 @@ class NethraField:
         established.  This is a runtime safeguard, not Nethra semantics.
         """
         degree = defaultdict(float)
-        for a, b, g in edges:
+        for e in edges:
+            a, b, g = e[0], e[1], max(e[2:])
             degree[a] += g
             degree[b] += g
         max_degree = max(degree.values(), default=0.0)
@@ -2411,9 +2644,10 @@ class NethraField:
         """
         if compiled is None:
             compiled = self._compile_interval(interval_nodes, edges, neighbors)
-        if self.integrator == "etd" or (
+        # ETD needs a linear passive operator; split direction is piecewise linear: RK4.
+        if self.direction == "shared" and (self.integrator == "etd" or (
             self.integrator == "auto" and len(interval_nodes) <= self.etd_max_nodes
-        ):
+        )):
             return self._etd_interval(initial, dt, interval_nodes, compiled)
         pieces = self._rk4_substeps(dt, edges)
         h = float(dt) / pieces

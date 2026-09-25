@@ -1,14 +1,30 @@
-# Handoff: binocular Nethra, focus and consequence (state as of 2026-09-25, end of third session)
+# Handoff: binocular Nethra, focus and consequence (state as of 2026-09-25, fifth session)
 
 ## START HERE
 
-Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0f and §0e
-(fourth session), §0-§0d (third session), then `nethra/nethra.py`. Older sections (§1-§10) are the second
-session's state and are still valid unless a §0 section says otherwise.
+Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0g (fifth
+session: direction, action loop), §0f and §0e (fourth session), §0-§0d (third session), then
+`nethra/nethra.py`. Older sections (§1-§10) are the second session's state and are still valid unless
+a §0 section says otherwise.
 
-**Branch:** `claude/tender-cray-bk3jq6` (Dooces/nethra-cuda-runner). It contains everything from
-`claude/zen-cerf-mqrlxe` (third session) plus the fourth session. No PR opened. Scratchpad files are
+**Branch:** `claude/pensive-davinci-zla3pj` (Dooces/nethra-cuda-runner). It contains everything from
+`claude/tender-cray-bk3jq6` (fourth session) plus the fifth session. No PR opened. Scratchpad files are
 gone after a session; every script used is in `nethra/tests/`.
+
+### Fifth session in one paragraph
+
+User: "make progress on direction and timing and develop an action loop; make sure the field and
+Nethra do the work, use ablation tests". New core option `direction="split"` (default stays
+`"shared"`, bit-identical to before): each incidence gets two conductances, one per flow direction,
+each moved by its own term of the existing evidence change, so timing of flow before manifestation
+decides which direction strengthens. On moving objects it makes the field's own next step move
+forward (ring: 24/24 intervals vs 8/24 shared; shuffled stream: chance). New action loop
+(`gaze_loop.py`): an innate lagged reflex drives the eye while the field watches; then the reflex is
+switched off and an actuator reads only the motor Nethra's activation, which nothing pushes any more.
+With split direction the field-driven eye follows a bouncing object better than its teacher and
+sometimes turns at the wall before the object does; lesioned structure, shuffled training, no
+eye-position input or shared direction each remove it. Split direction costs context capacity
+(`cue_capacity` 15 regimes 0.93 -> 0.59, `robust` clean 0.83 -> 0.58): not made default. §0g.
 
 ### What changed in the core in the fourth session
 
@@ -189,6 +205,164 @@ gone after a session; every script used is in `nethra/tests/`.
   streams, compare a hash of `checkpoint_dict()` and of all activations; include frontier, rk4 and a
   checkpoint round trip mid-stream.
 - Known: `source_support="product"` gives a different checkpoint on every run (pre-existing).
+
+## 0g. Fifth session: direction from timing, and an action loop
+
+### 0g.1 Core option `direction="split"`
+
+- Field law with `"split"`: incidence (relation R, member m) has g(R->m) and g(m->R).
+  Flow j -> i = g_ji max(0, a_j - a_i). With g_ji = g_ij this is exactly the shared law.
+  Both start at the admission seed (route registration, reseeding, graded side support).
+- Evidence: prior flow from the completed interval runs R -> m when A_R > A_m (through g(R->m)) and
+  m -> R otherwise (through g(m->R)). The outgoing term (flow into m, then m manifests or not)
+  moves g(R->m); the incoming term (tension shared among members that fed R) moves g(m->R). Same
+  formulas and rates as before; nothing reads before/after routes.
+- Covered incidences (conduction rule) zero both. Route summary = max over both directions.
+- Integration is RK4 in split mode (ETD needs a linear passive operator). About 2x slower on
+  `consequence_reach` (52.6 vs 26.2 ms/interval), 4x on `cue_capacity`.
+- Checkpoints store `incidence_evidence_in` and the parameter only in split mode; shared checkpoints
+  are byte-identical to before.
+
+Checks:
+- `bitcheck_cores.py` old core vs new core (default `"shared"`): ALL IDENTICAL (symbolic and graded,
+  2 seeds, default / frontier / frontier_min / rk4+0.9 / whole joining / evidence change off, top
+  on/off, round trip).
+- Split with evidence change off = shared with RK4, activations identical on a 100-interval stream.
+- Split checkpoint round trip mid-stream: activations and checkpoint identical.
+
+### 0g.2 Direction on moving objects (field reads only)
+
+Symbolic ring K=6, one Nethra per position (`direction_ring.py`). Predicted from the code: forward
+incidences (p_k -> N_(k+1), N_(k+1) -> p_(k+1)) strengthen, their reverse stays at the seed. Seen:
+
+| incidence of N_(k+1) = {N_k, p_k} \| {p_(k+1)} | g relation->member / member->relation |
+|---|---|
+| p_k (before member) | 0.22 / 1.03 |
+| p_(k+1) (after member) | 0.75 / 0.21 |
+| shared, same incidences | 0.99 / 0.99 and 0.68 / 0.68 |
+
+Free step on a copy (nothing pushed), gain over leakage-only decay, last lap:
+
+| | gain at p(k+1) | gain at p(k-1) |
+|---|---|---|
+| shared | +0.016 | +0.008 (spills backward) |
+| split | +0.019 | -0.002 |
+
+Graded ring, 12 positions, 8 tent cells, step 1, 20 laps (`direction_motion.py`); the live
+activation centre after a free step, relative to the centre now, along the true motion:
+
+| | centre shift (true step 1.00) | intervals shifting forward | gain ahead / behind |
+|---|---|---|---|
+| shared | -0.086 | 8/24 | 0.59 / 0.41 |
+| split | **+0.207** | **24/24** | 0.81 / 0.19 |
+| shared, positions shuffled in time | +0.101 | 13/24 | 0.48 / 0.52 |
+| split, positions shuffled in time | +0.092 | 13/24 | 0.49 / 0.51 |
+
+- The positive gain peaks 2 cell spacings ahead: the next cell is already active, so it gains
+  nothing (as in §0e.1). The centre shift is the read that shows the step.
+- Bouncing object (`STREAM=BOUNCE`), graded: split does not help (16/16 cells: forward in 4/30
+  intervals, shared 5/30). On a line visited both ways the pushed position is the same for both
+  directions; direction has to come from what came before. Symbolic bounce
+  (`direction_bounce.py`, L=5): gain(next) > gain(behind) in 6/6 intervals in both modes; split
+  learns directions per incidence from use, so Nethra built for rightward steps are also used for
+  leftward ones (e.g. N2 = {N1,p1} | {p2}: g(p2->N2) 0.82).
+
+### 0g.3 Action loop (`gaze_loop.py`)
+
+World: object bounces on 0..L-1 at speed 1. Eye at e (clamped). Nethra: retina (one per offset
+o = x - e, |o| <= R), motor command mL / mR, eye position (one per e). Each interval: push retina
+o, eye position e and, while the reflex drives, the motor command m; step; then e += m.
+
+- Learning (300 intervals): innate reflex with latency LAT, m_t = sign(o_(t-LAT)); motor Nethra
+  pushed with the reflex's command.
+- Test (80 intervals, same world state, evidence change off): reflex off; nothing pushes the motor
+  Nethra; actuator m = sign(a_R - a_L) if |a_R - a_L| > 0.002. The actuator is identical in every
+  condition.
+- Why this design (measured, `gaze_retina_device.py`, `gaze_motor_probe.py`):
+  1. An actuator that reads the retina already tracks with no structure at all (mean |o| 1.00 in
+     every condition): the device did the work. Discarded.
+  2. A motor Nethra that is pushed with the movement holds ~0.3 leftover; structure adds ~0.02-0.04
+     to the other one. Reading it is momentum. So at test the motor Nethra is not pushed.
+
+Results, LAT 2, R 4, split (share |o| <= 1; "with object" = moving intervals that move the object's
+way; reversal lag = intervals from object reversal to eye reversal):
+
+| L | teacher (reflex) | best fixed eye | **trained, reflex off** | lesion | shuffled training |
+|---|---|---|---|---|---|
+| 8 | 3.33 | 1.82 | 2.02, with object 0.70, lags 0-4 | 2.79, moves 0.06 | 1.79, moves 0.15 |
+| 10 | 3.70, lag 4 | 2.25 | **2.15**, near 0.39, with object 0.76, lags 3,0,4,2,1,0,3,2 | 4.64, moves 0.06 | 3.76, moves 0.01 |
+| 12 | 3.88 | 2.67 | 2.62, with object 0.81 | 5.79 | 3.51, moves 0.01 |
+| 14 (R 5) | 4.03 | 3.30 | **2.16**, with object 0.83, lags 3,2,1,0,0 | 6.35 | 4.14 |
+
+Ablations at L=10 (mean |o|, trained):
+
+| | result |
+|---|---|
+| shared direction | 4.62 (moves 0.79, with object 0.48: drives into a wall) |
+| no eye-position Nethra (`PROP=0`), split | 3.79 (reversal lags 2-15) |
+| no construction during learning | 4.64, moves 0.09 |
+| LAT 1 (teacher 2.58) | split 2.86, shared 4.67 |
+| LAT 3 (teacher 4.35) | split 1.88, near 0.54, with object 0.88, lags 0,3,0,2,0,2,0,2,0 |
+| 600 learning intervals | split 1.98 |
+| evidence change on at test | split 1.96, shared 3.01 |
+| actuator threshold 0.0005 / 0.01 | split 2.04 / 2.39 (moves 0.06 at 0.01) |
+
+- What the field does here: learns from the reflex which motor command follows which retina and
+  eye-position pattern, and drives it with the reflex gone. It acts on the latest pattern, not the
+  one the reflex used, so it is earlier than its teacher; reversal lag 0 means the eye turned in the
+  same interval as the object (it uses the eye-position Nethra: without them the lags are 2-15).
+- What it does not do: it is not better than the best fixed eye at L=8, and far from one-step
+  anticipation (mean |o| 1.0 for a perfect expectation with this actuator). Shuffled training
+  sometimes moves (L=8: 1.79 with 15% moving intervals, parked near the middle).
+- One run per configuration (deterministic world); the configurations are the replications.
+
+### 0g.4 Split direction on the user scripts (`DIR=split python3 with_params.py ...`)
+
+| script | shared (default) | split |
+|---|---|---|
+| `cue_capacity` 8 regimes 11/39/61%; 15 regimes | 1.00/1.00/0.94; 0.93 | 1.00/0.99/0.86; **0.59** |
+| same, cue2 C (right) / B; no cue B / C | 0.103/0.063; 0.051/0.070 | 0.104/0.059; 0.035/0.069 |
+| `robust` clean / partial / noisy / noisy2 | 0.83/0.40/0.50/0.04 | **0.58**/0.38/0.44/0.04 |
+| `human 14` blocking ratio | 0.18 | 0.25 |
+| same, interference after A: B / C | 0.017 / 0.041 | 0.007 / 0.042 |
+| same, spacing massed / spaced | 0.040 / 0.026 | 0.022 / **0.035** (spaced ahead) |
+| same, XOR per 150 blocks | 0.51-0.75 | 0.38-0.53 |
+| `context_partwise` small first, act right/wrong C1; C2 | .042/.039; .042/.040 | .044/.041; .045/.040 |
+| same, P right/wrong C1; C2 | .047/.048; .047/.049 | .050/.053; .053/.052 |
+| `focus_symbolic` share with / without F (P) | 0.484 / 0.480 | 0.409 / 0.487 |
+| `consequence_reach` P toward F first k; at k=8; peak; act F from k | 8; 8.9e-4; 5.0e-2; 3 | 8; 5.6e-3; 6.7e-2; 5 |
+| ms/interval (`consequence_reach`) | 26.2 | 52.6 |
+
+Split carries sequences further ahead (consequence reach, ring, action loop) and loses on
+co-present context (regimes, robust clean, XOR, focus). Not investigated why.
+
+### 0g.5 Decisions waiting for the user
+
+1. `direction="split"` stays an option, default `"shared"`. Adopt, keep as option, or look at the
+   context loss first (what co-present context needs from the reverse direction)?
+2. Action loop design: reflex-taught, motor Nethra not pushed at test. The alternative (motor
+   pushed with the movement) is momentum by measurement (0g.3).
+
+### 0g.6 Suggested next steps (do not start unasked)
+
+1. Trace why split loses 15-regime selection (`cue_trace.py`-style on one regime pair): which
+   member -> relation incidences of the context Nethra lose evidence.
+2. Action loop: the field only repeats the reflex's mapping, earlier. For focus that goes to what is
+   consequential, the loop needs something that makes some states matter (user's "want", §1.3).
+3. Timing without place (how long a run lasts): not tested this session; §0e.3 showed structure
+   cannot count a run of equal patterns.
+
+### 0g.7 Scripts (`nethra/tests/`)
+
+| script | what |
+|---|---|
+| `direction_ring.py` | env K, LAPS, ORDER: symbolic ring, both modes: directed g, P, free-step gain |
+| `direction_motion.py` | env STREAM=RING/BOUNCE, L, NC, STEP, LAPS, SPEEDS, PASSES, DIR, SHUF: centre shift, gain ahead/behind, profile |
+| `direction_bounce.py` | env L, PASSES, DIR, COND: symbolic bounce topology and free-step gain |
+| `gaze_loop.py` | env L, R, DIR, LAT, TRAIN, TEST, DEAD, LEARN, PROP, CONDS: action loop (0g.3), ~10-20 s |
+| `gaze_retina_device.py` | first loop design (actuator reads retina): tracks without structure, discarded |
+| `gaze_motor_probe.py` | motor Nethra activation trained vs lesioned during learning (why the motor is not pushed at test) |
+| `with_params.py` | now also env DIR=shared/split |
 
 ## 0f. Fourth session, part 2: a conduction rule better than top-only; delta input by field reads
 
