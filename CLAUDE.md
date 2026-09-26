@@ -100,6 +100,9 @@ closure. Never declare it in the harness.
       organically be able to do. Never judge a result against such a solution.
     If no human data for the task is known, say so instead of inventing one.
 
+**Blocking:** settled approach and receipts in `docs/BLOCKING.md`. Read it before touching the residual,
+evidence attribution or construction order. Do not reopen subtraction-before-construction.
+
 ## 3. How to feed and read (short form; details in the notes)
 
 - **Feed:** push a number onto each input Nethra (one bound to a source) whose source is present

@@ -9,10 +9,9 @@ numbers written "log §x" point there.
 1. Read in this order: `CLAUDE.md` (all of it), `nethra/NETHRA_OPERATING_NOTES.md`, this file. Open a
    log section only when this file points to it. Read the parts of `nethra/nethra.py` you will make
    predictions about or change (CLAUDE.md §0, §2.7).
-2. Branch: `claude/pensive-davinci-zla3pj` (Dooces/nethra-cuda-runner) holds all five sessions; `main`
-   and the older `claude/*` branches are its ancestors. Open PR: https://github.com/Dooces/nethra-cuda-runner/pull/3
-   (pushing to the branch updates it). If the session names another branch, start that branch from
-   this one.
+2. Branch: `main` is the only branch; it holds every session plus the merged timer (log §0i), drain and
+   flip prototypes (log §0j, §0k) and the blocking record (`docs/BLOCKING.md`). Earlier branches are tags
+   `archive/<name>`. Start new work on a branch from `main`. Run `nethra/tests/smoke.sh` first.
 3. Setup: `pip install numpy` if missing; one numeric thread
    (`OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`); `timeout` on every run; a run over 2-3
    minutes means something is wrong. Scratch scripts go in the scratchpad.

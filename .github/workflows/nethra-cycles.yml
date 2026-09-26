@@ -3,7 +3,7 @@ name: Nethra cycles
 on:
   push:
     branches:
-      - claude/beautiful-noether-86pm14
+      - main
     paths:
       - '.github/workflows/nethra-cycles.yml'
       - 'nethra/tests/cycles.py'

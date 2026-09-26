@@ -3,7 +3,7 @@ name: Nethra GPU bench
 on:
   push:
     branches:
-      - claude/zen-cerf-mqrlxe
+      - main
     paths:
       - '.github/workflows/nethra-gpu-bench.yml'
       - 'nethra/tests/gpu_bench.py'

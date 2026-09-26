@@ -10,6 +10,194 @@ were written before the user clarified the bar. Read them through `docs/HANDOFF.
 capability is a sanity check for failure; reproducing people's particular behaviour (the spacing
 effect, a 2:1 forward bias, their lag) is not a criterion.
 
+## 0i. Sixth session: timer sources for periodicity and time to finish (`timers.py`, `timers_trace.py`)
+
+User question: several "timer" Nethra at different frequencies, maybe log-spaced so they need not
+cover the whole joint state space; can they give the field references for periodicity and for
+roughly when something finishes? Tiny test, shared direction, default core.
+
+Stream: timers = square waves, periods 2, 4, 8 (each a high and a low Nethra, one of them pushed every
+interval; powers of 2, so 8 joint states instead of an lcm product). 32 warm-up intervals of timers
+alone (small factors first), then 20 episodes: E pushed D=5 intervals, O one interval, then a gap
+of timers only. Conditions: `none` (no timers, gap silent, gap 7-13), `locked` (gap 10: episode 16,
+E always starts at the same joint phase), `random` (gap 7-13: onset phase random), `reset` (timers
+restart at E onset; the harness does this: a device, reference only). Reads after each E interval k,
+last 8 episodes: P toward O; closure of the completed interval: number of refound Nethra having O in
+a route (N9 = {E}|{O} gives 1 everywhere).
+
+Prediction from the code (written before running): locked and reset build a Nethra
+{E + phase before} | {O + phase after}, refound only at k=5, so P toward O rises at k=5; random and
+none give no rise.
+
+| COND | built | P->O k=1..5 | refound with O route k=1..5 | ratio P(k=5)/P(k<5) (geo) |
+|---|---|---|---|---|
+| none | 2 | .062 .123 .125 .121 .118 | 1 1 1 1 1 | 1.14 |
+| locked | 16 | .070 .094 .090 .088 .090 | 1 1 1 1 **2** | 1.06 |
+| random | 35 | .059 .063 .062 .062 .061 | 2.4 2.0 2.0 2.0 2.3 | 1.01 |
+| reset (device) | 21 | .066 .083 .078 .077 .080 | 1 1 1 1 **2** | 1.05 |
+
+- Prediction held for structure and closure, failed for the flow. Locked topology (`timers_trace.py
+  locked`): warm-up N1-N8 = one Nethra per joint phase; N15 = {E, N14, phase-4 timers, ...} |
+  {O, phase-5 timers, ...}, in closure only at k=5. Flow into O at k=1..5: N9 (g 1.15-1.09) .053
+  .081 .080 .080 .078; N15 (g 0.33-0.30) .015 .014 .012 .011 .013. N15's activation is 0.086-0.139 at
+  every k: its members (E, N9, shared timer Nethra) drive it whether or not its route is complete.
+  Closure does not gate conduction, so the timing sits in closure, not in P.
+- Random onset: phase-bound E->O Nethra get built for many onset phases; each k completes some of
+  them (2.0-2.9 refound at every k, seeds 1-3). No timing in closure either.
+- D drawn from {4,5,6} (30 episodes, read last 15), reset: refound with O route k=1..6 = 1 1 1 2 2 3,
+  share of episodes where O came next = 0 0 0 .27 .36 1.00 (seeds 1-3: same counts, shares .27-.33,
+  .36-.45). Graded: "not before 4, surely by 6". P toward O flat (.064-.075). `locked` with D drawn is
+  not locked (episode length varies, onset drifts): 2.0 1.5 1.3 1.7 1.9 2.2, no clean timing.
+- Summary of measurements: free-running timers carry timing only when the world's events are locked
+  to their phase; with a reset at onset (harness) closure refinds "time to finish", graded when D
+  varies; in no condition does the flow toward O (P, live activation) show it.
+
+## 0k. Sixth session (branch modest-bohr, was §0k), part 2: flipped channels (prototype, not core)
+
+User's idea: each directed channel between Nethra can be individually reversed: instead of N
+sourcing m, N drains m ("a makes b unlikely", "something happens when something does not").
+User's answers: drained charge goes into the draining Nethra (yes); where flips come from and
+whether closure uses them: test.
+
+### 0k.1 What was built (`tests/flip_prototype.py`, `tests/flip_streams.py`)
+
+- `direction="split"` (two channels per incidence). A flipped channel N -| m pulls `h max(0, a_N)`
+  out of m into N while m has charge (at most m's charge per substep plus its inflow; m never below
+  zero, lowest seen -4e-5 from that limiter). h = conductance(e), h(0) = 0. Not a route member.
+- Evidence cannot cross zero on an existing channel: its change is proportional to its own flow,
+  which vanishes with g (the admission-seed fixed point, notes §4). So the sign is set at
+  construction: each handle of the transition gets as flipped members what was expected and did
+  not come. `expect="structure"`: after-route members of Nethra refound by their first route in
+  the before side; `"residual"`: Nethra with M - P < 0. New flips start at admission_seed; inert
+  ones found again are re-seeded (as the core re-seeds inert routes). `flip_to`: "all" or "leaves".
+- Residual at m is net of the pulls (M + Q - P) for the core's evidence change too;
+  `delta e(N -| m) = -outgoing_evidence_per_flow * q * r_m`.
+- `closure_mode="field"`: flips are field only. `"absent"`: a Nethra whose flipped member is in the
+  positive closure is blocked, closure recomputed once.
+- Off: bit-identical to the core with direction="split", integrator="rk4" (both closure modes).
+
+### 0k.2 Streams (300 trials, seed 0; baseline is split without flips; outcomes never silent)
+
+| stream, read (last block) | off (split) | structure field all / leaves | structure absent all / leaves | residual field all / leaves | residual absent all / leaves |
+|---|---|---|---|---|---|
+| A->X, AB->Y, C->X: X after AB/A; CB/C | 1.10; 1.05 | 1.16 / 1.13; 1.07 / 1.06 | 1.22 / 1.09; 1.10 / 1.04 | 1.15 / 1.13; 1.06 / 1.05 | 1.19 / 1.09; 1.16 / 1.04 |
+| A->X, B->X, AB->Y: X after AB/A | 1.90 | 1.84 / 1.90 | 1.58 / 1.90 | 1.85 / 1.88 | 1.68 / 1.88 |
+| operator, trained share c(x+1) O+ / O- | 0.562 / 0.572 | 0.473 / 0.444; 0.557 / 0.537 | 0.564 / 0.507; 0.561 / 0.533 | 0.512 / 0.537; 0.520 / 0.537 | 0.595 / 0.575; 0.529 / 0.527 |
+| operator, held-out c3 with O+ (off 0.369) | | 0.133 / 0.352 | 0.125 / 0.376 | 0.208 / 0.341 | 0.259 / 0.366 |
+| X->B 75%: share B | 0.532 | 0.530 / 0.535 | 0.512 / 0.535 | 0.506 / 0.504 | 0.585 / 0.504 |
+| bounce: share ahead, right / left | 0.398 / 0.422 | 0.400 / 0.424; 0.401 / 0.422 | same as field | 0.392 / 0.439; 0.394 / 0.430 | same as field |
+| extinction: X after A end of A->X / end of A->Y / 20 into A->X again | 0.0197 / 0.0158 / 0.0162 | 0.0170 / 0.0086 / 0.0166; 0.0191 / 0.0083 / 0.0163 | 0.0112 / 0.0081 / 0.0086; leaves = field | 0.0190 / 0.0122 / 0.0167; 0.0189 / 0.0121 / 0.0163 | 0.0138 / 0.0071 / 0.0103; leaves = field |
+
+Flips at the end: 11-5,077 (operator structure all 4,650); max h 0.08-0.2 except extinction (0.83).
+Cost up to 2.5x off (field) and 6.5x (absent, all: operator 13 -> 84 ms/interval).
+
+- Only extinction changed clearly: during A -> Y the A -> Y handle drains X (0.0158 -> 0.0083-0.0086,
+  structure). Back on A -> X, 20 trials reach 0.0163-0.0166 (85-98% of the level before extinction;
+  off 82%, but off only fell to 0.0158); first learning at 20 trials was 0.0102 (leaves), 0.0040 (all) vs off
+  0.0151: early filler flips slow first learning.
+- AB-only suppression did not form. Traced (`negfeature`, structure, leaves): evidence on the AB->Y
+  Nethra's flip onto X moved +0.61 in total at the Y intervals and -14.77 at intervals where X came
+  (A->X and C->X trials); ends at 0 and is re-seeded at every AB->Y. Cause: A alone conducts into the
+  AB Nethra (primitive members conduct without closure), so the flip pulls during A trials, and when
+  X comes its residual (~0.2) is about 10x the over-carry the flip cancels in AB trials (~0.03).
+- Early on (30 trials, structure, all) flips from random filler transitions landed on A and on the
+  A -> X Nethra: X after A 0.0006 (off ~0.003); they wore off by 150-200 trials (X comes, they weaken).
+- `absent` with `all` removes structure broadly: held-out O+ 0.125, relearning after extinction
+  stays at 0.0086, AB/B in negpattern 2.66. With `leaves`, `absent` equals `field` on most streams.
+- Bounce: flips barely formed (h ~0); no change.
+- Stability: nothing negative beyond the limiter's -4e-5; no oscillation seen.
+
+### 0k.3 Decisions waiting for the user
+
+1. The flip is erased because the draining Nethra is partly active without its route complete.
+   Options: pull only while the draining Nethra is refound (a closure gate on the flip: the
+   rejected "recognition gates conduction" class, but on a new channel); or evidence change on flips
+   weighted differently when the target comes (asymmetric rates: a parameter). Not chosen.
+2. Structure-expectation flips from unpredictable transitions (random fillers) are numerous
+   (hundreds to thousands) and temporarily harm what they touch. `leaves` bounds the count 3-6x.
+
+## 0j. Sixth session (branch modest-bohr, was §0j): operator tags, and drain incidences (prototype, not core)
+
+User: "is there a straightforward way to use the field to abstract operators"; then "what if Nethra
+of Nethra or their leaves could have a negation instead of excitation, or drain instead of source";
+then "check on many tiny streams, a few hundred cycles each, to see what settles".
+
+### 0j.1 Operator tags (no core change)
+
+Stream: 6 symbols cycled forward 8 laps, then trials [c_i, O+] -> c(i+1), [c_i, O-] -> c(i-1),
+O+ held out on c3. Share of P toward c(x+1) against c(x-1), frozen copy:
+
+| operand | tag | shared, 6 / 20 per (operand, op) | split, 6 |
+|---|---|---|---|
+| trained c1 | O+ / O- / none | 0.49-0.51 / 0.51-0.52 / 0.49-0.52; 20: 0.495 / 0.494 / 0.488 | 0.67-0.68 / 0.70-0.71 / 0.78 |
+| held-out c3 | O+ / none | 0.42-0.43 / 0.38-0.39; 20: 0.34 / 0.33 | 0.58-0.61 / 0.68-0.71 |
+
+- The tag does not select even on trained operands. The Nethra {c1, O+, ...} | {c2, ...} is built
+  but stays at seed-level g (~0.2); tag-free sequence Nethra carry the flow (the §0f.2 weak spot).
+- A tag is a hub (as d+/d- in §0f.3). Closure is membership only; nothing is shared across
+  operands but the tag, so no transfer to a held-out operand.
+- Per trial, M - P at the neighbour that did not come is -0.03 (negative in 72/72 trials); at the
+  result +0.16 to +0.24. Evidence change clamps at 0, so this is discarded today.
+
+### 0j.2 Drain incidences (`tests/drain_prototype.py`, `tests/drain_streams.py`)
+
+- Negative g in the conduction term is anti-diffusion (a pair's difference grows once g < -leak/2):
+  not used. Law used: s -| m adds `- h_sm max(0, a_s) a_m` to leaf m (shunt). It never pushes, never
+  makes m negative, adds charge nowhere; bilinear, so RK4. Targets are leaves only; closure and
+  construction are unchanged (drains are field only, not route members).
+- Drain evidence: `delta d_sm = rate A_s A_m ((P_m - D_m) - M_m)`, clamped at 0, s != m, with
+  D_m the charge the drains took from m (product of interval integrals: declared approximation).
+  The drain's own effect is counted in what the field carried, so it stops growing once it cancels
+  the over-carry. Rate = outgoing_evidence_per_flow. h = the conductance map (h(0) = 0), ceiling
+  g_max. Sources: pushed Nethra of the prior interval (`leaves`), constructed Nethra refound in it
+  (`built`), or `both`.
+- Drain off is bit-identical to the core with integrator="rk4" (checkpoint hash, 200 intervals).
+- Streams (300 trials each, probed every 50; predictions in the `drain_streams.py` docstring):
+  negfeature (A -> X, AB -> silent, C -> X), negpattern (A -> X, B -> X, AB -> silent), operator
+  (0h.1), prob (X -> B 75% / C 25%), ring (6 positions, 50 laps), extinction (A -> X 100, A -> silent
+  100, A -> X 100). Seed 0. Last block:
+
+| stream, read | off | leaves / built / both, stated rate | x100 rate (h at g_max) | x100 rate, ceiling 10 g_max (diagnostic) |
+|---|---|---|---|---|
+| negfeature X after AB / A | 1.16 | 1.14 / 1.16 / 1.13 | 1.05 / 1.12 / 1.03 | **0.62** / 1.06 / **0.63** |
+| negfeature X after CB / C | 1.09 | 1.07 / 1.09 / 1.07 | 0.93 / 1.06 / 0.91 | **0.48** / 0.98 / **0.50** |
+| negpattern X after AB / A | 1.85 | 1.83 / 1.85 / 1.84 | 1.76 / 1.80 / 1.75 | 1.61 / 1.70 / 1.64 |
+| operator trained share O+ / O- | 0.493 / 0.481 | same to 3 decimals | 0.493 / 0.482 | 0.496 / 0.487 (leaves) |
+| prob share B | 0.587 | 0.587 | 0.60-0.61 | 0.63-0.64 (0.64-0.68 at 250) |
+| ring share ahead | 0.500 | 0.501 | 0.502-0.504 | 0.507-0.513 |
+| extinction X after A, end of extinction (start 0.019) | 0.016 | 0.016 | 0.011-0.014 | **0.002-0.004** |
+| extinction, 20 trials into reacquisition / end | 0.018 / 0.020 | same | 0.016 / 0.019 | 0.011-0.013 / 0.016 |
+
+- At the stated rate nothing changes (every read within 2% of off): drain evidence grows linearly
+  and is far from settling (negfeature, B -| X: d 0 -> 21 over 100 AB trials; D 0.002 vs P 0.045).
+- It cannot settle either: to cancel P = 0.045 needs h A_B A_X = 0.045, h ~ 7.5 against a ceiling
+  of 1.5. A leaf's activation away from pushes is 0.01-0.02 and it loses charge through leak plus
+  all its conductances, so a shunt capped at g_max removes at most ~10-15% of it.
+- Only with the ceiling raised (diagnostic, not a proposal) does something emerge, and only from
+  leaf sources: B inhibits X after A and after C (summation transfer, as in conditioned inhibition;
+  Rescorla 1969, animals); extinction goes near zero and relearns at about the first-learning speed
+  (no savings; people and animals show savings and spontaneous recovery, Pavlov 1927, Bouton 2004);
+  probability shares sharpen a little, no winner.
+- Constructed-Nethra sources stay weak at every setting: a constructed Nethra's activation comes only
+  by conduction (§0e.1) and is small, so both its drain learning (A_s) and its drain (a_s) are small.
+  So configural inhibition (negpattern, operator selection) did not appear.
+- Stability: lowest activation 0 in every run; settled blocks equal to 4 digits (ring); no
+  oscillation. Shunting only adds dissipation. Cost up to 2.5x off (operator 10 -> 27 ms, x100 rate, ceiling 10).
+- Side effect: with strong drains construction changed (extinction 31 -> 39 Nethra): drains change
+  M, and M - P feeds construction.
+- Closure-level negation (routes with a negated member) was not built. Negation on leaves is
+  evaluated against the pushed pattern; negation on constructed Nethra would be evaluated once
+  against the finished positive closure, so it cannot feed back into itself (same settled rule as
+  "a description containing itself is skipped", old ledger 2026-09-23).
+
+### 0j.3 Decisions waiting for the user
+
+1. Drain ceiling: a shunt at g_max is too weak to matter. Options: its own ceiling (a parameter),
+   a drain sized relative to the target's own outflow (leak + sum g), or a sink form (charge removed
+   at a rate set by s, stopping at zero). Not chosen.
+2. Configural drains (from constructed Nethra) are weak because constructed Nethra carry little
+   activation; same root as the conjunction weak spot (§0f.2, §0j.1).
+
 ## Former start-here of the fifth session (superseded by docs/HANDOFF.md; note added when the log was split off)
 
 Read in this order: `CLAUDE.md`, `nethra/NETHRA_OPERATING_NOTES.md`, this section, then §0g (fifth

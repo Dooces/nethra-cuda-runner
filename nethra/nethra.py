@@ -1550,6 +1550,11 @@ class NethraField:
         unresolved residual on independently sourced current support can trigger a weak ordinary
         whole-support Nethra. No subset scanner or probability ledger participates.
         """
+        # BLOCKING (docs/BLOCKING.md): blocking is this ordering, not a separate rule. Existing structure
+        # is refound and what it accounts for is subtracted; only the remainder earns evidence or
+        # construction. A consequence already carried leaves less residual (M - P) and so less tension
+        # for a co-present cue X.  Do not reopen the order, and do not add a scale, cap or gate on
+        # g, P or M here to get blocking.
         if not self.current_interval_integral:
             return {}
 
@@ -1647,6 +1652,9 @@ class NethraField:
 
     def _construct(self, source_current, manifest_minus_prior, current_closed, current_description,
                    current_source_event):
+        # BLOCKING (docs/BLOCKING.md): structural subtraction before construction is ESTABLISHED
+        # (NETHRA_TODO, commit 4df45a8). _accounted() says which existing Nethra match both sides,
+        # not how much of M they explain.
         unresolved = sum(
             max(0.0, manifest_minus_prior.get(n, 0.0))
             for n in source_current

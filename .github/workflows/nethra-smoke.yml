@@ -1,0 +1,14 @@
+name: nethra-smoke
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: smoke
+        run: /usr/bin/python3 -c "import numpy" && nethra/tests/smoke.sh
